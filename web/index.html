@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EDAmbilight — Control</title>
+<link href="css/tailwind.min.css" rel="stylesheet">
+<link href="css/fonts.css" rel="stylesheet">
+<link href="css/design-system.css" rel="stylesheet">
+<style>
+    @font-face {
+        font-family:'Material Symbols Outlined'; font-style:normal; font-weight:100 700;
+        src:url('fonts/MaterialSymbolsOutlined.woff2') format('woff2'); font-display:block;
+    }
+
+    body { opacity:0; transition:opacity .35s cubic-bezier(0.23,1,0.32,1); }
+    body.loaded { opacity:1; }
+
+    /* ── 2-column layout ── */
+    .main-content {
+        flex: 1; min-height: 0;
+        display: flex; gap: 10px;
+        padding: 12px 20px 16px;
+    }
+    .status-panel { width: 240px; flex-shrink: 0; align-self: flex-start; }
+    .right-col {
+        flex: 1; min-width: 0; min-height: 0;
+        display: flex; flex-direction: column; gap: 10px;
+    }
+    .ctrl-row { display: flex; gap: 10px; flex-shrink: 0; }
+    .ctrl-row > .panel { flex: 1; min-width: 0; }
+    .param-row { display: flex; gap: 10px; flex-shrink: 0; }
+    .param-row > .panel { flex: 1; min-width: 0; }
+    .devices-row { flex: 1; min-height: 0; }
+
+    /* ── Status visual ── */
+    #status-visual .sv-ring {
+        position:absolute; width:64px; height:64px; border-radius:50%;
+        opacity:0; animation:none;
+        transition: opacity .5s cubic-bezier(0.23,1,0.32,1);
+    }
+    #status-visual.visual--active .sv-ring {
+        animation:sonarRingMd 2.8s cubic-bezier(0.23,1,0.32,1) infinite;
+    }
+    #status-visual.visual--active .sv-ring:nth-child(2) { animation-delay:1.3s; }
+    .sv-core {
+        width:22px; height:22px; border-radius:50%; position:relative; z-index:1;
+        border:1.5px solid rgba(255,255,255,.12);
+        background:rgba(255,255,255,.04);
+        transition:all .5s cubic-bezier(0.23,1,0.32,1);
+    }
+    #status-visual.visual--active .sv-core {
+        border-color:rgba(20,245,255,.70);
+        background:rgba(20,245,255,.08);
+        box-shadow:0 0 14px rgba(20,245,255,.38), 0 0 32px rgba(20,245,255,.16);
+    }
+    #card-status.panel--active {
+        border-color: rgba(20,245,255,.14);
+        animation: panelActiveGlow 5s cubic-bezier(0.77,0,0.175,1) infinite;
+    }
+
+    /* ── Devices note ── */
+    #devices-note a { color:var(--c-cyan); text-decoration:none; transition:opacity .2s; }
+    #devices-note a:hover { opacity:.72; }
+
+    /* ── Sliders ── */
+    .slider-row { margin-bottom:16px; }
+    .slider-row:last-child { margin-bottom:0; }
+    .slider-label { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; }
+    .slider-label-text { font-size:13px; color:var(--c-text-mid); font-family:var(--f-body); }
+    .slider-val { font-family:var(--f-display); font-size:1.05rem; font-weight:700; color:var(--c-cyan); line-height:1; }
+    .slider-unit { font-size:11px; color:var(--c-text-dim); font-family:var(--f-body); margin-left:2px; }
+    .slider-hint { font-size:11px; margin-top:6px; color:var(--c-text-ghost); line-height:1.4; }
+
+    /* ── Param eyebrow ── */
+    .param-eyebrow {
+        font-size:11px; font-weight:700; text-transform:uppercase;
+        letter-spacing:.14em; color:var(--c-text-dim);
+        font-family:var(--f-body); margin-bottom:14px;
+    }
+
+    /* ── FPS number ── */
+    .fps-num {
+        font-family:var(--f-display); font-size:2.2rem; font-weight:700;
+        color:var(--c-cyan); line-height:1;
+    }
+</style>
+<script src="/eel.js"></script>
+<script src="js/common.js"></script>
+</head>
+<body class="h-screen w-full relative flex">
+
+<!-- Atmospheric background -->
+<div class="ds-bg">
+    <div class="ds-bg-glow"></div>
+    <div class="ds-grain"></div>
+    <div class="ds-scan"></div>
+    <div class="ds-scan"></div>
+</div>
+
+<!-- Sidebar -->
+<div id="sidebar-nav" data-active-page="index"></div>
+
+<!-- Main -->
+<main class="relative z-10 flex-1 flex flex-col h-full overflow-hidden">
+
+    <!-- Compact header -->
+    <header style="
+        padding:14px 28px 10px; flex-shrink:0;
+        display:flex; align-items:center; gap:10px;
+        border-bottom:1px solid rgba(255,255,255,.04);
+    ">
+        <div class="ds-title-line" style="width:28px;"></div>
+        <span class="orbitron" style="font-size:.9rem;font-weight:700;letter-spacing:.34em;color:#fff;">AMBILIGHT</span>
+        <div class="ds-title-line rev" style="width:28px;"></div>
+        <span style="font-size:8px;text-transform:uppercase;letter-spacing:.28em;color:rgba(255,255,255,.18);padding-left:6px;">Control Panel</span>
+    </header>
+
+    <!-- 2-column layout -->
+    <div class="main-content">
+
+        <!-- ── LEFT: Status card ── -->
+        <div id="card-status" class="panel status-panel ds-appear" style="animation-delay:.04s;">
+            <div class="panel-body" style="padding:22px 20px; justify-content:space-between;">
+
+                <div>
+                    <div class="ds-label" style="margin-bottom:16px;">Status</div>
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+                        <div id="status-dot" style="
+                            width:10px; height:10px; border-radius:50%; flex-shrink:0;
+                            background:rgba(255,255,255,.16);
+                            transition:background .5s, box-shadow .5s;
+                        "></div>
+                        <span id="status-label" class="orbitron" style="
+                            font-size:.88rem; font-weight:700; letter-spacing:.2em;
+                            color:rgba(255,255,255,.18); transition:color .5s;
+                        ">—</span>
+                    </div>
+                    <div style="font-size:13px; color:var(--c-text-ghost);">Ambilight service</div>
+                </div>
+
+                <div id="status-visual" style="display:flex; align-items:center; justify-content:center; padding:24px 0;">
+                    <div style="position:relative; width:64px; height:64px; display:flex; align-items:center; justify-content:center;">
+                        <div class="sv-ring"></div>
+                        <div class="sv-ring"></div>
+                        <div class="sv-core"></div>
+                    </div>
+                </div>
+
+                <div style="padding-top:18px; border-top:1px solid rgba(255,255,255,.04);">
+                    <label class="glass-toggle-container" style="width:100%;">
+                        <input id="ctrl-enabled" type="checkbox" class="glass-toggle-input"
+                            onchange="toggleEnabled(this.checked)">
+                        <div class="glass-toggle-track"><div class="glass-toggle-thumb"></div></div>
+                        <span class="glass-toggle-label">Enable</span>
+                    </label>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ── RIGHT: Controls + Params + Devices ── -->
+        <div class="right-col">
+
+            <!-- Controls: FPS | Capturer | Strategy (horizontal row) -->
+            <div class="ctrl-row ds-appear" style="animation-delay:.10s;">
+
+                <div class="panel">
+                    <div class="panel-body" style="padding:16px 20px;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                            <div class="ds-label">FPS Target</div>
+                            <div id="fps-badge" style="font-size:11px; color:var(--c-text-ghost);">— live</div>
+                        </div>
+                        <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:14px;">
+                            <span id="val-fps" class="fps-num">15</span>
+                            <span style="font-size:13px; color:var(--c-text-dim); padding-bottom:3px;">fps</span>
+                        </div>
+                        <input id="ctrl-fps" type="range" min="1" max="60" value="15" step="1"
+                            oninput="liveUpdate('fps', +this.value, 'val-fps'); updateFill(this);">
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-body" style="padding:16px 20px;">
+                        <div class="ds-label" style="margin-bottom:10px;">Capture Engine</div>
+                        <select id="ctrl-capturer" onchange="liveUpdate('capturer', this.value, null)">
+                            <option value="auto">Auto (WGC → DXGI → mss)</option>
+                            <option value="wgc">WGC — Chrome-safe</option>
+                            <option value="dxcam">DXGI — Exclusive fullscreen</option>
+                            <option value="mss">mss — CPU-only</option>
+                        </select>
+                        <div style="display:flex; align-items:center; gap:8px; margin-top:10px;">
+                            <span style="font-size:12px; color:var(--c-text-ghost);">Active:</span>
+                            <span id="stat-capturer" style="font-size:13px; font-weight:700; color:var(--c-cyan);">—</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-body" style="padding:16px 20px;">
+                        <div class="ds-label" style="margin-bottom:10px;">Algorithm</div>
+                        <select id="ctrl-strategy" onchange="onStrategyChange(this.value)">
+                            <option value="adaptive_smooth">Adaptive + EMA (best)</option>
+                            <option value="adaptive">Adaptive depth</option>
+                            <option value="smooth">Percentile + EMA</option>
+                            <option value="percentile">Percentile 80%</option>
+                            <option value="dominant">Dominant color</option>
+                            <option value="mean">RGB mean</option>
+                        </select>
+                        <div style="font-size:12px; margin-top:10px; color:var(--c-text-ghost);">Color sampling strategy</div>
+                        <label class="glass-toggle-container" style="margin-top:12px;">
+                            <input id="ctrl-bb" type="checkbox" class="glass-toggle-input"
+                                onchange="liveUpdate('black_bar_detect', this.checked, null)">
+                            <div class="glass-toggle-track"><div class="glass-toggle-thumb"></div></div>
+                            <span class="glass-toggle-label">Black bar detect</span>
+                        </label>
+                        <div id="bb-status" style="font-size:11px; margin-top:6px; min-height:1.4em; color:var(--c-text-ghost);"></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Params: Sampling | Smoothing | Output (horizontal row) -->
+            <div class="param-row ds-appear" style="animation-delay:.18s;">
+
+                <div id="group-depth" class="panel">
+                    <div class="panel-body" style="padding:16px 20px;">
+                        <div class="param-eyebrow">Sampling Area</div>
+                        <div class="slider-row">
+                            <div class="slider-label">
+                                <span class="slider-label-text">Depth</span>
+                                <span><span id="val-depth" class="slider-val">10</span><span class="slider-unit">%</span></span>
+                            </div>
+                            <input id="ctrl-depth" type="range" min="1" max="30" value="10"
+                                oninput="liveUpdate('depth', +this.value, 'val-depth'); updateFill(this);">
+                            <div class="slider-hint">% of screen minor side</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="group-adaptive" class="panel hidden">
+                    <div class="panel-body" style="padding:16px 20px;">
+                        <div class="param-eyebrow">Adaptive Area</div>
+                        <div class="slider-row">
+                            <div class="slider-label">
+                                <span class="slider-label-text">Min depth</span>
+                                <span><span id="val-adap-min" class="slider-val">3</span><span class="slider-unit">%</span></span>
+                            </div>
+                            <input id="ctrl-adap-min" type="range" min="1" max="15" value="3"
+                                oninput="liveUpdate('adaptive_min', +this.value, 'val-adap-min'); updateFill(this);">
+                        </div>
+                        <div class="slider-row">
+                            <div class="slider-label">
+                                <span class="slider-label-text">Max depth</span>
+                                <span><span id="val-adap-max" class="slider-val">20</span><span class="slider-unit">%</span></span>
+                            </div>
+                            <input id="ctrl-adap-max" type="range" min="5" max="40" value="20"
+                                oninput="liveUpdate('adaptive_max', +this.value, 'val-adap-max'); updateFill(this);">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="group-smooth" class="panel">
+                    <div class="panel-body" style="padding:16px 20px;">
+                        <div class="param-eyebrow">Temporal Smoothing</div>
+                        <div class="slider-row">
+                            <div class="slider-label">
+                                <span class="slider-label-text">EMA Alpha</span>
+                                <span id="val-ema" class="slider-val">0.35</span>
+                            </div>
+                            <input id="ctrl-ema" type="range" min="0.05" max="0.95" step="0.05" value="0.35"
+                                oninput="liveUpdate('ema_alpha', +this.value, 'val-ema'); updateFill(this);">
+                            <div class="slider-hint">0.05 = smooth · 0.95 = instant</div>
+                        </div>
+                        <div class="slider-row">
+                            <div class="slider-label">
+                                <span class="slider-label-text">Scene-cut</span>
+                                <span id="val-scene-cut" class="slider-val">60</span>
+                            </div>
+                            <input id="ctrl-scene-cut" type="range" min="10" max="150" value="60"
+                                oninput="liveUpdate('scene_cut', +this.value, 'val-scene-cut'); updateFill(this);">
+                            <div class="slider-hint">Instant jump above threshold</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-body" style="padding:16px 20px;">
+                        <div class="param-eyebrow">Output</div>
+                        <div class="slider-row">
+                            <div class="slider-label">
+                                <span class="slider-label-text">Saturation boost</span>
+                                <span id="val-sat" class="slider-val">1.4</span>
+                            </div>
+                            <input id="ctrl-sat" type="range" min="0.5" max="2.5" step="0.1" value="1.4"
+                                oninput="liveUpdate('saturation_boost', +this.value, 'val-sat'); updateFill(this);">
+                            <div class="slider-hint">1.0 = none · 2.5 = max vivid</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Devices: takes remaining space -->
+            <div class="panel devices-row ds-appear" style="animation-delay:.26s;">
+                <div class="panel-body" style="padding:18px 20px;">
+                    <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:14px; flex-shrink:0;">
+                        <div class="ds-label">Devices</div>
+                        <span style="font-size:11px; color:var(--c-text-ghost);">keyboards excluded</span>
+                    </div>
+                    <div id="devices-container" style="flex:1; overflow-y:auto; min-height:0;">
+                        <div style="color:var(--c-text-dim); font-size:.9rem; text-align:center; padding:2rem 0;">
+                            Loading...
+                        </div>
+                    </div>
+                    <div id="devices-note"
+                         style="flex-shrink:0; margin-top:12px; padding:8px 12px; border-radius:8px;
+                                font-size:11px; line-height:1.6;
+                                border:1px solid rgba(20,245,255,.08);
+                                color:var(--c-text-ghost);">
+                        <span style="color:rgba(20,245,255,.55); font-weight:700;">NOTE —</span>
+                        Configure zones in the
+                        <a href="topology-editor.html">Topology Editor</a>
+                        first (MonitorTop, MonitorRight, MonitorBottom, MonitorLeft).
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- end right-col -->
+
+    </div><!-- end main-content -->
+
+</main>
+
+<script src="js/navigation.js"></script>
+<script src="js/ambilight.js"></script>
+<script>
+    function updateFill(el) {
+        const min = parseFloat(el.min) || 0;
+        const max = parseFloat(el.max) || 100;
+        const pct = ((parseFloat(el.value) - min) / (max - min) * 100).toFixed(1);
+        el.style.setProperty('--fill', pct + '%');
+    }
+
+    window.addEventListener('load', () => {
+        document.body.classList.add('loaded');
+        setTimeout(() => {
+            document.querySelectorAll('input[type=range]').forEach(updateFill);
+        }, 480);
+    });
+
+    // Wrap updateStatusBadge to animate the status visual
+    const _origStatus = window.updateStatusBadge;
+    window.updateStatusBadge = function(active) {
+        _origStatus && _origStatus(active);
+        const card = document.getElementById('card-status');
+        if (card) card.classList.toggle('panel--active', !!active);
+        const vis = document.getElementById('status-visual');
+        if (vis) vis.classList.toggle('visual--active', !!active);
+    };
+</script>
+</body>
+</html>

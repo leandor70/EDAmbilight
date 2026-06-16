@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EDAmbilight — Settings</title>
+<link href="css/tailwind.min.css" rel="stylesheet">
+<link href="css/fonts.css" rel="stylesheet">
+<link href="css/design-system.css" rel="stylesheet">
+<style>
+    @font-face {
+        font-family:'Material Symbols Outlined'; font-style:normal; font-weight:100 700;
+        src:url('fonts/MaterialSymbolsOutlined.woff2') format('woff2'); font-display:block;
+    }
+
+    body { opacity:0; transition:opacity .35s cubic-bezier(0.23,1,0.32,1); }
+    body.loaded { opacity:1; }
+
+    /* Section icon */
+    .section-icon {
+        width:32px; height:32px; border-radius:8px;
+        display:flex; align-items:center; justify-content:center;
+        background:rgba(20,245,255,.06);
+        border:1px solid rgba(20,245,255,.12);
+        flex-shrink:0;
+    }
+
+    /* Connection status row */
+    #conn-status {
+        display:inline-flex; align-items:center; gap:8px;
+        font-size:13px; font-family:var(--f-body);
+        color:var(--c-text-mid);
+    }
+
+    /* Restart notice */
+    .restart-notice {
+        font-size:10px; color:var(--c-text-ghost);
+        letter-spacing:.03em; margin-top:6px;
+        font-family:var(--f-body);
+    }
+
+    /* About */
+    .about-name {
+        font-family:var(--f-display); font-size:1.5rem; font-weight:700;
+        color:var(--c-cyan); letter-spacing:.05em; line-height:1;
+    }
+    .about-ver {
+        font-family:var(--f-display); font-size:.72rem; font-weight:700;
+        color:rgba(255,255,255,.20); letter-spacing:.08em;
+    }
+</style>
+<script src="/eel.js"></script>
+<script src="js/common.js"></script>
+</head>
+<body class="h-screen w-full relative flex">
+
+<!-- Atmospheric background -->
+<div class="ds-bg">
+    <div class="ds-bg-glow"></div>
+    <div class="ds-grain"></div>
+    <div class="ds-scan"></div>
+    <div class="ds-scan"></div>
+</div>
+
+<!-- Sidebar -->
+<div id="sidebar-nav" data-active-page="settings"></div>
+
+<!-- Main -->
+<main class="relative z-10 flex-1 flex flex-col h-full overflow-hidden">
+
+    <!-- Header -->
+    <header style="
+        padding:14px 28px 10px; flex-shrink:0;
+        display:flex; align-items:center; gap:10px;
+        border-bottom:1px solid rgba(255,255,255,.04);
+    ">
+        <div class="ds-title-line" style="width:28px;"></div>
+        <span class="orbitron" style="font-size:.9rem;font-weight:700;letter-spacing:.34em;color:#fff;">SETTINGS</span>
+        <div class="ds-title-line rev" style="width:28px;"></div>
+        <span style="font-size:8px;text-transform:uppercase;letter-spacing:.28em;color:rgba(255,255,255,.18);padding-left:6px;">Configuration</span>
+    </header>
+
+    <div class="flex-1 overflow-y-auto" style="padding:14px 20px 20px;">
+        <div style="max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:10px;">
+
+            <!-- OpenRGB Connection -->
+            <div class="panel ds-appear" style="animation-delay:.06s;">
+                <div class="panel-body" style="padding:22px 24px;">
+
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+                        <div class="section-icon">
+                            <span class="material-symbols-outlined" style="font-size:18px;color:rgba(20,245,255,.65);">hub</span>
+                        </div>
+                        <div>
+                            <div class="ds-label">OpenRGB Connection</div>
+                            <div style="font-size:10px;color:var(--c-text-ghost);margin-top:2px;">LED device server</div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 140px;gap:12px;margin-bottom:18px;">
+                        <div>
+                            <div class="field-label">Host</div>
+                            <input id="inp-host" type="text" value="localhost" placeholder="localhost"/>
+                        </div>
+                        <div>
+                            <div class="field-label">Port</div>
+                            <input id="inp-port" type="number" value="6742" min="1" max="65535" placeholder="6742"/>
+                        </div>
+                    </div>
+
+                    <div class="settings-divider" style="margin-bottom:16px;"></div>
+
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                        <div id="conn-status">
+                            <div class="dot-nul"></div>
+                            <span style="color:var(--c-text-dim);">Not tested</span>
+                        </div>
+                        <div style="display:flex;gap:8px;">
+                            <button class="btn-secondary" onclick="testConnection()">
+                                <span class="material-symbols-outlined" style="font-size:15px;">wifi_tethering</span>
+                                Test
+                            </button>
+                            <button class="btn" onclick="saveAndReconnect()">
+                                <span class="material-symbols-outlined" style="font-size:15px;">save</span>
+                                Save &amp; Reconnect
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Web Server -->
+            <div class="panel ds-appear" style="animation-delay:.12s;">
+                <div class="panel-body" style="padding:22px 24px;">
+
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+                        <div class="section-icon">
+                            <span class="material-symbols-outlined" style="font-size:18px;color:rgba(20,245,255,.65);">http</span>
+                        </div>
+                        <div>
+                            <div class="ds-label">Web Server</div>
+                            <div style="font-size:10px;color:var(--c-text-ghost);margin-top:2px;">Local Eel server port</div>
+                        </div>
+                    </div>
+
+                    <div style="max-width:200px;margin-bottom:10px;">
+                        <div class="field-label">Port</div>
+                        <input id="inp-webport" type="number" value="8001" min="1024" max="65535"/>
+                    </div>
+                    <div class="restart-notice">Change takes effect on next application start.</div>
+                    <button class="btn-secondary" style="margin-top:14px;" onclick="saveWebPort()">
+                        <span class="material-symbols-outlined" style="font-size:15px;">save</span>
+                        Save port
+                    </button>
+
+                </div>
+            </div>
+
+            <!-- About -->
+            <div class="panel ds-appear" style="animation-delay:.18s;">
+                <div class="panel-body" style="padding:22px 24px;">
+
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+                        <div class="section-icon">
+                            <span class="material-symbols-outlined" style="font-size:18px;color:rgba(20,245,255,.65);">info</span>
+                        </div>
+                        <div>
+                            <div class="ds-label">About</div>
+                            <div style="font-size:10px;color:var(--c-text-ghost);margin-top:2px;">Application info</div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:14px;">
+                        <span class="about-name">EDAmbilight</span>
+                        <span class="about-ver">v1.0</span>
+                    </div>
+                    <div class="settings-divider" style="margin-bottom:14px;"></div>
+                    <p style="font-size:12px;line-height:1.7;color:var(--c-text-dim);">
+                        Standalone ambilight controller based on OpenRGB.<br>
+                        Samples screen edges and maps colors to LED strips in real-time.<br>
+                        Supports WGC, DXGI, and mss capture backends.
+                    </p>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</main>
+
+<script src="js/navigation.js"></script>
+<script>
+'use strict';
+
+window.addEventListener('load', async () => {
+    document.body.classList.add('loaded');
+    const s = await api('get_settings');
+    if (!s) return;
+    if (s.openrgb_host) document.getElementById('inp-host').value    = s.openrgb_host;
+    if (s.openrgb_port) document.getElementById('inp-port').value    = s.openrgb_port;
+    if (s.web_port)     document.getElementById('inp-webport').value = s.web_port;
+});
+
+function setConnStatus(state, text) {
+    const el   = document.getElementById('conn-status');
+    const dots = { ok:'dot-ok', err:'dot-err', nul:'dot-nul' };
+    el.innerHTML = `
+        <div class="${dots[state] || dots.nul}"></div>
+        <span style="color:var(--c-text-mid);">${escapeHtml(text)}</span>`;
+}
+
+async function testConnection() {
+    const host = document.getElementById('inp-host').value.trim();
+    const port = parseInt(document.getElementById('inp-port').value);
+    setConnStatus('nul', 'Testing...');
+    try {
+        await api('save_settings', { openrgb_host: host, openrgb_port: port });
+        const r = await api('reconnect_openrgb');
+        if (r.ok) {
+            setConnStatus('ok', `Connected — ${r.devices} device(s)`);
+            showNotification('OpenRGB connected!', 'success');
+        } else {
+            setConnStatus('err', r.error || 'Connection failed');
+            showNotification('Connection failed: ' + (r.error || ''), 'error');
+        }
+    } catch (e) {
+        setConnStatus('err', 'Error: ' + e.message);
+    }
+}
+
+async function saveAndReconnect() {
+    const host = document.getElementById('inp-host').value.trim();
+    const port = parseInt(document.getElementById('inp-port').value);
+    await api('save_settings', { openrgb_host: host, openrgb_port: port });
+    const r = await api('reconnect_openrgb');
+    if (r.ok) {
+        setConnStatus('ok', `Connected — ${r.devices} device(s)`);
+        showNotification('Settings saved and reconnected!', 'success');
+    } else {
+        setConnStatus('err', r.error || 'Failed');
+        showNotification('Saved but reconnect failed: ' + (r.error || ''), 'warning');
+    }
+}
+
+async function saveWebPort() {
+    const port = parseInt(document.getElementById('inp-webport').value);
+    await api('save_settings', { web_port: port });
+    showNotification('Web port saved. Restart app to apply.', 'info');
+}
+</script>
+</body>
+</html>

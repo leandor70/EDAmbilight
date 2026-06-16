@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+*.spec
+
+# PyInstaller build artifacts
+build/
+dist/
+
+# Runtime data
+config/settings.json
+config/ambilight_config.json
+config/device_topologies.json
+log/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.user
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Claude Code
+.claude/settings.local.json
+
+# Screenshots / debug images used during development
+*-check.png
+*-fixed.png
+*-fluid.png
+*-lava.png
+*-neon.png
+*-panel-zoom.png
+*-selects.png
+*-viz*.png
+*-with-controls.png
+control-*.png
+flame-*.png
+fluid-*.png
+status-card*.png
+topology-redesigned.png
+
+# mp3 test files
+mp3/

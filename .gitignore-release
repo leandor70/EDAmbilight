@@ -1,0 +1,11 @@
+# Runtime data (created by the app — should not be committed)
+config/settings.json
+config/ambilight_config.json
+config/device_topologies.json
+log/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

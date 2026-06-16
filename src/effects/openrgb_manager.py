@@ -1,0 +1,125 @@
+"""
+OpenRGBManager — simplified manager per EDAmbilight.
+
+Interfaccia minimale compatibile con AmbilightService:
+  - apply_direct_colors(device_key, colors)
+  - is_effect_playing() -> sempre False (no effects in this app)
+  - devices: lista di DeviceController
+  - _make_device_key(ctrl) -> str
+"""
+
+import threading
+from dataclasses import dataclass
+from enum import Enum
+from typing import List, Optional, Tuple
+
+
+class TopologyType(Enum):
+    MATRIX = "matrix"
+    LINEAR = "linear"
+    SINGLE = "single"
+
+
+@dataclass
+class DeviceTopology:
+    device: object        # openrgb device object
+    topology_type: TopologyType
+    led_count: int
+
+
+class DeviceController:
+    def __init__(self, device, topology_type: TopologyType):
+        self.topology = DeviceTopology(
+            device=device,
+            topology_type=topology_type,
+            led_count=len(device.leds),
+        )
+
+
+class OpenRGBManager:
+    """
+    Manages OpenRGB devices for ambilight-only use.
+    No effect system — just direct LED color control.
+    """
+
+    def __init__(self, client) -> None:
+        self._client = client
+        self._lock   = threading.Lock()
+        self.devices: List[DeviceController] = []
+        self._init_devices()
+
+    # ── Device enumeration ─────────────────────────────────────────────────────
+
+    def _init_devices(self) -> None:
+        """Enumerate all non-MATRIX devices from OpenRGB."""
+        for device in self._client.devices:
+            topo = self._detect_topology(device)
+            if topo != TopologyType.MATRIX:
+                self.devices.append(DeviceController(device, topo))
+        print(f"[OpenRGBManager] {len(self.devices)} devices enrolled "
+              f"({len(self._client.devices)} total from OpenRGB)")
+
+    @staticmethod
+    def _detect_topology(device) -> TopologyType:
+        """Heuristic: if name contains 'keyboard' or has many LEDs in matrix → MATRIX."""
+        name_lower = device.name.lower()
+        if any(k in name_lower for k in ("keyboard", "k7", "k55", "k70", "k95",
+                                          "apex", "huntsman", "blackwidow")):
+            return TopologyType.MATRIX
+        if len(device.leds) > 100:
+            return TopologyType.MATRIX
+        if len(device.leds) > 1:
+            return TopologyType.LINEAR
+        return TopologyType.SINGLE
+
+    # ── Interface (compatible with AmbilightService) ───────────────────────────
+
+    def _make_device_key(self, ctrl: DeviceController) -> str:
+        return f"{ctrl.topology.device.name}::{ctrl.topology.topology_type.value}"
+
+    def is_effect_playing(self) -> bool:
+        return False
+
+    def apply_direct_colors(
+        self,
+        device_key: str,
+        colors: List[Tuple[int, int, int]],
+    ) -> bool:
+        """Apply RGB colors directly to a device. Thread-safe."""
+        from openrgb.utils import RGBColor
+        with self._lock:
+            for ctrl in self.devices:
+                if self._make_device_key(ctrl) == device_key:
+                    try:
+                        device = ctrl.topology.device
+                        # Switch to direct mode if not already
+                        if not getattr(device, '_direct_mode_set', False):
+                            try:
+                                device.set_mode('direct')
+                            except Exception:
+                                pass
+                            device._direct_mode_set = True
+
+                        rgb = [RGBColor(r, g, b) for r, g, b in colors]
+                        device.set_colors(rgb)
+                        return True
+                    except Exception as exc:
+                        print(f"[OpenRGBManager] apply_direct_colors error ({device_key}): {exc}")
+                        return False
+        return False
+
+    # ── Reconnect support ──────────────────────────────────────────────────────
+
+    def reconnect(self, host: str, port: int) -> bool:
+        """Attempt to reconnect to OpenRGB with new or same host/port."""
+        try:
+            from openrgb import OpenRGBClient
+            new_client = OpenRGBClient(host, port)
+            self._client = new_client
+            self.devices.clear()
+            self._init_devices()
+            print(f"[OpenRGBManager] Reconnected to {host}:{port}")
+            return True
+        except Exception as exc:
+            print(f"[OpenRGBManager] Reconnect failed: {exc}")
+            return False

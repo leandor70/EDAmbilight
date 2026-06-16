@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>EDAmbilight</title>
+<link href="css/fonts.css" rel="stylesheet">
+<style>
+@font-face {
+    font-family:'Material Symbols Outlined'; font-style:normal; font-weight:100 700;
+    src:url('fonts/MaterialSymbolsOutlined.woff2') format('woff2'); font-display:block;
+}
+
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+
+:root {
+    --c-cyan:     #14F5FF;
+    --bg-base:    #040c14;
+    --ease-out:   cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-spring:cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+body {
+    background: var(--bg-base);
+    color: #CDD6E0;
+    font-family:'Rajdhani','Segoe UI',sans-serif;
+    display:flex; align-items:center; justify-content:center;
+    height:100vh; overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+}
+
+/* ── Atmospheric background ── */
+
+.bg-layer {
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+}
+.bg-orb-1 {
+    position:absolute;
+    width:700px; height:600px;
+    top:-100px; left:-150px;
+    background:radial-gradient(ellipse, rgba(20,245,255,.055) 0%, transparent 65%);
+    animation: orbDrift1 18s ease-in-out infinite alternate;
+}
+.bg-orb-2 {
+    position:absolute;
+    width:800px; height:500px;
+    bottom:-200px; right:-200px;
+    background:radial-gradient(ellipse, rgba(60,20,200,.040) 0%, transparent 65%);
+    animation: orbDrift2 22s ease-in-out infinite alternate;
+}
+.bg-orb-3 {
+    position:absolute;
+    width:400px; height:300px;
+    top:60%; left:55%;
+    background:radial-gradient(ellipse, rgba(20,245,255,.022) 0%, transparent 65%);
+    animation: orbDrift1 14s ease-in-out infinite alternate-reverse;
+}
+@keyframes orbDrift1 {
+    from { transform:translate(0,0) scale(1); }
+    to   { transform:translate(30px, 20px) scale(1.06); }
+}
+@keyframes orbDrift2 {
+    from { transform:translate(0,0) scale(1); }
+    to   { transform:translate(-25px, -15px) scale(1.04); }
+}
+
+/* SVG noise grain */
+.bg-grain {
+    position:fixed; inset:0; z-index:1; pointer-events:none;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size:200px 200px;
+    opacity:.022;
+}
+
+/* Scan lines */
+.scan {
+    position:fixed; left:0; right:0; height:1px; z-index:2; pointer-events:none;
+    background:linear-gradient(90deg,
+        transparent 0%, rgba(20,245,255,.04) 30%,
+        rgba(20,245,255,.08) 50%, rgba(20,245,255,.04) 70%, transparent 100%);
+    animation:scanLine 10s linear infinite;
+}
+.scan:nth-child(2) { animation-delay:5s; }
+@keyframes scanLine {
+    from { transform:translateY(-2px); opacity:0; }
+    5%   { opacity:1; }
+    95%  { opacity:1; }
+    to   { transform:translateY(100vh); opacity:0; }
+}
+
+/* ── Main container ── */
+
+.container {
+    position:relative; z-index:10;
+    display:flex; flex-direction:column; align-items:center;
+    text-align:center;
+    animation: containerFadeIn .8s var(--ease-out) both;
+}
+@keyframes containerFadeIn {
+    from { opacity:0; transform:translateY(10px); }
+    to   { opacity:1; transform:translateY(0); }
+}
+
+/* ── Logo ── */
+
+.logo-wrap {
+    position:relative;
+    width:160px; height:160px;
+    display:flex; align-items:center; justify-content:center;
+    margin-bottom:48px;
+}
+
+/* Sonar rings — 3 layers expanding */
+.sonar-ring {
+    position:absolute; border-radius:50%;
+    width:160px; height:160px;
+    border:1px solid rgba(20,245,255,.50);
+    animation:sonarExpand 3s var(--ease-out) infinite;
+}
+.sonar-ring:nth-child(2) { animation-delay:1s;   border-color:rgba(20,245,255,.30); }
+.sonar-ring:nth-child(3) { animation-delay:2s;   border-color:rgba(20,245,255,.15); }
+@keyframes sonarExpand {
+    0%   { transform:scale(.7); opacity:.75; }
+    100% { transform:scale(2.2); opacity:0; }
+}
+
+/* Double-bezel logo — outer ring */
+.logo-bezel {
+    position:relative; z-index:1;
+    width:130px; height:130px; border-radius:50%;
+    padding:3px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    box-shadow:0 0 0 1px rgba(0,0,0,.3), 0 0 60px rgba(20,245,255,.12);
+    display:flex; align-items:center; justify-content:center;
+}
+
+/* Logo core */
+.logo-core {
+    width:124px; height:124px; border-radius:50%;
+    border:1.5px solid rgba(20,245,255,.65);
+    background:radial-gradient(circle,
+        rgba(20,245,255,.10) 0%,
+        rgba(20,245,255,.04) 50%,
+        transparent 100%);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+    animation:coreGlow 2.5s ease-in-out infinite alternate;
+}
+@keyframes coreGlow {
+    from { box-shadow:0 0 24px rgba(20,245,255,.24), inset 0 0 16px rgba(20,245,255,.05); }
+    to   { box-shadow:0 0 56px rgba(20,245,255,.44), inset 0 0 32px rgba(20,245,255,.10); }
+}
+
+/* ── Title ── */
+
+.eyebrow {
+    font-size:9px; text-transform:uppercase; letter-spacing:.42em;
+    color:rgba(255,255,255,.22);
+    margin-bottom:10px;
+    animation: fadein .6s var(--ease-out) .3s both;
+}
+@keyframes fadein { from{opacity:0} to{opacity:1} }
+
+.title {
+    font-family:'Orbitron',monospace;
+    font-size:30px; font-weight:700;
+    letter-spacing:.28em; color:#fff;
+    display:flex; gap:0;
+}
+.title span {
+    display:inline-block; opacity:0;
+    animation:letterReveal .5s var(--ease-out) forwards;
+}
+@keyframes letterReveal {
+    from { opacity:0; transform:translateY(10px); filter:blur(3px); }
+    to   { opacity:1; transform:translateY(0);    filter:blur(0); }
+}
+
+.subtitle {
+    font-size:11px; text-transform:uppercase;
+    letter-spacing:.35em; color:rgba(255,255,255,.25);
+    margin-top:10px;
+    animation:fadein .8s var(--ease-out) 1.4s both;
+}
+
+/* ── Progress section ── */
+
+.progress-section {
+    margin-top:52px;
+    display:flex; flex-direction:column; align-items:center; gap:16px;
+    animation:fadein .7s var(--ease-out) .4s both;
+}
+
+.progress-outer {
+    width:320px; height:2px;
+    background:rgba(255,255,255,.06);
+    border-radius:1px; position:relative; overflow:visible;
+}
+.progress-fill {
+    height:100%; border-radius:1px;
+    background:linear-gradient(90deg, rgba(20,245,255,.6) 0%, var(--c-cyan) 100%);
+    box-shadow:0 0 12px rgba(20,245,255,.8);
+    width:0%;
+    transition:width .45s cubic-bezier(0.23, 1, 0.32, 1);
+    position:relative;
+}
+/* Glow dot at progress head */
+.progress-fill::after {
+    content:''; position:absolute; right:-5px; top:-4px;
+    width:10px; height:10px; border-radius:50%;
+    background:var(--c-cyan);
+    animation:glowDot 1.3s ease-in-out infinite;
+}
+@keyframes glowDot {
+    0%,100% { box-shadow:0 0 8px rgba(20,245,255,.9), 0 0 18px rgba(20,245,255,.5); }
+    50%     { box-shadow:0 0 14px rgba(20,245,255,1),  0 0 32px rgba(20,245,255,.8); }
+}
+
+.status-text {
+    font-size:11px; letter-spacing:.08em;
+    color:rgba(255,255,255,.22);
+    min-height:1.5em; transition:opacity .3s var(--ease-out);
+}
+.status-text.error { color:#F05454; }
+
+/* ── OpenRGB warning panel ── */
+.material-symbols-outlined {
+    font-family:'Material Symbols Outlined'; font-weight:normal; font-style:normal;
+    display:inline-block; line-height:1; letter-spacing:normal; white-space:nowrap;
+    font-variation-settings:'FILL' 0,'wght' 200,'GRAD' 0,'opsz' 24;
+}
+.orgb-warn {
+    margin-top:28px; width:380px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,176,46,.28);
+    border-radius:14px; padding:16px 18px;
+    text-align:left;
+    animation:containerFadeIn .5s var(--ease-out) both;
+}
+.orgb-head {
+    display:flex; align-items:center; gap:8px;
+    font-family:'Rajdhani',sans-serif; font-size:13px; font-weight:700;
+    letter-spacing:.10em; text-transform:uppercase; color:#FFB02E;
+}
+.orgb-head .material-symbols-outlined { font-size:18px; color:#FFB02E; }
+.orgb-detail {
+    margin-top:8px; font-size:12.5px; line-height:1.55;
+    color:rgba(255,255,255,.55); letter-spacing:.02em;
+}
+.orgb-actions { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+.orgb-btn {
+    font-family:'Rajdhani',sans-serif; font-size:11px; font-weight:700;
+    letter-spacing:.08em; text-transform:uppercase;
+    padding:6px 14px; border-radius:20px; cursor:pointer;
+    background:rgba(20,245,255,.10); color:rgba(20,245,255,.92);
+    border:1px solid rgba(20,245,255,.38);
+    transition:all .2s var(--ease-out);
+}
+.orgb-btn:hover { background:rgba(20,245,255,.20); box-shadow:0 0 12px rgba(20,245,255,.15); }
+.orgb-btn.ghost {
+    background:transparent; color:rgba(255,255,255,.45);
+    border-color:rgba(255,255,255,.16);
+}
+.orgb-btn.ghost:hover { color:#fff; border-color:rgba(255,255,255,.34); box-shadow:none; }
+.orgb-btn:disabled { opacity:.4; pointer-events:none; }
+</style>
+<script src="/eel.js"></script>
+</head>
+<body>
+
+
+<!-- Background -->
+<div class="bg-layer">
+    <div class="bg-orb-1"></div>
+    <div class="bg-orb-2"></div>
+    <div class="bg-orb-3"></div>
+</div>
+<div class="bg-grain"></div>
+<div class="scan"></div>
+<div class="scan"></div>
+
+<div class="container">
+
+    <!-- Logo -->
+    <div class="logo-wrap">
+        <div class="sonar-ring"></div>
+        <div class="sonar-ring"></div>
+        <div class="sonar-ring"></div>
+        <div class="logo-bezel">
+            <div class="logo-core">
+                <svg viewBox="0 0 56 56" fill="none" width="52" height="52">
+                    <!-- Screen glow bars -->
+                    <rect x="9"  y="20" width="38" height="3.5" rx="1.75" fill="#14F5FF"/>
+                    <rect x="9"  y="27" width="38" height="3.5" rx="1.75" fill="#14F5FF" opacity=".62"/>
+                    <rect x="9"  y="34" width="38" height="3.5" rx="1.75" fill="#14F5FF" opacity=".30"/>
+                    <!-- Monitor dot -->
+                    <circle cx="28" cy="13" r="5.5" stroke="#14F5FF" stroke-width="1.5" opacity=".85"/>
+                    <circle cx="28" cy="13" r="2"   fill="#14F5FF" opacity=".55"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Title -->
+    <div class="eyebrow">Ambient Lighting Controller</div>
+    <div class="title" id="title-letters"></div>
+    <div class="subtitle">OpenRGB · Screen Sampling · Real-time LEDs</div>
+
+    <!-- Progress -->
+    <div class="progress-section">
+        <div class="progress-outer">
+            <div id="progress" class="progress-fill"></div>
+        </div>
+        <div id="status" class="status-text">Initializing...</div>
+    </div>
+
+    <!-- OpenRGB warning -->
+    <div id="orgb-warn" class="orgb-warn" style="display:none">
+        <div class="orgb-head">
+            <span class="material-symbols-outlined">warning</span>
+            <span id="orgb-title">OpenRGB</span>
+        </div>
+        <div id="orgb-detail" class="orgb-detail"></div>
+        <div class="orgb-actions">
+            <button id="orgb-download" class="orgb-btn" style="display:none"
+                    onclick="window.open('https://openrgb.org','_blank')">Download OpenRGB</button>
+            <button id="orgb-retry" class="orgb-btn" onclick="retryOpenrgb()">Retry</button>
+            <button id="orgb-continue" class="orgb-btn ghost" onclick="continueAnyway()">Continue without LEDs</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const TITLE = 'EDAMBILIGHT';
+const wrap  = document.getElementById('title-letters');
+TITLE.split('').forEach((ch, i) => {
+    const s = document.createElement('span');
+    s.textContent = ch;
+    s.style.animationDelay = (.05 + i * .055) + 's';
+    wrap.appendChild(s);
+});
+
+const ORGB_TITLES = {
+    not_found:  'OpenRGB not installed',
+    no_server:  'OpenRGB SDK server is off',
+    uac_denied: 'Administrator permission denied',
+    timeout:    'SDK server did not respond',
+    remote:     'Remote OpenRGB unreachable',
+    disabled:   'OpenRGB auto-start disabled',
+    error:      'OpenRGB error',
+    retrying:   'Retrying...',
+};
+const ORGB_BAD = Object.keys(ORGB_TITLES);
+
+function showOpenrgbWarn(o) {
+    const warn = document.getElementById('orgb-warn');
+    warn.style.display = 'block';
+    document.getElementById('orgb-title').textContent  = ORGB_TITLES[o.state] || 'OpenRGB';
+    document.getElementById('orgb-detail').textContent = o.detail || '';
+    document.getElementById('orgb-download').style.display = o.state === 'not_found' ? '' : 'none';
+    const retrying = o.state === 'retrying';
+    document.getElementById('orgb-retry').disabled    = retrying;
+    document.getElementById('orgb-continue').disabled = retrying;
+}
+
+function retryOpenrgb()  { eel.retry_openrgb()(); }
+function continueAnyway() { window.location.href = 'index.html'; }
+
+function goReady() {
+    document.getElementById('progress').style.width = '100%';
+    setTimeout(() => { window.location.href = 'index.html'; }, 380);
+}
+
+async function poll() {
+    try {
+        const s = await eel.get_init_status()();
+        if (!s) { setTimeout(poll, 300); return; }
+        const pct = s.total > 0 ? Math.round((s.step / s.total) * 100) : 0;
+        document.getElementById('progress').style.width = pct + '%';
+        const statusEl = document.getElementById('status');
+        statusEl.textContent = s.message || '...';
+        if (s.error) {
+            statusEl.textContent = 'Error: ' + s.error;
+            statusEl.classList.add('error');
+            return;
+        }
+        if (s.ready) {
+            const o = s.openrgb || {};
+            if (ORGB_BAD.includes(o.state)) {
+                document.getElementById('progress').style.width = '100%';
+                statusEl.textContent = 'Ready — OpenRGB needs attention';
+                showOpenrgbWarn(o);
+                setTimeout(poll, 600);   // continua a osservare l'esito del retry
+                return;
+            }
+            document.getElementById('orgb-warn').style.display = 'none';
+            goReady();
+            return;
+        }
+    } catch(e) { /* eel not ready yet */ }
+    setTimeout(poll, 350);
+}
+poll();
+</script>
+</body>
+</html>

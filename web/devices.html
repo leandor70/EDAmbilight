@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EDAmbilight — Devices</title>
+<link href="css/tailwind.min.css" rel="stylesheet">
+<link href="css/fonts.css" rel="stylesheet">
+<link href="css/design-system.css" rel="stylesheet">
+<style>
+    @font-face {
+        font-family:'Material Symbols Outlined'; font-style:normal; font-weight:100 700;
+        src:url('fonts/MaterialSymbolsOutlined.woff2') format('woff2'); font-display:block;
+    }
+
+    body { opacity:0; transition:opacity .35s cubic-bezier(0.23,1,0.32,1); }
+    body.loaded { opacity:1; }
+
+    /* Device icon badge */
+    .dev-icon-wrap {
+        width:40px; height:40px; flex-shrink:0;
+        border:1px solid rgba(20,245,255,.14); border-radius:10px;
+        display:flex; align-items:center; justify-content:center;
+        background:rgba(20,245,255,.03);
+        transition:all .25s cubic-bezier(0.23,1,0.32,1);
+    }
+    .panel:hover .dev-icon-wrap,
+    .sci-fi-border:hover .dev-icon-wrap {
+        border-color:rgba(20,245,255,.32);
+        background:rgba(20,245,255,.07);
+    }
+
+    /* Flash button pulse */
+    @keyframes flashPulse {
+        0%  { box-shadow: 0 0 6px rgba(20,245,255,.4); }
+        50% { box-shadow: 0 0 24px rgba(20,245,255,.9); }
+        100%{ box-shadow: 0 0 6px rgba(20,245,255,.4); }
+    }
+    .btn.flashing { animation: flashPulse .6s ease-in-out 3; }
+</style>
+<script src="/eel.js"></script>
+<script src="js/common.js"></script>
+</head>
+<body class="h-screen w-full relative flex">
+
+<!-- Atmospheric background -->
+<div class="ds-bg">
+    <div class="ds-bg-glow"></div>
+    <div class="ds-grain"></div>
+    <div class="ds-scan"></div>
+    <div class="ds-scan"></div>
+</div>
+
+<!-- Sidebar -->
+<div id="sidebar-nav" data-active-page="devices"></div>
+
+<!-- Main -->
+<main class="relative z-10 flex-1 flex flex-col h-full overflow-hidden">
+
+    <!-- Header -->
+    <header style="
+        padding:14px 28px 10px; flex-shrink:0;
+        display:flex; align-items:center; gap:10px;
+        border-bottom:1px solid rgba(255,255,255,.04);
+    ">
+        <div class="ds-title-line" style="width:28px;"></div>
+        <span class="orbitron" style="font-size:.9rem;font-weight:700;letter-spacing:.34em;color:#fff;">DEVICES</span>
+        <div class="ds-title-line rev" style="width:28px;"></div>
+        <span style="font-size:8px;text-transform:uppercase;letter-spacing:.28em;color:rgba(255,255,255,.18);padding-left:6px;">OpenRGB Hardware</span>
+    </header>
+
+    <div class="flex-1 overflow-y-auto" style="padding:14px 20px 20px;">
+
+        <!-- Stat panels -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;">
+
+            <div class="panel ds-appear" style="animation-delay:.05s;">
+                <div class="panel-body" style="padding:16px 18px;">
+                    <div class="ds-label" style="margin-bottom:8px;">Total Devices</div>
+                    <div id="stat-total" class="orbitron" style="font-size:2.1rem;font-weight:700;color:var(--c-cyan);line-height:1;">—</div>
+                </div>
+            </div>
+
+            <div class="panel ds-appear" style="animation-delay:.11s;">
+                <div class="panel-body" style="padding:16px 18px;">
+                    <div class="ds-label" style="margin-bottom:8px;">With Topology</div>
+                    <div id="stat-topo" class="orbitron" style="font-size:2.1rem;font-weight:700;color:rgba(255,255,255,.45);line-height:1;">—</div>
+                </div>
+            </div>
+
+            <div class="panel ds-appear" style="animation-delay:.17s;">
+                <div class="panel-body" style="padding:16px 18px;flex-direction:row;align-items:center;justify-content:space-between;">
+                    <div>
+                        <div class="ds-label" style="margin-bottom:4px;">Actions</div>
+                        <div style="font-size:10px;color:var(--c-text-ghost);">Flash to identify</div>
+                    </div>
+                    <button class="btn" id="btn-flash-all" onclick="flashAll()">
+                        <span class="material-symbols-outlined" style="font-size:16px;">bolt</span>
+                        Flash All
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Device list -->
+        <div id="device-list" class="space-y-2">
+            <div style="text-align:center;padding:56px 0;color:var(--c-text-dim);">
+                Loading devices...
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<script src="js/navigation.js"></script>
+<script>
+'use strict';
+
+let _devices = [];
+
+window.addEventListener('load', async () => {
+    document.body.classList.add('loaded');
+    await loadDevices();
+});
+
+async function loadDevices() {
+    const devs = await api('get_ambilight_devices');
+    _devices   = devs || [];
+    renderDevices(_devices);
+}
+
+function renderDevices(devs) {
+    const container = document.getElementById('device-list');
+    const withTopo  = devs.filter(d => d.has_topology).length;
+
+    document.getElementById('stat-total').textContent = devs.length || '0';
+    document.getElementById('stat-topo').textContent  = withTopo;
+
+    if (!devs.length) {
+        container.innerHTML = `
+            <div class="panel" style="margin-top:8px;">
+                <div class="panel-body" style="padding:48px;align-items:center;gap:12px;">
+                    <span class="material-symbols-outlined"
+                          style="font-size:44px;color:var(--c-text-ghost);">device_hub</span>
+                    <div style="color:var(--c-text-dim);font-size:.9rem;">No devices found.</div>
+                    <div style="color:var(--c-text-ghost);font-size:.78rem;">
+                        Make sure OpenRGB is running and connected.
+                    </div>
+                </div>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = devs.map((dev, idx) => {
+        const tType = dev.topology_type || 'single';
+        const badgeClass = tType === 'linear' ? 'badge-linear'
+                         : tType === 'matrix'  ? 'badge-matrix' : 'badge-single';
+        const iconName = tType === 'matrix'  ? 'keyboard'
+                       : tType === 'linear'  ? 'linear_scale'
+                       : 'fiber_manual_record';
+        const iconColor = tType === 'matrix'  ? 'rgba(167,139,250,.65)'
+                        : tType === 'linear'  ? 'rgba(20,245,255,.60)'
+                        : 'rgba(255,255,255,.28)';
+        const topoEl = dev.has_topology
+            ? `<span class="has-topology">${dev.zone_count} zone${dev.zone_count !== 1 ? 's' : ''}</span>`
+            : `<span class="no-topology">No topology</span>`;
+
+        return `
+        <div class="panel device-card ds-appear" id="dev-card-${idx}"
+             style="animation-delay:${.06 + idx * .05}s;${dev.enabled === false ? 'opacity:.45;' : ''}">
+            <div class="panel-body" style="padding:14px 18px;flex-direction:row;align-items:center;gap:16px;">
+                <div class="dev-icon-wrap">
+                    <span class="material-symbols-outlined"
+                          style="font-size:20px;color:${iconColor};">${iconName}</span>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-weight:700;font-size:14px;color:rgba(255,255,255,.88);
+                                white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:5px;">
+                        ${escapeHtml(dev.name)}
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <span class="badge ${badgeClass}">${tType}</span>
+                        <span style="font-size:12px;color:var(--c-text-dim);">${dev.led_count} LED</span>
+                        ${topoEl}
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;">
+                    <label class="glass-toggle-container" onclick="event.stopPropagation()" title="Include in ambilight lighting">
+                        <input type="checkbox" class="glass-toggle-input"
+                               ${dev.enabled !== false ? 'checked' : ''}
+                               onchange="toggleDevice('${escapeAttr(dev.device_key)}', this.checked, ${idx})">
+                        <div class="glass-toggle-track"><div class="glass-toggle-thumb"></div></div>
+                    </label>
+                    ${tType === 'linear' ? `
+                    <a href="topology-editor.html" class="btn" style="font-size:11px;padding:6px 12px;">
+                        <span class="material-symbols-outlined" style="font-size:14px;">hub</span>
+                        Edit topology
+                    </a>` : ''}
+                    <button class="btn" style="font-size:11px;padding:6px 12px;"
+                            id="flash-btn-${idx}"
+                            onclick="flashDevice('${escapeAttr(dev.device_key)}', ${idx})">
+                        <span class="material-symbols-outlined" style="font-size:14px;">bolt</span>
+                        Flash
+                    </button>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function toggleDevice(deviceKey, enabled, idx) {
+    const dev = _devices.find(d => d.device_key === deviceKey);
+    if (dev) dev.enabled = enabled;
+    const card = document.getElementById('dev-card-' + idx);
+    if (card) card.style.opacity = enabled ? '' : '.45';
+    try {
+        await api('set_ambilight_device_enabled', deviceKey, enabled);
+        showNotification(enabled ? 'Device enabled' : 'Device disabled', 'info', 1800);
+    } catch(e) {
+        if (dev) dev.enabled = !enabled;
+        if (card) card.style.opacity = !enabled ? '' : '.45';
+        const toggle = card && card.querySelector('.glass-toggle-input');
+        if (toggle) toggle.checked = !enabled;
+    }
+}
+
+async function flashDevice(deviceKey, idx) {
+    showNotification('Flashing: ' + deviceKey.split('::')[0], 'info', 1800);
+    const btn = document.getElementById('flash-btn-' + idx);
+    if (btn) { btn.classList.add('flashing'); setTimeout(() => btn.classList.remove('flashing'), 1900); }
+    await api('flash_topology_device', deviceKey);
+}
+
+async function flashAll() {
+    const btn = document.getElementById('btn-flash-all');
+    if (btn) { btn.classList.add('flashing'); setTimeout(() => btn.classList.remove('flashing'), 2000); }
+    for (const dev of _devices) {
+        await api('flash_topology_device', dev.device_key);
+        await new Promise(r => setTimeout(r, 200));
+    }
+}
+</script>
+</body>
+</html>
