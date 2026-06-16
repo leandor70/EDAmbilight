@@ -1,5 +1,6 @@
 """Settings management for EDAmbilight."""
 import json
+import os
 from pathlib import Path
 
 
@@ -18,9 +19,11 @@ class Settings:
         return {}
 
     def _save(self):
-        self.config_file.write_text(
+        tmp = self.config_file.with_suffix(".json.tmp")
+        tmp.write_text(
             json.dumps(self.settings, indent=2, ensure_ascii=False), encoding="utf-8"
         )
+        os.replace(str(tmp), str(self.config_file))
 
     def get_openrgb_host(self) -> str:
         return self.settings.get("openrgb_host", "localhost")

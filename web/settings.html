@@ -210,13 +210,18 @@ function setConnStatus(state, text) {
         <span style="color:var(--c-text-mid);">${escapeHtml(text)}</span>`;
 }
 
+function _parsePort(id, min, max) {
+    const v = parseInt(document.getElementById(id).value);
+    return (!isNaN(v) && v >= min && v <= max) ? v : null;
+}
+
 async function testConnection() {
     const host = document.getElementById('inp-host').value.trim();
-    const port = parseInt(document.getElementById('inp-port').value);
+    const port = _parsePort('inp-port', 1, 65535);
+    if (!port) { setConnStatus('err', 'Invalid port (1–65535)'); return; }
     setConnStatus('nul', 'Testing...');
     try {
-        await api('save_settings', { openrgb_host: host, openrgb_port: port });
-        const r = await api('reconnect_openrgb');
+        const r = await api('test_openrgb_connection', host, port);
         if (r.ok) {
             setConnStatus('ok', `Connected — ${r.devices} device(s)`);
             showNotification('OpenRGB connected!', 'success');
@@ -231,7 +236,8 @@ async function testConnection() {
 
 async function saveAndReconnect() {
     const host = document.getElementById('inp-host').value.trim();
-    const port = parseInt(document.getElementById('inp-port').value);
+    const port = _parsePort('inp-port', 1, 65535);
+    if (!port) { setConnStatus('err', 'Invalid port (1–65535)'); showNotification('Invalid port number', 'error'); return; }
     await api('save_settings', { openrgb_host: host, openrgb_port: port });
     const r = await api('reconnect_openrgb');
     if (r.ok) {
@@ -244,7 +250,8 @@ async function saveAndReconnect() {
 }
 
 async function saveWebPort() {
-    const port = parseInt(document.getElementById('inp-webport').value);
+    const port = _parsePort('inp-webport', 1024, 65535);
+    if (!port) { showNotification('Invalid port (1024–65535)', 'error'); return; }
     await api('save_settings', { web_port: port });
     showNotification('Web port saved. Restart app to apply.', 'info');
 }

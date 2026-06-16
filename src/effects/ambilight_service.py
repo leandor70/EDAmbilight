@@ -126,6 +126,26 @@ def _boost_saturation(
     return result
 
 
+def _sample_area_point(
+    frame: np.ndarray,
+    x_pct: float,
+    y_pct: float,
+    strategy: str,
+    radius_pct: float = 0.18,
+) -> Tuple[int, int, int]:
+    """Sample a screen area at (x_pct, y_pct) in [0,1]x[0,1] coordinates."""
+    h, w = frame.shape[:2]
+    cx = int(w * x_pct)
+    cy = int(h * y_pct)
+    r  = max(1, int(min(h, w) * radius_pct))
+    x0, x1 = max(0, cx - r), min(w, cx + r)
+    y0, y1 = max(0, cy - r), min(h, cy + r)
+    patch = frame[y0:y1, x0:x1, :3].astype(np.float32)
+    # No HSV conversion for area patches — use brightness-based percentile
+    eff = "adaptive_smooth" if strategy in ("hsv", "adaptive", "adaptive_smooth") else strategy
+    return _sample_segment(patch, eff)
+
+
 # ── Black-border detection ────────────────────────────────────────────────────
 
 _BB_STEP     = 8      # passo di sottocampionamento del probe
@@ -270,10 +290,10 @@ def build_device_zones(device_key: str) -> Tuple[List[dict], int]:
     if not all_zones:
         return [], 0
 
-    offset_map: Dict[int, int] = {}
+    zone_offsets: List[int] = []
     off = 0
     for zone in all_zones:
-        offset_map[zone["zone_index"]] = off
+        zone_offsets.append(off)
         off += zone["led_count"]
     total_leds = off
 
@@ -288,7 +308,7 @@ def build_device_zones(device_key: str) -> Tuple[List[dict], int]:
         mon_x_min, mon_x_max, mon_y_min, mon_y_max = 0.0, 100.0, 0.0, 100.0
 
     result: List[dict] = []
-    for zone in all_zones:
+    for z_idx, zone in enumerate(all_zones):
         name = zone.get("name", "")
         if name not in _ZONE_SCREEN_MAP:
             continue
@@ -326,13 +346,59 @@ def build_device_zones(device_key: str) -> Tuple[List[dict], int]:
             "name":         name,
             "zone_index":   zone["zone_index"],
             "led_count":    zone["led_count"],
-            "led_offset":   offset_map[zone["zone_index"]],
+            "led_offset":   zone_offsets[z_idx],
             "led_start":    led_start,
             "led_end":      led_end,
             "screen_start": screen_start,
             "screen_end":   screen_end,
             "edge":         edge,
             "reversed":     mapping["reversed"],
+        })
+
+    # Non-Monitor zones: sample screen area proportional to canvas position.
+    # Use global scene bounds (all devices) so positions are consistent.
+    all_scene_pts = [
+        pt
+        for _, topo in data.get("topologies", {}).items()
+        for z in topo.get("zones", [])
+        for pt in _led_world_positions(z)
+    ]
+    if all_scene_pts:
+        scene_x_min = min(p[0] for p in all_scene_pts)
+        scene_x_max = max(p[0] for p in all_scene_pts)
+        scene_y_min = min(p[1] for p in all_scene_pts)
+        scene_y_max = max(p[1] for p in all_scene_pts)
+    else:
+        scene_x_min, scene_x_max, scene_y_min, scene_y_max = 0.0, 100.0, 0.0, 100.0
+
+    span_x = max(0.001, scene_x_max - scene_x_min)
+    span_y = max(0.001, scene_y_max - scene_y_min)
+
+    for z_idx, zone in enumerate(all_zones):
+        name = zone.get("name", "")
+        if name in _ZONE_SCREEN_MAP:
+            continue
+
+        led_pts = _led_world_positions(zone)
+        if not led_pts:
+            continue
+
+        x_avg = sum(p[0] for p in led_pts) / len(led_pts)
+        y_avg = sum(p[1] for p in led_pts) / len(led_pts)
+
+        result.append({
+            "name":         name,
+            "zone_index":   zone["zone_index"],
+            "led_count":    zone["led_count"],
+            "led_offset":   zone_offsets[z_idx],
+            "led_start":    0,
+            "led_end":      zone["led_count"],
+            "screen_start": 0.0,
+            "screen_end":   1.0,
+            "edge":         "area",
+            "x_pct":        max(0.0, min(1.0, (x_avg - scene_x_min) / span_x)),
+            "y_pct":        max(0.0, min(1.0, (y_avg - scene_y_min) / span_y)),
+            "reversed":     False,
         })
 
     return result, total_leds
@@ -599,6 +665,22 @@ class AmbilightService:
                 active    = led_end - led_start
                 off       = zone["led_offset"] + led_start
                 zone_key  = f"{device_key}:{zone['name']}"
+
+                if zone["edge"] == "area":
+                    color = _sample_area_point(
+                        frame, zone["x_pct"], zone["y_pct"], strategy
+                    )
+                    if strategy != "hsv":
+                        color = _boost_saturation([color], sat_boost)[0]
+                    zone_colors = [color] * active
+                    if strategy in ("smooth", "adaptive_smooth"):
+                        zone_colors = _apply_temporal_smooth(
+                            self._prev_colors, zone_key, zone_colors,
+                            alpha=cfg.get("ema_alpha", 0.35),
+                            cut_threshold=cfg.get("scene_cut", 60.0),
+                        )
+                    colors[off: off + active] = zone_colors
+                    continue
 
                 zone_colors = _sample_edge(
                     frame,

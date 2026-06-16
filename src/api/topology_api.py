@@ -326,7 +326,7 @@ def reload_device_from_openrgb(device_id: str) -> dict:
                 upd = existing.copy()
                 upd["led_count"] = new_count
                 upd["name"]      = oz["name"]
-                upd["color"]     = ZONE_COLORS[oz["zone_index"] % len(ZONE_COLORS)]
+                upd["color"]     = existing.get("color", ZONE_COLORS[oz["zone_index"] % len(ZONE_COLORS)])
                 upd.setdefault("position",    {"x": 0, "y": oz["zone_index"]})
                 upd.setdefault("rotation",    0)
                 upd.setdefault("direction",   "forward")
@@ -428,7 +428,8 @@ def flash_topology_device(device_id: str) -> dict:
         return {"success": False, "error": str(e)}
 
 
-def _calibration_loop(device_led_data: list, stop_event: threading.Event, blink_config: dict) -> None:
+def _calibration_loop(device_led_data: list, stop_event: threading.Event,
+                      blink_config: dict, write_lock: threading.Lock = None) -> None:
     RING_COLORS = [(255, 255, 255), (255, 60, 60), (80, 140, 255), (60, 210, 70)]
     COLOR_KEYS  = ["white", "red", "blue", "green"]
 
@@ -465,7 +466,11 @@ def _calibration_loop(device_led_data: list, stop_event: threading.Event, blink_
                         c = base
                 colors[hw_idx] = RGBColor(*c)
             try:
-                ctrl.topology.device.set_colors(colors)
+                if write_lock is not None:
+                    with write_lock:
+                        ctrl.topology.device.set_colors(colors)
+                else:
+                    ctrl.topology.device.set_colors(colors)
             except Exception:
                 pass
 
@@ -539,10 +544,11 @@ def test_topology_calibration(effect_center: dict, ring_spacing: float,
             is_ctr   = (ctrl, hw_idx) == center_key
             led_data.append((ctrl, hw_idx, ring_idx, is_ctr))
 
+        write_lock = _openrgb_manager._lock if _openrgb_manager is not None else None
         _calib_stop  = threading.Event()
         _calib_thread = threading.Thread(
             target=_calibration_loop,
-            args=(led_data, _calib_stop, blink_config),
+            args=(led_data, _calib_stop, blink_config, write_lock),
             daemon=True, name="TopologyCalibration",
         )
         _calib_thread.start()

@@ -100,7 +100,8 @@ def _retry_openrgb_worker():
     try:
         boot = ensure_openrgb(
             _settings_ref,
-            status_cb=lambda m: _init_status["openrgb"].update({"detail": m}),
+            status_cb=lambda m: _init_status["openrgb"].update({"detail": m})
+                if isinstance(_init_status.get("openrgb"), dict) else None,
         )
     except Exception as e:
         boot = {"state": "error", "detail": str(e)}
@@ -230,7 +231,7 @@ def main():
         port=web_port,
         mode=None,
         block=False,
-        shutdown_delay=30,
+        shutdown_delay=0,
         close_callback=_on_browser_close,
     )
 

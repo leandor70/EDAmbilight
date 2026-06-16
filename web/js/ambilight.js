@@ -17,6 +17,15 @@ window.addEventListener('load', async () => {
 
     applyConfig(_cfg);
     renderDevices(_devs, _cfg);
+
+    // Carica zone per device già abilitati (dopo renderDevices, _devs è già popolato)
+    for (const dev of _devs) {
+        const devCfg = (_cfg.devices || {})[dev.device_key] || {};
+        if (devCfg.enabled && dev.has_topology) {
+            await loadDeviceZones(dev.device_key);
+        }
+    }
+
     pollStatus();
     setInterval(pollStatus, 800);
 });
@@ -182,8 +191,7 @@ function toggleDevice(deviceKey, enable, btnEl) {
     if (btn) {
         btn.classList.toggle('enabled', enable);
         btn.title = (enable ? 'Disabilita' : 'Abilita') + ' per ambilight';
-        btn.setAttribute('onclick',
-            `toggleDevice('${escapeAttr(deviceKey)}', ${!enable}, this)`);
+        btn.onclick = () => toggleDevice(deviceKey, !enable, btn);
 
         const ripple = document.createElement('span');
         ripple.className = 'dev-power-ripple';
@@ -278,14 +286,3 @@ function updateStatusBadge(active) {
     }
 }
 
-// Carica zone per device già abilitati all'avvio
-window.addEventListener('load', () => {
-    setTimeout(async () => {
-        for (const dev of _devs) {
-            const devCfg = (_cfg.devices || {})[dev.device_key] || {};
-            if (devCfg.enabled && dev.has_topology) {
-                await loadDeviceZones(dev.device_key);
-            }
-        }
-    }, 300);
-});

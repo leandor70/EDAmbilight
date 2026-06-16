@@ -357,9 +357,17 @@ class ScreenCapturerService:
         return _use_mss()
 
     def _switch_capturer(self, fps: int, preferred: str) -> None:
-        old            = self._capturer
-        new            = self._make_capturer(fps, preferred)
-        self._capturer = new
+        new = self._make_capturer(fps, preferred)  # slow — outside lock
+        with self._lock:
+            if self._capturer is None:
+                # stop() was called while we were initialising the new capturer
+                try:
+                    new.stop()
+                except Exception:
+                    pass
+                return
+            old            = self._capturer
+            self._capturer = new
         if old is not None:
             try:
                 old.stop()

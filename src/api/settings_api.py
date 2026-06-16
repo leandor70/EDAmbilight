@@ -83,11 +83,26 @@ def reconnect_openrgb() -> dict:
         new_manager     = OpenRGBManager(client)
         _openrgb_manager = new_manager
 
+        # Aggiorna il riferimento al manager nel service in esecuzione
+        if _ambilight_service is not None:
+            _ambilight_service._manager = new_manager
+
         init_ambilight_api(_ambilight_service, new_manager)
         init_topology_api(new_manager, _ambilight_service)
 
         return {"ok": True, "devices": len(new_manager.devices)}
 
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+@eel.expose
+def test_openrgb_connection(host: str, port: int) -> dict:
+    """Test connectivity to OpenRGB without saving settings."""
+    try:
+        from openrgb import OpenRGBClient
+        client = OpenRGBClient(host, int(port))
+        return {"ok": True, "devices": len(client.devices)}
     except Exception as exc:
         return {"ok": False, "error": str(exc)}
 

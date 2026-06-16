@@ -61,12 +61,11 @@ class OpenRGBManager:
 
     @staticmethod
     def _detect_topology(device) -> TopologyType:
-        """Heuristic: if name contains 'keyboard' or has many LEDs in matrix → MATRIX."""
+        """Heuristic: keyword-based keyboard detection only — no LED-count threshold."""
         name_lower = device.name.lower()
         if any(k in name_lower for k in ("keyboard", "k7", "k55", "k70", "k95",
                                           "apex", "huntsman", "blackwidow")):
-            return TopologyType.MATRIX
-        if len(device.leds) > 100:
+            print(f"[OpenRGBManager] '{device.name}' → MATRIX (keyboard heuristic)")
             return TopologyType.MATRIX
         if len(device.leds) > 1:
             return TopologyType.LINEAR
@@ -96,9 +95,9 @@ class OpenRGBManager:
                         if not getattr(device, '_direct_mode_set', False):
                             try:
                                 device.set_mode('direct')
+                                device._direct_mode_set = True
                             except Exception:
                                 pass
-                            device._direct_mode_set = True
 
                         rgb = [RGBColor(r, g, b) for r, g, b in colors]
                         device.set_colors(rgb)
