@@ -173,18 +173,18 @@ Configuration files are stored in the `config/` folder next to the exe and are c
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  Screen Capture  (WGC → DXGI → mss, auto-selected)             │
-│         ↓                                                        │
-│  Black Bar Detection  →  content rect [x0,y0,x1,y1]            │
-│         ↓                                                        │
+│  Screen Capture  (WGC → DXGI → mss, auto-selected)              │
+│         ↓                                                       │
+│  Black Bar Detection  →  content rect [x0,y0,x1,y1]             │
+│         ↓                                                       │
 │  Per-Edge Strip Extraction  (adaptive or fixed depth)           │
-│         ↓                                                        │
+│         ↓                                                       │
 │  Per-LED Segment Sampling  (percentile / dominant / mean)       │
-│         ↓                                                        │
-│  Saturation Boost                                                │
-│         ↓                                                        │
+│         ↓                                                       │
+│  Saturation Boost                                               │
+│         ↓                                                       │
 │  Temporal Smoothing (EMA)  ←→  Scene-Cut Bypass                 │
-│         ↓                                                        │
+│         ↓                                                       │
 │  OpenRGB SDK  →  LED Strip / Mouse / Headset / RAM / Motherboard│
 └─────────────────────────────────────────────────────────────────┘
 ```
