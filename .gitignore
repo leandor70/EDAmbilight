@@ -16,6 +16,10 @@ build/
 build/
 dist/
 
+# Release packages — distributed via GitHub Releases, never committed
+*.zip
+*.zip.sha256
+
 # Runtime data
 config/settings.json
 config/ambilight_config.json

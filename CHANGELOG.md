@@ -6,6 +6,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.0.1] — 2026-06-21
+
+### Fixed
+
+- Resolved "Number of colors doesn't match number of LEDs" error: color counts
+  sent to a device are now reconciled with the LED count reported by the
+  hardware (padded with black or truncated as needed).
+
+### Added
+
+- Topology validation on zone load: a warning is logged once per device when
+  the LED count declared in `device_topologies.json` does not match the
+  hardware, pointing to the stale config entry.
+
+---
+
 ## [1.0.0] — 2026-06-16
 
 ### Added

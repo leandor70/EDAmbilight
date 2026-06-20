@@ -422,6 +422,7 @@ class AmbilightService:
         self._actual_fps: float = 0.0
         self._paused: bool = False
         self._zone_cache: Dict[str, Tuple[List[dict], int]] = {}
+        self._topology_warned: set = set()
         # Black-border detection: None = schermo intero
         self._bb_rect:        Optional[Tuple[int, int, int, int]] = None
         self._bb_candidate:   Optional[Tuple[int, int, int, int]] = None
@@ -570,11 +571,33 @@ class AmbilightService:
 
     def refresh_zones(self, device_key: str) -> None:
         self._zone_cache.pop(device_key, None)
+        self._topology_warned.discard(device_key)
 
     def get_device_zones(self, device_key: str) -> Tuple[List[dict], int]:
         if device_key not in self._zone_cache:
-            self._zone_cache[device_key] = build_device_zones(device_key)
+            zones, total_leds = build_device_zones(device_key)
+            self._validate_topology(device_key, total_leds)
+            self._zone_cache[device_key] = (zones, total_leds)
         return self._zone_cache[device_key]
+
+    def _validate_topology(self, device_key: str, total_leds: int) -> None:
+        """Warn (once per device) when the LED count from the topology config
+        does not match the count reported by the hardware. The mismatch is
+        handled gracefully downstream (apply_direct_colors pads/truncates),
+        but it usually signals a stale config/device_topologies.json entry."""
+        if not self._manager or total_leds <= 0:
+            return
+        hw_led_count = self._manager.get_device_led_count(device_key)
+        if hw_led_count is None or hw_led_count == total_leds:
+            return
+        if device_key in self._topology_warned:
+            return
+        self._topology_warned.add(device_key)
+        print(
+            f"[AmbilightService] Topology mismatch for '{device_key}': config "
+            f"declares {total_leds} LEDs but hardware reports {hw_led_count}. "
+            f"Colors will be padded/truncated; check config/device_topologies.json."
+        )
 
     # ── Idle loop ─────────────────────────────────────────────────────────────
 

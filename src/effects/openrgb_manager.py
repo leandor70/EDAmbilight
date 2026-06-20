@@ -79,6 +79,15 @@ class OpenRGBManager:
     def is_effect_playing(self) -> bool:
         return False
 
+    def get_device_led_count(self, device_key: str) -> Optional[int]:
+        """Return the LED count reported by the hardware for a device_key,
+        or None if no matching device is currently enrolled."""
+        with self._lock:
+            for ctrl in self.devices:
+                if self._make_device_key(ctrl) == device_key:
+                    return len(ctrl.topology.device.leds)
+        return None
+
     def apply_direct_colors(
         self,
         device_key: str,
@@ -98,6 +107,18 @@ class OpenRGBManager:
                                 device._direct_mode_set = True
                             except Exception:
                                 pass
+
+                        # Reconcile color count with the actual LED count
+                        # reported by the hardware. The topology config may be
+                        # stale/misaligned (e.g. device reports a different LED
+                        # count), so pad with black or truncate to avoid the
+                        # "Number of colors doesn't match number of LEDs" error.
+                        hw_led_count = len(device.leds)
+                        if len(colors) != hw_led_count:
+                            if len(colors) < hw_led_count:
+                                colors = colors + [(0, 0, 0)] * (hw_led_count - len(colors))
+                            else:
+                                colors = colors[:hw_led_count]
 
                         rgb = [RGBColor(r, g, b) for r, g, b in colors]
                         device.set_colors(rgb)
