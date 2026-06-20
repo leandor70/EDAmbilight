@@ -6,6 +6,41 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.0.2] — 2026-06-21
+
+### Fixed
+
+- Topology calibration no longer crashes with `IndexError` when the saved
+  topology declares more LEDs than the hardware reports — out-of-range LED
+  indices are skipped (same root cause as the 1.0.1 color-count fix).
+- Devices that share the same name (e.g. two identical Corsair RAM modules)
+  no longer collide on a single device key. They previously mapped to one
+  key, so one module was unreachable and its topology zones were duplicated
+  in the editor. Duplicates now get a `#N` suffix; the first occurrence keeps
+  the bare key, so existing single-device configs are unaffected.
+- Physical LEDs now match the calibration overlay drawn in the editor. The
+  ring color of each LED was computed twice (canvas in JS, hardware in
+  Python) with diverging geometry — different ring center, a half-LED
+  positional offset, and limited rotation handling — so physical LEDs lit
+  up differently from the drawing. The editor canvas is now the single
+  source of truth: it sends the per-LED ring map to the backend, which just
+  applies it.
+
+### Changed
+
+- Calibration and device identification now fully suspend the ambilight so
+  they render correctly without the sampling loop fighting them: `pause()`
+  blacks out every managed device, the sampling loop skips a write if a pause
+  arrives mid-frame, and `flash_topology_device` pauses sampling and
+  serializes its writes through the device lock.
+- Leaving the topology editor (page navigation or window close) now stops an
+  active calibration automatically, instead of leaving its thread driving the
+  LEDs with the ambilight stuck paused. Handled both client-side (`pagehide`)
+  and reliably server-side via the browser close callback; stopping is a
+  no-op when no calibration is running, so normal navigation is undisturbed.
+
+---
+
 ## [1.0.1] — 2026-06-21
 
 ### Fixed
