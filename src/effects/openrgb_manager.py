@@ -34,6 +34,9 @@ class DeviceController:
             topology_type=topology_type,
             led_count=len(device.leds),
         )
+        # Assigned by OpenRGBManager._assign_device_keys() — disambiguates
+        # devices that share the same name (e.g. two identical RAM modules).
+        self.device_key: str = ""
 
 
 class OpenRGBManager:
@@ -56,8 +59,25 @@ class OpenRGBManager:
             topo = self._detect_topology(device)
             if topo != TopologyType.MATRIX:
                 self.devices.append(DeviceController(device, topo))
+        self._assign_device_keys()
         print(f"[OpenRGBManager] {len(self.devices)} devices enrolled "
               f"({len(self._client.devices)} total from OpenRGB)")
+
+    def _assign_device_keys(self) -> None:
+        """Give each device a stable key. Devices sharing the same name+type
+        (e.g. two identical RAM modules) would otherwise collide on one key,
+        making one of them unreachable and duplicating its topology zones.
+        The first occurrence keeps the bare 'name::type' key (backward
+        compatible); each further duplicate gets a '#N' suffix."""
+        seen: dict = {}
+        for ctrl in self.devices:
+            base = f"{ctrl.topology.device.name}::{ctrl.topology.topology_type.value}"
+            n = seen.get(base, 0)
+            seen[base] = n + 1
+            ctrl.device_key = base if n == 0 else f"{base}#{n + 1}"
+            if n > 0:
+                print(f"[OpenRGBManager] Duplicate device name '{ctrl.topology.device.name}' "
+                      f"→ key '{ctrl.device_key}'")
 
     @staticmethod
     def _detect_topology(device) -> TopologyType:
@@ -74,7 +94,9 @@ class OpenRGBManager:
     # ── Interface (compatible with AmbilightService) ───────────────────────────
 
     def _make_device_key(self, ctrl: DeviceController) -> str:
-        return f"{ctrl.topology.device.name}::{ctrl.topology.topology_type.value}"
+        return ctrl.device_key or (
+            f"{ctrl.topology.device.name}::{ctrl.topology.topology_type.value}"
+        )
 
     def is_effect_playing(self) -> bool:
         return False

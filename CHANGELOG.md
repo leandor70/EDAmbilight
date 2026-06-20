@@ -13,6 +13,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Topology calibration no longer crashes with `IndexError` when the saved
   topology declares more LEDs than the hardware reports — out-of-range LED
   indices are skipped (same root cause as the 1.0.1 color-count fix).
+- Devices that share the same name (e.g. two identical Corsair RAM modules)
+  no longer collide on a single device key. They previously mapped to one
+  key, so one module was unreachable and its topology zones were duplicated
+  in the editor. Duplicates now get a `#N` suffix; the first occurrence keeps
+  the bare key, so existing single-device configs are unaffected.
 - Physical LEDs now match the calibration overlay drawn in the editor. The
   ring color of each LED was computed twice (canvas in JS, hardware in
   Python) with diverging geometry — different ring center, a half-LED
