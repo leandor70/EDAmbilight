@@ -13,6 +13,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Topology calibration no longer crashes with `IndexError` when the saved
   topology declares more LEDs than the hardware reports — out-of-range LED
   indices are skipped (same root cause as the 1.0.1 color-count fix).
+- Physical LEDs now match the calibration overlay drawn in the editor. The
+  ring color of each LED was computed twice (canvas in JS, hardware in
+  Python) with diverging geometry — different ring center, a half-LED
+  positional offset, and limited rotation handling — so physical LEDs lit
+  up differently from the drawing. The editor canvas is now the single
+  source of truth: it sends the per-LED ring map to the backend, which just
+  applies it.
 
 ### Changed
 
