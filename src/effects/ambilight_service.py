@@ -562,10 +562,31 @@ class AmbilightService:
         ScreenCapturerService.get_instance().stop()
 
     def pause(self) -> None:
+        """Suspend the sampling loop AND turn the managed LEDs off.
+
+        Used during topology calibration: the calibration must own the LEDs
+        for a correct visualization, so we both stop sampling and black out
+        every device the ambilight drives. Devices not covered by the
+        calibration (non-linear, or LEDs outside the mapped topology) would
+        otherwise stay frozen on the last ambilight frame."""
         self._paused = True
+        self._blackout()
 
     def resume(self) -> None:
         self._paused = False
+
+    def _blackout(self) -> None:
+        """Send black to every enabled managed device, so nothing stays lit
+        while the ambilight is paused."""
+        if not self._manager:
+            return
+        for device_key, dev_cfg in self._config.get("devices", {}).items():
+            if not dev_cfg.get("enabled", False):
+                continue
+            _, total_leds = self.get_device_zones(device_key)
+            if total_leds <= 0:
+                continue
+            self._manager.apply_direct_colors(device_key, [(0, 0, 0)] * total_leds)
 
     # ── Zone cache ────────────────────────────────────────────────────────────
 
@@ -725,5 +746,7 @@ class AmbilightService:
 
                 colors[off: off + active] = zone_colors
 
-            if self._manager:
+            # Skip the write if a pause arrived mid-frame (e.g. calibration
+            # just started) — avoids a stray ambilight frame fighting it.
+            if self._manager and not self._paused:
                 self._manager.apply_direct_colors(device_key, colors)

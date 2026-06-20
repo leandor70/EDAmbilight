@@ -6,6 +6,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.0.2] — 2026-06-21
+
+### Fixed
+
+- Topology calibration no longer crashes with `IndexError` when the saved
+  topology declares more LEDs than the hardware reports — out-of-range LED
+  indices are skipped (same root cause as the 1.0.1 color-count fix).
+
+### Changed
+
+- Calibration and device identification now fully suspend the ambilight so
+  they render correctly without the sampling loop fighting them: `pause()`
+  blacks out every managed device, the sampling loop skips a write if a pause
+  arrives mid-frame, and `flash_topology_device` pauses sampling and
+  serializes its writes through the device lock.
+
+---
+
 ## [1.0.1] — 2026-06-21
 
 ### Fixed

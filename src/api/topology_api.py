@@ -407,25 +407,32 @@ def flash_topology_device(device_id: str) -> dict:
     """Flash a device white for identification."""
     if not _openrgb_manager:
         return {"success": False, "error": "Manager not initialized"}
+    # Pause the ambilight so the flash isn't immediately overwritten by the
+    # next sampled frame, and serialize writes through the manager lock so we
+    # don't interleave packets with another writer.
+    if _ambilight_service:
+        _ambilight_service.pause()
     try:
+        import time
         from openrgb.utils import RGBColor
+        lock = _openrgb_manager._lock
         for ctrl in _openrgb_manager.devices:
             if _openrgb_manager._make_device_key(ctrl) == device_id:
                 n  = ctrl.topology.led_count
                 on = [RGBColor(255, 255, 255)] * n
                 of = [RGBColor(0, 0, 0)] * n
-                import time
-                ctrl.topology.device.set_colors(on)
-                time.sleep(0.15)
-                ctrl.topology.device.set_colors(of)
-                time.sleep(0.10)
-                ctrl.topology.device.set_colors(on)
-                time.sleep(0.15)
-                ctrl.topology.device.set_colors(of)
+                for frame, delay in ((on, 0.15), (of, 0.10), (on, 0.15), (of, 0.0)):
+                    with lock:
+                        ctrl.topology.device.set_colors(frame)
+                    if delay:
+                        time.sleep(delay)
                 return {"success": True}
         return {"success": False, "error": f"Device not found: {device_id}"}
     except Exception as e:
         return {"success": False, "error": str(e)}
+    finally:
+        if _ambilight_service:
+            _ambilight_service.resume()
 
 
 def _calibration_loop(device_led_data: list, stop_event: threading.Event,
@@ -449,6 +456,10 @@ def _calibration_loop(device_led_data: list, stop_event: threading.Event,
         for ctrl, entries in by_device.items():
             colors = [RGBColor(0, 0, 0)] * ctrl.topology.led_count
             for _, hw_idx, ring_idx, is_center in entries:
+                # The saved topology may declare more LEDs than the hardware
+                # reports; skip indices that fall outside the real LED range.
+                if not (0 <= hw_idx < len(colors)):
+                    continue
                 if is_center:
                     cfg     = blink_config.get("center", {})
                     period  = max(100, cfg.get("period_ms", 333))
