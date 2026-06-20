@@ -6,7 +6,6 @@ sistema effetti; usa direttamente OpenRGBManager.
 
 import eel
 import json
-import math
 import threading
 import time as _time
 from pathlib import Path
@@ -407,25 +406,32 @@ def flash_topology_device(device_id: str) -> dict:
     """Flash a device white for identification."""
     if not _openrgb_manager:
         return {"success": False, "error": "Manager not initialized"}
+    # Pause the ambilight so the flash isn't immediately overwritten by the
+    # next sampled frame, and serialize writes through the manager lock so we
+    # don't interleave packets with another writer.
+    if _ambilight_service:
+        _ambilight_service.pause()
     try:
+        import time
         from openrgb.utils import RGBColor
+        lock = _openrgb_manager._lock
         for ctrl in _openrgb_manager.devices:
             if _openrgb_manager._make_device_key(ctrl) == device_id:
                 n  = ctrl.topology.led_count
                 on = [RGBColor(255, 255, 255)] * n
                 of = [RGBColor(0, 0, 0)] * n
-                import time
-                ctrl.topology.device.set_colors(on)
-                time.sleep(0.15)
-                ctrl.topology.device.set_colors(of)
-                time.sleep(0.10)
-                ctrl.topology.device.set_colors(on)
-                time.sleep(0.15)
-                ctrl.topology.device.set_colors(of)
+                for frame, delay in ((on, 0.15), (of, 0.10), (on, 0.15), (of, 0.0)):
+                    with lock:
+                        ctrl.topology.device.set_colors(frame)
+                    if delay:
+                        time.sleep(delay)
                 return {"success": True}
         return {"success": False, "error": f"Device not found: {device_id}"}
     except Exception as e:
         return {"success": False, "error": str(e)}
+    finally:
+        if _ambilight_service:
+            _ambilight_service.resume()
 
 
 def _calibration_loop(device_led_data: list, stop_event: threading.Event,
@@ -449,6 +455,10 @@ def _calibration_loop(device_led_data: list, stop_event: threading.Event,
         for ctrl, entries in by_device.items():
             colors = [RGBColor(0, 0, 0)] * ctrl.topology.led_count
             for _, hw_idx, ring_idx, is_center in entries:
+                # The saved topology may declare more LEDs than the hardware
+                # reports; skip indices that fall outside the real LED range.
+                if not (0 <= hw_idx < len(colors)):
+                    continue
                 if is_center:
                     cfg     = blink_config.get("center", {})
                     period  = max(100, cfg.get("period_ms", 333))
@@ -478,8 +488,13 @@ def _calibration_loop(device_led_data: list, stop_event: threading.Event,
 
 
 @eel.expose
-def test_topology_calibration(effect_center: dict, ring_spacing: float,
-                              blink_config: dict = None) -> dict:
+def test_topology_calibration(ring_map: dict, blink_config: dict = None) -> dict:
+    """Apply the calibration ring colors computed by the editor canvas.
+
+    The canvas is the single source of truth for the geometry (ring index per
+    physical LED), so the backend no longer recomputes positions/center —
+    physical LEDs always match the drawing. ring_map maps a device_key to a
+    list of [hw_idx, ring_idx, is_center] entries."""
     if blink_config is None:
         blink_config = {"center": {"blink": True, "period_ms": 333}}
     global _calib_thread, _calib_stop
@@ -495,56 +510,23 @@ def test_topology_calibration(effect_center: dict, ring_spacing: float,
         _calib_thread.join(timeout=0.3)
 
     try:
-        from effects.openrgb_manager import TopologyType
-        from effects.ambilight_service import build_device_zones, _led_world_positions
-
-        # Collect all linear LED world positions
-        device_leds = []
-        for ctrl in _openrgb_manager.devices:
-            if ctrl.topology.topology_type != TopologyType.LINEAR:
-                continue
-            device_key   = _openrgb_manager._make_device_key(ctrl)
-            zones, _     = build_device_zones(device_key)
-            if not zones:
-                continue
-            topo_data  = _load_topologies().get("topologies", {}).get(device_key, {})
-            zone_defs  = {z["zone_index"]: z for z in topo_data.get("zones", [])}
-            off        = 0
-            for z_def in sorted(topo_data.get("zones", []), key=lambda z: z["zone_index"]):
-                pts = _led_world_positions(z_def)
-                for local_idx, (wx, wy) in enumerate(pts):
-                    device_leds.append((ctrl, off + local_idx, wx, wy))
-                off += len(pts)
-
-        if not device_leds:
-            return {"success": False, "error": "No linear topology devices found"}
-
-        min_x = min(p[2] for p in device_leds)
-        max_x = max(p[2] for p in device_leds)
-        min_y = min(p[3] for p in device_leds)
-        max_y = max(p[3] for p in device_leds)
-
-        cx      = min_x + (max_x - min_x) * (effect_center.get("x", 50) / 100.0)
-        cy      = min_y + (max_y - min_y) * (effect_center.get("y", 50) / 100.0)
-        spacing = max(0.01, float(ring_spacing))
-
-        # Find center LED
-        min_dist   = float("inf")
-        center_key = None
-        for ctrl, hw_idx, wx, wy in device_leds:
-            d = math.hypot(wx - cx, wy - cy)
-            if d < min_dist:
-                min_dist   = d
-                center_key = (ctrl, hw_idx)
+        ctrl_by_key = {_openrgb_manager._make_device_key(c): c
+                       for c in _openrgb_manager.devices}
 
         led_data = []
-        for ctrl, hw_idx, wx, wy in device_leds:
-            dist     = math.hypot(wx - cx, wy - cy)
-            ring_idx = int(dist / spacing)
-            is_ctr   = (ctrl, hw_idx) == center_key
-            led_data.append((ctrl, hw_idx, ring_idx, is_ctr))
+        for device_key, entries in (ring_map or {}).items():
+            ctrl = ctrl_by_key.get(device_key)
+            if ctrl is None:
+                continue
+            for entry in entries:
+                hw_idx, ring_idx = int(entry[0]), int(entry[1])
+                is_ctr = bool(entry[2]) if len(entry) > 2 else False
+                led_data.append((ctrl, hw_idx, ring_idx, is_ctr))
 
-        write_lock = _openrgb_manager._lock if _openrgb_manager is not None else None
+        if not led_data:
+            return {"success": False, "error": "No calibration LEDs"}
+
+        write_lock = _openrgb_manager._lock
         _calib_stop  = threading.Event()
         _calib_thread = threading.Thread(
             target=_calibration_loop,
@@ -552,7 +534,7 @@ def test_topology_calibration(effect_center: dict, ring_spacing: float,
             daemon=True, name="TopologyCalibration",
         )
         _calib_thread.start()
-        return {"success": True, "leds_colored": len(device_leds)}
+        return {"success": True, "leds_colored": len(led_data)}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
@@ -560,8 +542,12 @@ def test_topology_calibration(effect_center: dict, ring_spacing: float,
 @eel.expose
 def stop_topology_calibration() -> dict:
     global _calib_thread, _calib_stop
+    # No-op if calibration isn't running, so it's safe to call on every page
+    # leave without disturbing the ambilight on normal navigation.
+    if _calib_thread is None:
+        return {"success": True, "already_stopped": True}
     _calib_stop.set()
-    if _calib_thread and _calib_thread.is_alive():
+    if _calib_thread.is_alive():
         _calib_thread.join(timeout=0.5)
     _calib_thread = None
     # Turn off all LEDs

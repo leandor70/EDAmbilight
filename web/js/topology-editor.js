@@ -393,28 +393,75 @@ class TopologyCanvas {
         }
     }
 
-    _calibrationColor(zone, ledIndex) {
-        // Returns CSS color string for a LED based on its distance from the effect center.
-        const RING_COLORS = ['#FFFFFF', '#FF3C3C', '#507FFF', '#3CD250'];
-        const bbox = this.calculateBoundingBox();
-        if (!bbox) return zone.color;
-
-        const cx_w = bbox.min_x + (bbox.max_x - bbox.min_x) * (this.effectCenter.x / 100);
-        const cy_w = bbox.min_y + (bbox.max_y - bbox.min_y) * (this.effectCenter.y / 100);
-
-        // LED center in zone local space
+    // World-space center of a LED (single source of truth for calibration geometry).
+    _ledWorldPos(zone, ledIndex) {
         const ledSpacing = zone.led_spacing ?? 1.0;
         const lx_local = (ledIndex + 0.5) * ledSpacing;
         const ly_local = 0.5;
-
-        // Rotate to world space
         const rad = zone.rotation * Math.PI / 180;
-        const wx = zone.position.x + lx_local * Math.cos(rad) - ly_local * Math.sin(rad);
-        const wy = zone.position.y + lx_local * Math.sin(rad) + ly_local * Math.cos(rad);
+        return {
+            x: zone.position.x + lx_local * Math.cos(rad) - ly_local * Math.sin(rad),
+            y: zone.position.y + lx_local * Math.sin(rad) + ly_local * Math.cos(rad),
+        };
+    }
 
-        const dist = Math.hypot(wx - cx_w, wy - cy_w);
-        const ringIdx = Math.floor(dist / (this.calibrationSpacing || 10));
-        return RING_COLORS[ringIdx % 4];
+    // Effect center in world coordinates (from the current bounding box).
+    _effectCenterWorld() {
+        const bbox = this.calculateBoundingBox();
+        if (!bbox) return null;
+        return {
+            x: bbox.min_x + (bbox.max_x - bbox.min_x) * (this.effectCenter.x / 100),
+            y: bbox.min_y + (bbox.max_y - bbox.min_y) * (this.effectCenter.y / 100),
+        };
+    }
+
+    _ringIndex(zone, ledIndex, center) {
+        const p = this._ledWorldPos(zone, ledIndex);
+        const dist = Math.hypot(p.x - center.x, p.y - center.y);
+        return Math.floor(dist / (this.calibrationSpacing || 10));
+    }
+
+    _calibrationColor(zone, ledIndex) {
+        // Returns CSS color string for a LED based on its distance from the effect center.
+        const RING_COLORS = ['#FFFFFF', '#FF3C3C', '#507FFF', '#3CD250'];
+        const center = this._effectCenterWorld();
+        if (!center) return zone.color;
+        return RING_COLORS[this._ringIndex(zone, ledIndex, center) % 4];
+    }
+
+    // Build the per-device ring map sent to the backend. The canvas is the
+    // single source of truth: the backend just applies these ring indices
+    // (and blink) instead of recomputing geometry, so physical LEDs always
+    // match the drawing. hw_idx follows the same cumulative ordering the
+    // backend uses (zones grouped by device, sorted by zone_index).
+    buildCalibrationRingMap() {
+        const center = this._effectCenterWorld();
+        if (!center) return {};
+
+        const byDevice = {};
+        this.zones.forEach(z => {
+            (byDevice[z.device_id] = byDevice[z.device_id] || []).push(z);
+        });
+
+        const ringMap = {};
+        let best = { dist: Infinity, dev: null, pos: -1 };
+        for (const [devId, zones] of Object.entries(byDevice)) {
+            zones.sort((a, b) => a.zone_index - b.zone_index);
+            const entries = [];
+            let off = 0;
+            for (const z of zones) {
+                for (let i = 0; i < z.led_count; i++) {
+                    const p = this._ledWorldPos(z, i);
+                    const dist = Math.hypot(p.x - center.x, p.y - center.y);
+                    entries.push([off + i, Math.floor(dist / (this.calibrationSpacing || 10)), false]);
+                    if (dist < best.dist) best = { dist, dev: devId, pos: entries.length - 1 };
+                }
+                off += z.led_count;
+            }
+            ringMap[devId] = entries;
+        }
+        if (best.dev !== null) ringMap[best.dev][best.pos][2] = true;  // mark global center
+        return ringMap;
     }
 
     drawZone(zone, isSelected, isHovered) {
@@ -1109,7 +1156,7 @@ function triggerHardwareCalibration() {
     if (!canvas || !canvas.showCalibration) return;
     clearTimeout(_calibrationTimer);
     _calibrationTimer = setTimeout(() => {
-        api('test_topology_calibration', canvas.effectCenter, canvas.calibrationSpacing, readCalibrationConfig());
+        api('test_topology_calibration', canvas.buildCalibrationRingMap(), readCalibrationConfig());
     }, 80);
 }
 
@@ -1378,9 +1425,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('calibration-panel').classList.toggle('hidden', !canvas.showCalibration);
         canvas.render();
         if (canvas.showCalibration) {
-            api('test_topology_calibration', canvas.effectCenter, canvas.calibrationSpacing, readCalibrationConfig());
+            api('test_topology_calibration', canvas.buildCalibrationRingMap(), readCalibrationConfig());
         } else {
             api('stop_topology_calibration');
+        }
+    });
+
+    // Leaving the page (navigation / close) must stop an active calibration.
+    // Fire-and-forget eel call for immediacy; the backend close_callback is
+    // the reliable fallback if this doesn't make it out before unload.
+    window.addEventListener('pagehide', () => {
+        if (canvas && canvas.showCalibration) {
+            try { eel.stop_topology_calibration()(); } catch (e) {}
         }
     });
 

@@ -422,6 +422,7 @@ class AmbilightService:
         self._actual_fps: float = 0.0
         self._paused: bool = False
         self._zone_cache: Dict[str, Tuple[List[dict], int]] = {}
+        self._topology_warned: set = set()
         # Black-border detection: None = schermo intero
         self._bb_rect:        Optional[Tuple[int, int, int, int]] = None
         self._bb_candidate:   Optional[Tuple[int, int, int, int]] = None
@@ -561,20 +562,63 @@ class AmbilightService:
         ScreenCapturerService.get_instance().stop()
 
     def pause(self) -> None:
+        """Suspend the sampling loop AND turn the managed LEDs off.
+
+        Used during topology calibration: the calibration must own the LEDs
+        for a correct visualization, so we both stop sampling and black out
+        every device the ambilight drives. Devices not covered by the
+        calibration (non-linear, or LEDs outside the mapped topology) would
+        otherwise stay frozen on the last ambilight frame."""
         self._paused = True
+        self._blackout()
 
     def resume(self) -> None:
         self._paused = False
+
+    def _blackout(self) -> None:
+        """Send black to every enabled managed device, so nothing stays lit
+        while the ambilight is paused."""
+        if not self._manager:
+            return
+        for device_key, dev_cfg in self._config.get("devices", {}).items():
+            if not dev_cfg.get("enabled", False):
+                continue
+            _, total_leds = self.get_device_zones(device_key)
+            if total_leds <= 0:
+                continue
+            self._manager.apply_direct_colors(device_key, [(0, 0, 0)] * total_leds)
 
     # ── Zone cache ────────────────────────────────────────────────────────────
 
     def refresh_zones(self, device_key: str) -> None:
         self._zone_cache.pop(device_key, None)
+        self._topology_warned.discard(device_key)
 
     def get_device_zones(self, device_key: str) -> Tuple[List[dict], int]:
         if device_key not in self._zone_cache:
-            self._zone_cache[device_key] = build_device_zones(device_key)
+            zones, total_leds = build_device_zones(device_key)
+            self._validate_topology(device_key, total_leds)
+            self._zone_cache[device_key] = (zones, total_leds)
         return self._zone_cache[device_key]
+
+    def _validate_topology(self, device_key: str, total_leds: int) -> None:
+        """Warn (once per device) when the LED count from the topology config
+        does not match the count reported by the hardware. The mismatch is
+        handled gracefully downstream (apply_direct_colors pads/truncates),
+        but it usually signals a stale config/device_topologies.json entry."""
+        if not self._manager or total_leds <= 0:
+            return
+        hw_led_count = self._manager.get_device_led_count(device_key)
+        if hw_led_count is None or hw_led_count == total_leds:
+            return
+        if device_key in self._topology_warned:
+            return
+        self._topology_warned.add(device_key)
+        print(
+            f"[AmbilightService] Topology mismatch for '{device_key}': config "
+            f"declares {total_leds} LEDs but hardware reports {hw_led_count}. "
+            f"Colors will be padded/truncated; check config/device_topologies.json."
+        )
 
     # ── Idle loop ─────────────────────────────────────────────────────────────
 
@@ -702,5 +746,7 @@ class AmbilightService:
 
                 colors[off: off + active] = zone_colors
 
-            if self._manager:
+            # Skip the write if a pause arrived mid-frame (e.g. calibration
+            # just started) — avoids a stray ambilight frame fighting it.
+            if self._manager and not self._paused:
                 self._manager.apply_direct_colors(device_key, colors)
