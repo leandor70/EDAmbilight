@@ -542,8 +542,12 @@ def test_topology_calibration(ring_map: dict, blink_config: dict = None) -> dict
 @eel.expose
 def stop_topology_calibration() -> dict:
     global _calib_thread, _calib_stop
+    # No-op if calibration isn't running, so it's safe to call on every page
+    # leave without disturbing the ambilight on normal navigation.
+    if _calib_thread is None:
+        return {"success": True, "already_stopped": True}
     _calib_stop.set()
-    if _calib_thread and _calib_thread.is_alive():
+    if _calib_thread.is_alive():
         _calib_thread.join(timeout=0.5)
     _calib_thread = None
     # Turn off all LEDs

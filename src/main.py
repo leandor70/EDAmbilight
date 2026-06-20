@@ -193,6 +193,15 @@ def _do_init(settings):
 
 def _on_browser_close(route, websockets):
     global _shutdown_timer
+    # Leaving the topology editor (navigation or close) must stop an active
+    # calibration, otherwise its thread keeps driving the LEDs and the
+    # ambilight stays paused/blacked out.
+    if route and "topology-editor" in route:
+        try:
+            from api.topology_api import stop_topology_calibration
+            stop_topology_calibration()
+        except Exception:
+            pass
     if websockets:
         if _shutdown_timer is not None:
             _shutdown_timer.cancel()

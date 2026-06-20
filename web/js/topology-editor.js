@@ -1431,6 +1431,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // Leaving the page (navigation / close) must stop an active calibration.
+    // Fire-and-forget eel call for immediacy; the backend close_callback is
+    // the reliable fallback if this doesn't make it out before unload.
+    window.addEventListener('pagehide', () => {
+        if (canvas && canvas.showCalibration) {
+            try { eel.stop_topology_calibration()(); } catch (e) {}
+        }
+    });
+
     document.getElementById('calibration-spacing').addEventListener('input', (e) => {
         const val = parseFloat(e.target.value);
         if (val > 0) {

@@ -28,6 +28,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   blacks out every managed device, the sampling loop skips a write if a pause
   arrives mid-frame, and `flash_topology_device` pauses sampling and
   serializes its writes through the device lock.
+- Leaving the topology editor (page navigation or window close) now stops an
+  active calibration automatically, instead of leaving its thread driving the
+  LEDs with the ambilight stuck paused. Handled both client-side (`pagehide`)
+  and reliably server-side via the browser close callback; stopping is a
+  no-op when no calibration is running, so normal navigation is undisturbed.
 
 ---
 
