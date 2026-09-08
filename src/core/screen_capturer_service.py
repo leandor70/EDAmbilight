@@ -20,7 +20,11 @@ DOWNSAMPLE = 4
 
 
 class _WGCCapturer:
-    """Windows.Graphics.Capture — coesiste con Chrome (Win10 1903+)."""
+    """Windows.Graphics.Capture — coesiste con Chrome (Win10 1903+).
+
+    Nota: HDCP-protected content (es. Netflix fullscreen, film DRM) ritorna
+    frame neri, non una cattura del contenuto protetto. È una limitazione
+    hardware di Windows, non risolubile da questo codice."""
 
     def __init__(self, fps: int):
         from windows_capture import WindowsCapture
@@ -74,7 +78,10 @@ class _WGCCapturer:
 
 
 class _DxcamCapturer:
-    """DXGI Desktop Duplication — cattura exclusive fullscreen, conflitto con Chrome GPU."""
+    """DXGI Desktop Duplication — cattura exclusive fullscreen, conflitto con Chrome GPU.
+
+    Nota: Come WGC, HDCP-protected content ritorna frame neri. Questo è il
+    comportamento di Windows per rispettare le restrizioni DRM."""
 
     _RECOVERABLE = ("0x887a0026", "access lost", "access_lost", "output-change")
 
