@@ -219,6 +219,18 @@ Lower `ema_alpha` (e.g. `0.3`) for smoother transitions, or raise `scene_cut` to
 **Black bars are not detected**
 Enable `black_bar_detect` in `ambilight_config.json`. Works best with static 16:9 or 21:9 content; may not activate during very dark scenes (expected — the algorithm needs visible content to locate the border).
 
+**LEDs turn off when playing protected content (Netflix fullscreen, etc.)**
+This is due to **HDCP (High-bandwidth Digital Content Protection)** — a DRM protection used by streaming services. When HDCP is active:
+- Windows screen capture APIs (WGC, DXGI, etc.) return completely black frames
+- All LED zones appear black with no color information
+
+**This is a Windows/hardware limitation, not a bug.** HDCP content cannot be screen-captured on Windows.
+
+*Workarounds:*
+- Watch in **windowed mode** instead of fullscreen
+- Check your GPU driver settings for an option to disable HDCP (may reduce streaming quality to 1080p)
+- Use a different display output if available (some HDMI ports bypass HDCP if not connected to protected displays)
+
 ---
 
 ## 📁 Directory Structure
