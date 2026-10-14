@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal EnableDelayedExpansion
 cd /d "%~dp0"
 title EDAmbilight
 color 0B
@@ -57,10 +57,42 @@ if "%HAS_WGC%"=="0" (
     echo         Per migliorare: pip install dxcam
 )
 
+:: Verifica porta web (web_port in config\settings.json, default 8001)
+set WEBPORT=8001
+if exist config\settings.json (
+    for /f %%p in ('python -c "import json;print(json.load(open('config/settings.json')).get('web_port',8001))" 2^>nul') do set WEBPORT=%%p
+)
+set PORT_PID=
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr /R /C:"[0-9]:%WEBPORT% .*LISTENING"') do set PORT_PID=%%a
+if defined PORT_PID (
+    set PORT_PROC=sconosciuto
+    for /f "tokens=1 delims=," %%n in ('tasklist /FI "PID eq %PORT_PID%" /NH /FO CSV 2^>nul') do set PORT_PROC=%%~n
+    echo.
+    echo  [ATTENZIONE] La porta %WEBPORT% e' gia' in uso da: !PORT_PROC! ^(PID !PORT_PID!^).
+    echo  Probabilmente EDAmbilight e' gia' in esecuzione ^(controlla la system tray^).
+    echo.
+    choice /c SN /m " Chiudere quel processo e continuare"
+    if errorlevel 2 (
+        echo  Avvio annullato.
+        pause
+        exit /b 1
+    )
+    taskkill /PID %PORT_PID% /F >nul 2>&1
+    if errorlevel 1 (
+        echo  [ERRORE] Impossibile chiudere il processo. Chiudilo a mano e riprova.
+        pause
+        exit /b 1
+    )
+    timeout /t 2 /nobreak >nul
+    echo  [OK] Porta %WEBPORT% liberata
+) else (
+    echo  [OK] Porta %WEBPORT% libera
+)
+
 echo.
 echo  ------------------------------------------------
 echo  Avvio in corso...
-echo  Browser: http://localhost:8001
+echo  Browser: http://localhost:%WEBPORT%
 echo  ------------------------------------------------
 echo.
 
