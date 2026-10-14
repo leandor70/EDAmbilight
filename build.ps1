@@ -13,6 +13,8 @@ $pyiArgs = @(
     '--name', 'EDAmbilight',
     '--collect-data', 'eel',
     '--hidden-import', 'bottle_websocket',
+    '--collect-all', 'dxcam',
+    '--hidden-import', 'comtypes',
     '--workpath', 'build',
     '--distpath', 'dist',
     '--specpath', 'build'

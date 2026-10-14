@@ -13,6 +13,27 @@ from settings import Settings
 
 os.chdir(get_base_dir())
 
+
+def _setup_stdio() -> None:
+    """UTF-8 su stdout/stderr (le print usano '→', '—'); nell'exe l'output va su log/."""
+    if getattr(sys, "frozen", False):
+        try:
+            log_dir = get_base_dir() / "log"
+            log_dir.mkdir(exist_ok=True)
+            stream = open(log_dir / "edambilight.log", "w", encoding="utf-8",
+                          errors="replace", buffering=1)
+            sys.stdout = sys.stderr = stream
+        except OSError:
+            pass
+    for s in (sys.stdout, sys.stderr):
+        try:
+            s.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
+
+_setup_stdio()
+
 _init_status = {
     "ready":   False,
     "message": "Starting...",

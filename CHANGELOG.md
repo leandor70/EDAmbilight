@@ -6,6 +6,31 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.0.3] — 2026-10-14
+
+### Fixed
+
+- Ambilight thread no longer crashes at startup when neither `windows-capture`
+  nor `dxcam` is installed: the `wgc` preference now falls back to dxcam and
+  then to mss, like `auto` already did.
+- DXGI capture in the bundled exe returned no frames: `dxcam` converts to BGR
+  through OpenCV, which it does not install. Frames are now requested as BGRA
+  and the alpha channel is dropped, so OpenCV is not needed.
+- The auto-switch no longer flips DXGI -> WGC -> mss every time the foreground
+  window changes when `windows-capture` is not installed (dxcam is a singleton,
+  a second instance failed with "Capture is already running").
+- Startup no longer fails with `'charmap' codec can't encode character '→'`
+  on consoles using cp1252: stdout/stderr are forced to UTF-8.
+
+### Changed
+
+- `dxcam` is now bundled in the exe (`build.ps1`), so DXGI capture works
+  without any extra install.
+- The exe writes its output to `log/edambilight.log` for diagnostics.
+- `start.bat` reports which screen-capture backend is available.
+
+---
+
 ## [1.0.2] — 2026-06-21
 
 ### Fixed

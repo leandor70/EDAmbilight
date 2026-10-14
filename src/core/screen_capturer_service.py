@@ -4,6 +4,7 @@ Fornisce get_latest_frame() thread-safe per uso da AmbilightService.
 """
 
 import ctypes
+import importlib.util
 import threading
 import time
 from typing import Optional
@@ -89,14 +90,14 @@ class _DxcamCapturer:
         import dxcam
         self._dxcam = dxcam
         self._fps   = fps
-        self._cam   = dxcam.create(output_color="BGR")
+        self._cam   = dxcam.create(output_color="BGRA")
         self._cam.start(target_fps=fps)
         print(f"[ScreenCapturer] DXGI (dxcam, target {fps} fps)")
 
     def grab(self) -> Optional[np.ndarray]:
         try:
             frame = self._cam.get_latest_frame()
-            return None if frame is None else frame[::DOWNSAMPLE, ::DOWNSAMPLE, :]
+            return None if frame is None else frame[::DOWNSAMPLE, ::DOWNSAMPLE, :3]
         except Exception as exc:
             if any(t in str(exc).lower() for t in self._RECOVERABLE):
                 self._recover()
@@ -111,7 +112,7 @@ class _DxcamCapturer:
         time.sleep(0.5)
         for attempt in range(1, 4):
             try:
-                self._cam = self._dxcam.create(output_color="BGR")
+                self._cam = self._dxcam.create(output_color="BGRA")
                 self._cam.start(target_fps=self._fps)
                 print(f"[ScreenCapturer] DXGI recuperato ({attempt}/3)")
                 return
@@ -128,7 +129,7 @@ class _DxcamCapturer:
         except Exception:
             pass
         self._fps = fps
-        self._cam = self._dxcam.create(output_color="BGR")
+        self._cam = self._dxcam.create(output_color="BGRA")
         self._cam.start(target_fps=fps)
 
     def stop(self) -> None:
@@ -198,6 +199,12 @@ class _AutoSwitch:
             print(f"[ScreenCapturer] Auto-switch '{preferred}' fallito: {exc}")
             return False
 
+    @staticmethod
+    def _wgc_installed() -> bool:
+        # Senza windows-capture lo swap DXGI->WGC fallirebbe: dxcam e' un singleton
+        # e creare un secondo capturer dxcam mentre il primo gira da' "already running".
+        return importlib.util.find_spec("windows_capture") is not None
+
     def _get_fg(self) -> int:
         try:
             return ctypes.windll.user32.GetForegroundWindow()
@@ -230,7 +237,7 @@ class _AutoSwitch:
                 else:
                     self.stuck_since = None
 
-            elif self.mode == "DXGI":
+            elif self.mode == "DXGI" and self._wgc_installed():
                 fg = self._get_fg()
                 if fg != 0 and fg != self.fg_at_switch:
                     if self._swap("wgc"):
@@ -338,7 +345,11 @@ class ScreenCapturerService:
                 return _try_wgc()
             except Exception as exc:
                 print(f"[ScreenCapturer] WGC non disponibile ({exc}), provo dxcam")
+            try:
                 return _try_dxcam()
+            except Exception as exc:
+                print(f"[ScreenCapturer] dxcam non disponibile ({exc}), fallback mss")
+                return _use_mss()
         elif preferred == "dxcam":
             try:
                 return _try_dxcam()

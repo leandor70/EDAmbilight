@@ -43,6 +43,20 @@ if errorlevel 1 (
 )
 echo  [OK] Dependencies OK
 
+:: Verifica backend di cattura opzionali (WGC / DXGI)
+python -c "import windows_capture" >nul 2>&1
+set HAS_WGC=%errorlevel%
+python -c "import dxcam" >nul 2>&1
+set HAS_DXCAM=%errorlevel%
+if "%HAS_WGC%"=="0" (
+    echo  [OK] Cattura schermo: WGC
+) else if "%HAS_DXCAM%"=="0" (
+    echo  [OK] Cattura schermo: DXGI ^(dxcam^)
+) else (
+    echo  [WARN] Nessun backend veloce installato: uso mss ^(piu lento, no fullscreen esclusivo^).
+    echo         Per migliorare: pip install dxcam
+)
+
 echo.
 echo  ------------------------------------------------
 echo  Avvio in corso...
