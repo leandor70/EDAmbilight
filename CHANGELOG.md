@@ -6,6 +6,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.0.4] — 2026-10-21
+
+### Added
+
+- Control page: an info (i) button on every panel opens a tooltip explaining
+  the parameters and what happens when each one is raised or lowered.
+
+### Changed
+
+- Parameter panels not used by the selected algorithm are now shown dimmed and
+  disabled with a "Not used" badge instead of being hidden.
+
+### Fixed
+
+- Slider and on/off toggle thumbs are now centered on their tracks.
+
+---
+
 ## [1.0.3] — 2026-10-14
 
 ### Fixed
