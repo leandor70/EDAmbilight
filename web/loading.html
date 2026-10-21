@@ -365,11 +365,19 @@ function showOpenrgbWarn(o) {
 }
 
 function retryOpenrgb()  { eel.retry_openrgb()(); }
-function continueAnyway() { window.location.href = 'index.html'; }
+// First run -> Help page, afterwards straight to Control
+async function nextPage() {
+    try {
+        const s = await eel.get_settings()();
+        if (!s.help_seen) return 'help.html?first=1';
+    } catch (e) {}
+    return 'index.html';
+}
+async function continueAnyway() { window.location.href = await nextPage(); }
 
 function goReady() {
     document.getElementById('progress').style.width = '100%';
-    setTimeout(() => { window.location.href = 'index.html'; }, 380);
+    setTimeout(async () => { window.location.href = await nextPage(); }, 380);
 }
 
 async function poll() {

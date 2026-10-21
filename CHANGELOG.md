@@ -6,6 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.0.5] — 2026-10-21
+
+### Added
+
+- Help page with a four-step getting-started guide. It opens automatically on
+  first run and can be reopened any time from the sidebar.
+
+### Changed
+
+- On first run the Topology Editor imports the zones from OpenRGB
+  automatically, so a fresh install no longer starts with an empty editor.
+
+---
+
 ## [1.0.4] — 2026-10-21
 
 ### Added

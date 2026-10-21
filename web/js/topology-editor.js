@@ -1160,6 +1160,41 @@ function triggerHardwareCalibration() {
     }, 80);
 }
 
+// Import zones from OpenRGB; returns true if new zones were added.
+async function reloadFromOpenRGB() {
+    try {
+        const result = await eel.reload_scene_from_openrgb()();
+        if (result.success) {
+            // Merge reloaded zones back (preserving positions from current canvas)
+            const reloadedMap = {};
+            result.zones.forEach(z => {
+                const uid = `${z.device_id}::${z.zone_index}`;
+                reloadedMap[uid] = z;
+            });
+            canvas.zones = canvas.zones.map(z => {
+                const uid = `${z.device_id}::${z.zone_index}`;
+                return reloadedMap[uid] ? { ...z, led_count: reloadedMap[uid].led_count } : z;
+            });
+            // Add newly detected zones that weren't on canvas
+            result.zones.forEach(z => {
+                const uid = `${z.device_id}::${z.zone_index}`;
+                const exists = canvas.zones.find(cz => `${cz.device_id}::${cz.zone_index}` === uid);
+                if (!exists) canvas.zones.push({ ...z, id: z.zone_index });
+            });
+
+            const hasNew = Object.values(result.changes).some(c => c.new_zones?.length > 0);
+            if (hasNew) canvas.autoLayout();
+            else { canvas.render(); canvas.updateZonesList(); }
+            showNotification(result.message || 'Scene reloaded from OpenRGB', 'success');
+            return hasNew;
+        } else {
+            showNotification(result.error || 'Reload failed', 'error');
+        }
+    } catch (e) {
+        showNotification('Failed to reload from OpenRGB', 'error');
+    }
+}
+
 async function loadSceneTopology() {
     try {
         console.log('[Topology] Loading unified scene topology...');
@@ -1469,38 +1504,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    document.getElementById('btn-reload-openrgb').addEventListener('click', async () => {
-        try {
-            const result = await eel.reload_scene_from_openrgb()();
-            if (result.success) {
-                // Merge reloaded zones back (preserving positions from current canvas)
-                const reloadedMap = {};
-                result.zones.forEach(z => {
-                    const uid = `${z.device_id}::${z.zone_index}`;
-                    reloadedMap[uid] = z;
-                });
-                canvas.zones = canvas.zones.map(z => {
-                    const uid = `${z.device_id}::${z.zone_index}`;
-                    return reloadedMap[uid] ? { ...z, led_count: reloadedMap[uid].led_count } : z;
-                });
-                // Add newly detected zones that weren't on canvas
-                result.zones.forEach(z => {
-                    const uid = `${z.device_id}::${z.zone_index}`;
-                    const exists = canvas.zones.find(cz => `${cz.device_id}::${cz.zone_index}` === uid);
-                    if (!exists) canvas.zones.push({ ...z, id: z.zone_index });
-                });
-
-                const hasNew = Object.values(result.changes).some(c => c.new_zones?.length > 0);
-                if (hasNew) canvas.autoLayout();
-                else { canvas.render(); canvas.updateZonesList(); }
-                showNotification(result.message || 'Scene reloaded from OpenRGB', 'success');
-            } else {
-                showNotification(result.error || 'Reload failed', 'error');
-            }
-        } catch (e) {
-            showNotification('Failed to reload from OpenRGB', 'error');
-        }
-    });
+    document.getElementById('btn-reload-openrgb').addEventListener('click', reloadFromOpenRGB);
 
     document.getElementById('btn-save').addEventListener('click', async () => {
         try {
@@ -1514,6 +1518,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             showNotification('Failed to save scene', 'error');
         }
     });
+
+    // First run: nothing configured yet -> import zones from OpenRGB automatically
+    if (canvas.zones.length === 0 && availableDevices.length > 0) {
+        if (await reloadFromOpenRGB()) {
+            await eel.save_scene_topology(canvas.zones, canvas.effectCenter)();
+        }
+    }
 
     console.log('[Topology Editor] Ready');
 });

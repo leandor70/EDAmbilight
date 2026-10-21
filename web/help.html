@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EDAmbilight — Help</title>
+<link href="css/tailwind.min.css" rel="stylesheet">
+<link href="css/fonts.css" rel="stylesheet">
+<link href="css/design-system.css" rel="stylesheet">
+<style>
+    @font-face {
+        font-family:'Material Symbols Outlined'; font-style:normal; font-weight:100 700;
+        src:url('fonts/MaterialSymbolsOutlined.woff2') format('woff2'); font-display:block;
+    }
+    body { opacity:0; transition:opacity .35s cubic-bezier(0.23,1,0.32,1); }
+    body.loaded { opacity:1; }
+
+    .step-head { display:flex; align-items:center; gap:14px; margin-bottom:12px; }
+    .step-num {
+        width:32px; height:32px; border-radius:8px; flex-shrink:0;
+        display:flex; align-items:center; justify-content:center;
+        background:rgba(20,245,255,.06); border:1px solid rgba(20,245,255,.14);
+        font-family:var(--f-display); font-size:.9rem; font-weight:700; color:var(--c-cyan);
+    }
+    .step-title { font-family:var(--f-body); font-size:15px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#fff; }
+    .help-text { font-size:14px; line-height:1.55; color:var(--c-text); }
+    .help-text p { margin:0 0 8px; }
+    .help-text p:last-child { margin-bottom:0; }
+    .help-text b { color:var(--c-cyan-80); font-weight:700; }
+    .help-text a { color:var(--c-cyan); text-decoration:none; }
+    .help-text a:hover { opacity:.72; }
+    .help-text ul { margin:0 0 8px; padding-left:18px; list-style:none; }
+    .help-text li { position:relative; margin-bottom:5px; color:rgba(205,214,224,.82); }
+    .help-text li::before { content:''; position:absolute; left:-14px; top:.62em; width:4px; height:4px; border-radius:50%; background:rgba(20,245,255,.5); }
+    .help-note {
+        margin-top:10px; padding:8px 12px; border-radius:8px; font-size:12px; line-height:1.5;
+        border:1px solid rgba(20,245,255,.08); color:var(--c-text-mid);
+    }
+    .help-cta {
+        display:inline-flex; align-items:center; gap:8px; padding:10px 22px; border-radius:10px;
+        font-family:var(--f-body); font-size:13px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+        color:var(--c-cyan); text-decoration:none; cursor:pointer;
+        background:rgba(20,245,255,.08); border:1px solid rgba(20,245,255,.35);
+        transition:background .2s cubic-bezier(0.23,1,0.32,1), box-shadow .2s cubic-bezier(0.23,1,0.32,1), transform .15s cubic-bezier(0.23,1,0.32,1);
+    }
+    .help-cta:hover { background:rgba(20,245,255,.14); box-shadow:0 0 18px rgba(20,245,255,.25); }
+    .help-cta:active { transform:scale(.96); }
+</style>
+<script src="/eel.js"></script>
+<script src="js/common.js"></script>
+</head>
+<body class="h-screen w-full relative flex">
+
+<div class="ds-bg">
+    <div class="ds-bg-glow"></div>
+    <div class="ds-grain"></div>
+    <div class="ds-scan"></div>
+    <div class="ds-scan"></div>
+</div>
+
+<div id="sidebar-nav" data-active-page="help"></div>
+
+<main class="relative z-10 flex-1 flex flex-col h-full overflow-hidden">
+
+    <header style="
+        padding:14px 28px 10px; flex-shrink:0;
+        display:flex; align-items:center; gap:10px;
+        border-bottom:1px solid rgba(255,255,255,.04);
+    ">
+        <div class="ds-title-line" style="width:28px;"></div>
+        <span class="orbitron" style="font-size:.9rem;font-weight:700;letter-spacing:.34em;color:#fff;">HELP</span>
+        <div class="ds-title-line rev" style="width:28px;"></div>
+        <span style="font-size:8px;text-transform:uppercase;letter-spacing:.28em;color:rgba(255,255,255,.18);padding-left:6px;">Getting started</span>
+    </header>
+
+    <div class="flex-1 overflow-y-auto" style="padding:14px 20px 24px;">
+        <div style="max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:10px;">
+
+            <div class="panel ds-appear" style="animation-delay:.04s;">
+                <div class="panel-body help-text" style="padding:22px 24px;">
+                    <div class="orbitron" style="font-size:1.1rem;font-weight:700;letter-spacing:.12em;color:var(--c-cyan);margin-bottom:10px;">WELCOME TO EDAMBILIGHT</div>
+                    <p>EDAmbilight reads the colors at the edges of your screen and sends them to your RGB devices through OpenRGB, so your lights follow what is on screen.</p>
+                    <p>Follow these four steps once. You can come back to this page any time from the <b>Help</b> button in the sidebar.</p>
+                </div>
+            </div>
+
+            <div class="panel ds-appear" style="animation-delay:.10s;">
+                <div class="panel-body help-text" style="padding:20px 24px;">
+                    <div class="step-head"><div class="step-num">1</div><div class="step-title">Make sure OpenRGB is running</div></div>
+                    <p>EDAmbilight talks to your lights through <b>OpenRGB</b>. It starts it for you if it can find it.</p>
+                    <ul>
+                        <li>OpenRGB needs <b>administrator rights</b> to reach your devices: when it starts, Windows shows a permission prompt. Click <b>Yes</b>, otherwise no device will be found.</li>
+                        <li>In OpenRGB, open the <b>SDK Server</b> tab and click <b>Start Server</b> (default port 6742).</li>
+                        <li>If the connection fails, check host, port and the OpenRGB path in <a href="settings.html">Settings</a>.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="panel ds-appear" style="animation-delay:.16s;">
+                <div class="panel-body help-text" style="padding:20px 24px;">
+                    <div class="step-head"><div class="step-num">2</div><div class="step-title">Map your strip to the screen</div></div>
+                    <p>Open the <a href="topology-editor.html">Topology</a> page. On first run the zones of your devices are imported from OpenRGB automatically (the <b>Reload</b> button does it again at any time).</p>
+                    <ul>
+                        <li>Zones named <b>MonitorTop</b>, <b>MonitorRight</b>, <b>MonitorBottom</b> and <b>MonitorLeft</b> are the ones that follow the screen edges.</li>
+                        <li>Any other zone name is ignored by the ambilight.</li>
+                        <li>Use <b>Flip</b> / direction if the colors run the wrong way along an edge, then press <b>Save Topology</b>.</li>
+                    </ul>
+                    <div class="help-note">Tip: zone names come from OpenRGB. Create segments called MonitorTop, MonitorRight&hellip; in OpenRGB (Resizable zones &amp; segments) or rename the zones in the editor.</div>
+                </div>
+            </div>
+
+            <div class="panel ds-appear" style="animation-delay:.22s;">
+                <div class="panel-body help-text" style="padding:20px 24px;">
+                    <div class="step-head"><div class="step-num">3</div><div class="step-title">Choose devices and switch it on</div></div>
+                    <ul>
+                        <li>On the <a href="index.html">Control</a> page the <b>Devices</b> list shows what will receive colors. Use each device's power button to include or exclude it.</li>
+                        <li>Turn on the <b>Enable</b> switch in the Status panel. The ring pulses when the ambilight is running.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="panel ds-appear" style="animation-delay:.28s;">
+                <div class="panel-body help-text" style="padding:20px 24px;">
+                    <div class="step-head"><div class="step-num">4</div><div class="step-title">Fine-tune the look</div></div>
+                    <ul>
+                        <li>Click the <b>i</b> next to any panel title to see what each parameter does and what happens when you raise or lower it.</li>
+                        <li>Parameters that the selected algorithm does not use are dimmed with a <b>Not used</b> badge.</li>
+                        <li>Changes apply live: no need to save or restart.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="panel ds-appear" style="animation-delay:.34s;">
+                <div class="panel-body help-text" style="padding:20px 24px;">
+                    <div class="step-head"><div class="step-num"><span class="material-symbols-outlined" style="font-size:18px;">help</span></div><div class="step-title">Good to know</div></div>
+                    <ul>
+                        <li><b>Black screen / dark LEDs:</b> protected (HDCP) video such as some streaming apps cannot be captured. Try another <b>Capture Engine</b> on the Control page.</li>
+                        <li><b>Exclusive fullscreen games:</b> choose <b>DXGI</b> as Capture Engine.</li>
+                        <li><b>Window closed:</b> the app keeps running in the system tray. Right-click the tray icon to reopen or quit.</li>
+                        <li>Logs are written to <b>log/edambilight.log</b> next to the exe.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div style="display:flex;justify-content:center;padding:8px 0 4px;">
+                <a class="help-cta" href="topology-editor.html">
+                    <span class="material-symbols-outlined" style="font-size:18px;">hub</span>
+                    <span id="cta-text">Open Topology</span>
+                </a>
+            </div>
+
+        </div>
+    </div>
+</main>
+
+<script src="js/navigation.js"></script>
+<script>
+    // First run (opened automatically by the loading page): remember it was shown
+    if (new URLSearchParams(location.search).has('first')) {
+        try { eel.save_settings({ help_seen: true })(); } catch (e) {}
+        document.getElementById('cta-text').textContent = 'Start: open Topology';
+    }
+    window.addEventListener('load', () => document.body.classList.add('loaded'));
+</script>
+</body>
+</html>

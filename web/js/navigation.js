@@ -6,6 +6,7 @@ const NAV_ITEMS = [
     { id: 'devices',         icon: 'memory',              label: 'Devices',  href: 'devices.html' },
     { id: 'settings',        icon: 'tune',                label: 'Settings', href: 'settings.html' },
     { id: 'preview',         icon: 'auto_awesome',        label: 'Preview',  href: 'preview.html' },
+    { id: 'help',            icon: 'help',                label: 'Help',     href: 'help.html' },
 ];
 
 /* Inject keyframes + nav-item animation once per page */
@@ -26,6 +27,7 @@ const NAV_ITEMS = [
         .nav-item:nth-child(3) { animation-delay:.36s; }
         .nav-item:nth-child(4) { animation-delay:.48s; }
         .nav-item:nth-child(5) { animation-delay:.60s; }
+        .nav-item:nth-child(6) { animation-delay:.72s; }
 
         /* Logo fade-down */
         @keyframes logoIn {

@@ -27,6 +27,7 @@ def get_settings() -> dict:
         "openrgb_autostart": _settings.get_openrgb_autostart(),
         "language":          _settings.get_language(),
         "theme":             _settings.get_theme(),
+        "help_seen":         bool(_settings.settings.get("help_seen", False)),
     }
 
 
@@ -48,6 +49,9 @@ def save_settings(updates: dict) -> dict:
             _settings._save()
         if "openrgb_path" in updates:
             _settings.settings["openrgb_path"] = str(updates["openrgb_path"])
+            _settings._save()
+        if "help_seen" in updates:
+            _settings.settings["help_seen"] = bool(updates["help_seen"])
             _settings._save()
         if "openrgb_autostart" in updates:
             _settings.settings["openrgb_autostart"] = bool(updates["openrgb_autostart"])
