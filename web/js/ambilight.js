@@ -87,9 +87,15 @@ function onStrategyChange(value) {
 function updateStrategyVisibility(strategy) {
     const isAdaptive = strategy.includes('adaptive');
     const isSmooth   = strategy.includes('smooth');
-    document.getElementById('group-depth').classList.toggle('hidden', isAdaptive);
-    document.getElementById('group-adaptive').classList.toggle('hidden', !isAdaptive);
-    document.getElementById('group-smooth').classList.toggle('hidden', !isSmooth);
+    _setGroupActive('group-depth', !isAdaptive);
+    _setGroupActive('group-adaptive', isAdaptive);
+    _setGroupActive('group-smooth', isSmooth);
+}
+
+function _setGroupActive(id, active) {
+    const g = document.getElementById(id);
+    g.classList.toggle('is-off', !active);
+    g.querySelectorAll('input').forEach(i => { i.disabled = !active; });
 }
 
 // ── Devices ───────────────────────────────────────────────────────────────────

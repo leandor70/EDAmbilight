@@ -84,6 +84,51 @@
         font-family:var(--f-display); font-size:2.2rem; font-weight:700;
         color:var(--c-cyan); line-height:1;
     }
+    /* ── Info tooltip ── */
+    .info-btn {
+        display:inline-flex; align-items:center; justify-content:center;
+        width:14px; height:14px; margin-left:6px; padding:0;
+        vertical-align:middle; position:relative; top:-1px;
+        border-radius:50%; border:1px solid rgba(255,255,255,.18);
+        background:rgba(255,255,255,.03); color:var(--c-text-dim);
+        font-family:var(--f-display); font-size:8px; font-weight:700; font-style:normal;
+        text-transform:none; letter-spacing:0; line-height:1; cursor:help;
+        transition:color .25s cubic-bezier(0.23,1,0.32,1), border-color .25s cubic-bezier(0.23,1,0.32,1), background .25s cubic-bezier(0.23,1,0.32,1);
+    }
+    .info-btn:hover, .info-btn:focus-visible {
+        color:var(--c-cyan); border-color:rgba(20,245,255,.55);
+        background:rgba(20,245,255,.08); outline:none;
+    }
+    #info-tip {
+        position:fixed; z-index:1000; width:max-content; max-width:320px; padding:12px 14px;
+        border-radius:12px; pointer-events:none;
+        background:linear-gradient(160deg, rgba(10,24,36,.96), rgba(4,12,20,.97));
+        border:1px solid rgba(20,245,255,.18);
+        box-shadow:0 12px 36px rgba(0,0,0,.55), 0 0 22px rgba(20,245,255,.06);
+        backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+        opacity:0; transform:translateY(4px);
+        transition:opacity .2s cubic-bezier(0.23,1,0.32,1), transform .2s cubic-bezier(0.23,1,0.32,1);
+    }
+    #info-tip.show { opacity:1; transform:translateY(0); }
+    #info-tip .it-title {
+        font-size:11px; font-weight:700; text-transform:uppercase;
+        letter-spacing:.14em; color:var(--c-cyan); margin-bottom:6px; font-family:var(--f-body);
+    }
+    #info-tip .it-text { font-size:13px; line-height:1.45; color:var(--c-text); font-family:var(--f-body); }
+    #info-tip .it-row { margin-top:7px; padding-top:7px; border-top:1px solid rgba(255,255,255,.06); }
+    #info-tip .it-name { display:block; font-weight:700; color:var(--c-cyan-80); font-size:12px; letter-spacing:.04em; }
+    #info-tip .it-desc { color:var(--c-text-mid); color:rgba(205,214,224,.78); }
+    /* ── Disabled (unused by selected algorithm) ── */
+    .param-row > .panel { transition:opacity .35s cubic-bezier(0.23,1,0.32,1), filter .35s cubic-bezier(0.23,1,0.32,1); }
+    .panel.is-off { opacity:.38; filter:saturate(0); }
+    .panel.is-off .panel-body > *:not(.param-eyebrow) { pointer-events:none; }
+    .panel.is-off .info-btn { pointer-events:auto; }
+    .off-badge {
+        display:none; margin-left:8px; padding:2px 7px; border-radius:999px;
+        border:1px solid rgba(255,255,255,.18); color:var(--c-text-mid);
+        font-size:9px; letter-spacing:.12em; vertical-align:middle;
+    }
+    .panel.is-off .off-badge { display:inline-block; }
 </style>
 <script src="/eel.js"></script>
 <script src="js/common.js"></script>
@@ -124,7 +169,7 @@
             <div class="panel-body" style="padding:22px 20px; justify-content:space-between;">
 
                 <div>
-                    <div class="ds-label" style="margin-bottom:16px;">Status</div>
+                    <div class="ds-label" style="margin-bottom:16px;">Status <button type="button" class="info-btn" aria-label="Info: Status" data-info-title="Status" data-info="Shows whether the Ambilight service is running and sending colors to your devices.&#10;Enable|Turns the effect on or off. When off, devices return to their normal lighting.">i</button></div>
                     <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
                         <div id="status-dot" style="
                             width:10px; height:10px; border-radius:50%; flex-shrink:0;
@@ -168,7 +213,7 @@
                 <div class="panel">
                     <div class="panel-body" style="padding:16px 20px;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-                            <div class="ds-label">FPS Target</div>
+                            <div class="ds-label">FPS Target <button type="button" class="info-btn" aria-label="Info: FPS Target" data-info-title="FPS Target" data-info="How many times per second the screen is captured and the LEDs are updated.&#10;Higher|Smoother and more reactive LEDs, but more CPU/GPU load.&#10;Lower|Lighter on the system, but colors follow the image with visible lag or steps.&#10;The badge shows the real rate being reached.">i</button></div>
                             <div id="fps-badge" style="font-size:11px; color:var(--c-text-ghost);">— live</div>
                         </div>
                         <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:14px;">
@@ -182,7 +227,7 @@
 
                 <div class="panel">
                     <div class="panel-body" style="padding:16px 20px;">
-                        <div class="ds-label" style="margin-bottom:10px;">Capture Engine</div>
+                        <div class="ds-label" style="margin-bottom:10px;">Capture Engine <button type="button" class="info-btn" aria-label="Info: Capture Engine" data-info-title="Capture Engine" data-info="The method used to grab the screen image.&#10;Auto|Tries WGC, then DXGI, then mss. Best choice for most setups.&#10;WGC|Works with browsers and windowed apps.&#10;DXGI|Needed for exclusive-fullscreen games.&#10;mss|Slow CPU-only fallback, use it only if the others fail.&#10;Protected (HDCP) content may appear black with any engine.">i</button></div>
                         <select id="ctrl-capturer" onchange="liveUpdate('capturer', this.value, null)">
                             <option value="auto">Auto (WGC → DXGI → mss)</option>
                             <option value="wgc">WGC — Chrome-safe</option>
@@ -198,7 +243,7 @@
 
                 <div class="panel">
                     <div class="panel-body" style="padding:16px 20px;">
-                        <div class="ds-label" style="margin-bottom:10px;">Algorithm</div>
+                        <div class="ds-label" style="margin-bottom:10px;">Algorithm <button type="button" class="info-btn" aria-label="Info: Algorithm" data-info-title="Algorithm" data-info="How each LED color is calculated from the screen edge. It decides which parameters below are active.&#10;Adaptive + EMA|Auto sampling depth plus smoothing. Best overall.&#10;Adaptive depth|Auto depth, no smoothing: reacts instantly.&#10;Percentile + EMA|Fixed depth, bright-pixel color, smoothed.&#10;Percentile 80%|Picks a bright pixel of the area: vivid colors, may flicker.&#10;Dominant color|Median color: ignores small bright details.&#10;RGB mean|Plain average: calm but washed-out colors.&#10;Black bar detect|Ignores black letterbox bars so colors match the actual picture.">i</button></div>
                         <select id="ctrl-strategy" onchange="onStrategyChange(this.value)">
                             <option value="adaptive_smooth">Adaptive + EMA (best)</option>
                             <option value="adaptive">Adaptive depth</option>
@@ -225,7 +270,7 @@
 
                 <div id="group-depth" class="panel">
                     <div class="panel-body" style="padding:16px 20px;">
-                        <div class="param-eyebrow">Sampling Area</div>
+                        <div class="param-eyebrow">Sampling Area <button type="button" class="info-btn" aria-label="Info: Sampling Area" data-info-title="Sampling Area" data-info="How far from the screen edge pixels are read to compute each LED color. Used by fixed-depth algorithms.&#10;Depth ▲|Larger area: more averaged, calmer color that also reflects what is further from the edge.&#10;Depth ▼|Thin strip: colors follow the exact edge, more precise but more flickery.&#10;Value is a % of the screen&#x27;s shorter side.">i</button><span class="off-badge">Not used</span></div>
                         <div class="slider-row">
                             <div class="slider-label">
                                 <span class="slider-label-text">Depth</span>
@@ -238,9 +283,9 @@
                     </div>
                 </div>
 
-                <div id="group-adaptive" class="panel hidden">
+                <div id="group-adaptive" class="panel">
                     <div class="panel-body" style="padding:16px 20px;">
-                        <div class="param-eyebrow">Adaptive Area</div>
+                        <div class="param-eyebrow">Adaptive Area <button type="button" class="info-btn" aria-label="Info: Adaptive Area" data-info-title="Adaptive Area" data-info="The sampling depth changes automatically with the image content, always staying between these two limits.&#10;Min depth ▲|The area never gets very thin: more stable, less edge precision.&#10;Min depth ▼|Allows a very thin strip on busy or detailed edges.&#10;Max depth ▲|The area can grow a lot on uniform edges: smoother, more averaged color.&#10;Max depth ▼|Caps the area: colors stay closer to the edge.&#10;Max should stay above Min.">i</button><span class="off-badge">Not used</span></div>
                         <div class="slider-row">
                             <div class="slider-label">
                                 <span class="slider-label-text">Min depth</span>
@@ -262,7 +307,7 @@
 
                 <div id="group-smooth" class="panel">
                     <div class="panel-body" style="padding:16px 20px;">
-                        <div class="param-eyebrow">Temporal Smoothing</div>
+                        <div class="param-eyebrow">Temporal Smoothing <button type="button" class="info-btn" aria-label="Info: Temporal Smoothing" data-info-title="Temporal Smoothing" data-info="Blends each new frame with the previous ones to reduce flicker.&#10;EMA Alpha ▲|LEDs follow the image faster, with more flicker (0.95 = almost instant).&#10;EMA Alpha ▼|Slower, softer color changes, with some delay (0.05 = very smooth).&#10;Scene-cut ▲|Only very big color changes skip the smoothing: more fading between scenes.&#10;Scene-cut ▼|Even small color changes make the LEDs jump instantly: less smoothing effect.">i</button><span class="off-badge">Not used</span></div>
                         <div class="slider-row">
                             <div class="slider-label">
                                 <span class="slider-label-text">EMA Alpha</span>
@@ -286,7 +331,7 @@
 
                 <div class="panel">
                     <div class="panel-body" style="padding:16px 20px;">
-                        <div class="param-eyebrow">Output</div>
+                        <div class="param-eyebrow">Output <button type="button" class="info-btn" aria-label="Info: Output" data-info-title="Output" data-info="Final adjustment applied to the colors before they are sent to the devices.&#10;Saturation boost ▲|More vivid, intense colors (2.5 = max).&#10;Saturation boost ▼|Paler colors, closer to the real picture (1.0 = no change, below 1.0 = desaturated).">i</button></div>
                         <div class="slider-row">
                             <div class="slider-label">
                                 <span class="slider-label-text">Saturation boost</span>
@@ -305,7 +350,7 @@
             <div class="panel devices-row ds-appear" style="animation-delay:.26s;">
                 <div class="panel-body" style="padding:18px 20px;">
                     <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:14px; flex-shrink:0;">
-                        <div class="ds-label">Devices</div>
+                        <div class="ds-label">Devices <button type="button" class="info-btn" aria-label="Info: Devices" data-info-title="Devices" data-info="The lighting devices that receive the Ambilight colors.&#10;On/off|Use each device&#x27;s power button to include or exclude it from the effect.&#10;Each device needs its zones mapped to a screen side in the Topology Editor, otherwise it gets no colors.">i</button></div>
                         <span style="font-size:11px; color:var(--c-text-ghost);">keyboards excluded</span>
                     </div>
                     <div id="devices-container" style="flex:1; overflow-y:auto; min-height:0;">
@@ -332,6 +377,43 @@
 
 </main>
 
+<div id="info-tip" role="tooltip"><div class="it-title"></div><div class="it-text"></div></div>
+<script>
+(function () {
+    const tip = document.getElementById('info-tip');
+    const tt = tip.querySelector('.it-title'), tx = tip.querySelector('.it-text');
+    function show(btn) {
+        tt.textContent = btn.dataset.infoTitle;
+        tx.textContent = '';
+        btn.dataset.info.split('\n').forEach((line, i) => {
+            const d = document.createElement('div');
+            const sep = line.indexOf('|');
+            if (i === 0) { d.textContent = line; }
+            else if (sep > 0) {
+                d.className = 'it-row';
+                const n = document.createElement('span'); n.className = 'it-name'; n.textContent = line.slice(0, sep);
+                const t = document.createElement('span'); t.className = 'it-desc'; t.textContent = line.slice(sep + 1);
+                d.append(n, t);
+            } else { d.className = 'it-row it-desc'; d.textContent = line; }
+            tx.appendChild(d);
+        });
+        const r = btn.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+        let left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), window.innerWidth - w - 8);
+        let top = r.bottom + 8;
+        if (top + h > window.innerHeight - 8) top = r.top - h - 8;
+        tip.style.left = left + 'px';
+        tip.style.top = Math.max(8, top) + 'px';
+        tip.classList.add('show');
+    }
+    function hide() { tip.classList.remove('show'); }
+    document.querySelectorAll('.info-btn').forEach(b => {
+        b.addEventListener('mouseenter', () => show(b));
+        b.addEventListener('mouseleave', hide);
+        b.addEventListener('focus', () => show(b));
+        b.addEventListener('blur', hide);
+    });
+})();
+</script>
 <script src="js/navigation.js"></script>
 <script src="js/ambilight.js"></script>
 <script>
