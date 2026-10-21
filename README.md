@@ -13,13 +13,19 @@
 
 ## 📥 Download
 
-➡️ **[Latest Release — v1.0.0](../../releases/latest)**
+➡️ **[Latest Release](../../releases/latest)**
 
-Download `EDAmbilight-v1.0.0.zip`, extract anywhere, run `EDAmbilight.exe`.
+Download the `EDAmbilight-vX.Y.Z.zip` from the release page, extract anywhere, run `EDAmbilight.exe`.
 No Python or extra dependencies needed.
 
 > **OpenRGB must be running** with the SDK Server enabled before launching EDAmbilight.
 > In OpenRGB: *Settings → SDK Server → Start Server* (default port 6742)
+
+> **Windows SmartScreen warning:** the exe is not code-signed yet, so Windows may show
+> *"Windows protected your PC"* / *"Unknown publisher"* on first launch. This is expected.
+> Click **More info → Run anyway**. If the zip itself is blocked, right-click it →
+> *Properties* → tick **Unblock** before extracting. To verify the download, compare
+> `certutil -hashfile EDAmbilight-vX.Y.Z.zip SHA256` with the `.sha256` file on the release page.
 
 ---
 
@@ -194,6 +200,10 @@ The sampling loop runs as a background thread at the configured FPS. Each frame 
 ---
 
 ## 🔍 Troubleshooting
+
+**"Windows protected your PC" / "Unknown publisher"**
+The exe is not code-signed. Click *More info → Run anyway*, or unblock the zip
+(right-click → Properties → Unblock) before extracting.
 
 **"OpenRGB not found" on the splash screen**
 Make sure OpenRGB is running with the SDK Server enabled on port 6742.
