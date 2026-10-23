@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.0.6] — 2026-10-23
+
+### Fixed
+
+- DXGI capture no longer stops for good after a display mode change, lock
+  screen or driver reset. The capture thread is now monitored and restarted
+  automatically, with up to 10 retries and increasing back-off.
+
+---
+
 ## [1.0.5] — 2026-10-21
 
 ### Added

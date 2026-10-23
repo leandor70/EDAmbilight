@@ -94,8 +94,17 @@ class _DxcamCapturer:
         self._cam.start(target_fps=fps)
         print(f"[ScreenCapturer] DXGI (dxcam, target {fps} fps)")
 
+    def _capture_thread_dead(self) -> bool:
+        # Se il recupero interno di dxcam fallisce (es. cambio modalita' video,
+        # lock screen, UAC, driver reset) il thread di cattura muore in silenzio:
+        # get_latest_frame() continua a restituire l'ultimo frame senza eccezioni.
+        thread = getattr(self._cam, "_DXCamera__thread", None)
+        return thread is not None and not thread.is_alive()
+
     def grab(self) -> Optional[np.ndarray]:
         try:
+            if self._capture_thread_dead():
+                self._recover()
             frame = self._cam.get_latest_frame()
             return None if frame is None else frame[::DOWNSAMPLE, ::DOWNSAMPLE, :3]
         except Exception as exc:
@@ -105,21 +114,29 @@ class _DxcamCapturer:
 
     def _recover(self) -> None:
         print("[ScreenCapturer] DXGI access lost — recupero...")
-        try:
-            self._cam.stop()
-        except Exception:
-            pass
+        for fn in ("stop", "release"):
+            try:
+                getattr(self._cam, fn)()
+            except Exception:
+                pass
         time.sleep(0.5)
-        for attempt in range(1, 4):
+        # Il desktop puo' restare in transizione a lungo (cambio modalita',
+        # lock screen): riprova con backoff crescente invece di arrendersi.
+        for attempt in range(1, 11):
             try:
                 self._cam = self._dxcam.create(output_color="BGRA")
                 self._cam.start(target_fps=self._fps)
-                print(f"[ScreenCapturer] DXGI recuperato ({attempt}/3)")
+                print(f"[ScreenCapturer] DXGI recuperato ({attempt}/10)")
                 return
             except Exception as exc:
-                print(f"[ScreenCapturer] Recupero {attempt}/3 fallito: {exc}")
-                time.sleep(1.0)
-        raise RuntimeError("[ScreenCapturer] DXGI: impossibile recuperare dopo 3 tentativi")
+                print(f"[ScreenCapturer] Recupero {attempt}/10 fallito: {exc}")
+                for fn in ("stop", "release"):
+                    try:
+                        getattr(self._cam, fn)()
+                    except Exception:
+                        pass
+                time.sleep(min(1.0 * attempt, 5.0))
+        raise RuntimeError("[ScreenCapturer] DXGI: impossibile recuperare dopo 10 tentativi")
 
     def set_fps(self, fps: int) -> None:
         if fps == self._fps:
