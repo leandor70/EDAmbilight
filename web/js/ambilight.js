@@ -37,7 +37,8 @@ function applyConfig(cfg) {
     setSlider('ctrl-fps',       'val-fps',       cfg.fps              ?? 15);
     setSlider('ctrl-depth',     'val-depth',     cfg.depth            ?? 10);
     setSlider('ctrl-sat',       'val-sat',       cfg.saturation_boost ?? 1.4);
-    setSlider('ctrl-ema',       'val-ema',       cfg.ema_alpha        ?? 0.35);
+    setSlider('ctrl-min-lum',   'val-min-lum',   cfg.min_luminance    ?? 0);
+    setSlider('ctrl-ema',      'val-ema',       cfg.ema_alpha        ?? 0.35);
     setSlider('ctrl-scene-cut', 'val-scene-cut', cfg.scene_cut        ?? 60);
     setSlider('ctrl-adap-min',  'val-adap-min',  cfg.adaptive_min     ?? 3);
     setSlider('ctrl-adap-max',  'val-adap-max',  cfg.adaptive_max     ?? 20);

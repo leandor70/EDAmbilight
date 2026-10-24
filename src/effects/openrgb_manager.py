@@ -81,11 +81,9 @@ class OpenRGBManager:
 
     @staticmethod
     def _detect_topology(device) -> TopologyType:
-        """Heuristic: keyword-based keyboard detection only — no LED-count threshold."""
-        name_lower = device.name.lower()
-        if any(k in name_lower for k in ("keyboard", "k7", "k55", "k70", "k95",
-                                          "apex", "huntsman", "blackwidow")):
-            print(f"[OpenRGBManager] '{device.name}' → MATRIX (keyboard heuristic)")
+        """Keyboards (by the device type OpenRGB reports) are excluded as MATRIX."""
+        if getattr(device.type, "name", "") == "KEYBOARD":
+            print(f"[OpenRGBManager] '{device.name}' → MATRIX (device type: keyboard)")
             return TopologyType.MATRIX
         if len(device.leds) > 1:
             return TopologyType.LINEAR

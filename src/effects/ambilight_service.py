@@ -126,6 +126,31 @@ def _boost_saturation(
     return result
 
 
+_MIN_LUM_BLACK = 4   # sotto questo valore (max canale) il colore è nero vero: resta spento
+
+
+def _apply_min_luminance(
+    colors: List[Tuple[int, int, int]],
+    floor: float,
+) -> List[Tuple[int, int, int]]:
+    """Alza i colori più scuri di `floor` (0-255) fino a quella luminosità.
+
+    Scala i tre canali in proporzione, quindi la tinta non cambia. Il nero
+    vero (max canale < _MIN_LUM_BLACK) non viene toccato: così le scene
+    davvero nere continuano a spegnere i LED.
+    """
+    if floor <= 0:
+        return colors
+    result = []
+    for r, g, b in colors:
+        peak = max(r, g, b)
+        if _MIN_LUM_BLACK <= peak < floor:
+            k = floor / peak
+            r, g, b = (min(255, int(r * k)), min(255, int(g * k)), min(255, int(b * k)))
+        result.append((r, g, b))
+    return result
+
+
 def _sample_area_point(
     frame: np.ndarray,
     x_pct: float,
@@ -440,7 +465,7 @@ class AmbilightService:
             return {
                 "version": 1, "enabled": False, "capturer": "auto",
                 "fps": 15, "strategy": "adaptive_smooth",
-                "depth": 10, "saturation_boost": 1.4,
+                "depth": 10, "saturation_boost": 1.4, "min_luminance": 0,
                 "ema_alpha": 0.35, "scene_cut": 60,
                 "adaptive_min": 3, "adaptive_max": 20,
                 "black_bar_detect": True, "bb_interval": 1.0,
@@ -686,6 +711,7 @@ class AmbilightService:
         strategy    = cfg.get("strategy", "adaptive_smooth")
         depth_pct   = cfg.get("depth", 10.0) / 100.0
         sat_boost   = cfg.get("saturation_boost", 1.4)
+        min_lum     = cfg.get("min_luminance", 0)
         devices_cfg = cfg.get("devices", {})
         edge_cache: Dict[str, np.ndarray] = {}
 
@@ -723,7 +749,7 @@ class AmbilightService:
                             alpha=cfg.get("ema_alpha", 0.35),
                             cut_threshold=cfg.get("scene_cut", 60.0),
                         )
-                    colors[off: off + active] = zone_colors
+                    colors[off: off + active] = _apply_min_luminance(zone_colors, min_lum)
                     continue
 
                 zone_colors = _sample_edge(
@@ -744,7 +770,7 @@ class AmbilightService:
                 if strategy != "hsv":
                     zone_colors = _boost_saturation(zone_colors, sat_boost)
 
-                colors[off: off + active] = zone_colors
+                colors[off: off + active] = _apply_min_luminance(zone_colors, min_lum)
 
             # Skip the write if a pause arrived mid-frame (e.g. calibration
             # just started) — avoids a stray ambilight frame fighting it.

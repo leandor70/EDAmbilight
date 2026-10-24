@@ -6,6 +6,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.0.7] — 2026-10-24
+
+### Added
+
+- **Min brightness** slider in the Output panel (`min_luminance`, 0 = off).
+  Colors darker than the chosen level are lifted to it with their hue kept,
+  so LEDs over dim areas of the screen no longer look switched off. Pure
+  black still keeps the LEDs off.
+
+### Changed
+
+- Keyboards are now excluded by the device type OpenRGB reports, not by
+  matching keywords in the device name, so other devices whose name happens
+  to contain a model like "K7" are no longer skipped by mistake.
+
+---
+
 ## [1.0.6] — 2026-10-23
 
 ### Fixed

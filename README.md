@@ -157,6 +157,7 @@ Configuration files are stored in the `config/` folder next to the exe and are c
 | `strategy` | `"adaptive_smooth"` | Sampling strategy (see below) |
 | `depth` | `10` | Base sampling depth as % of screen |
 | `saturation_boost` | `1.6` | Saturation multiplier |
+| `min_luminance` | `0` | Brightness floor (0–255): colors darker than this are lifted to it, hue kept; pure black stays off. 0 = disabled |
 | `ema_alpha` | `0.5` | EMA smoothing factor (0 = frozen, 1 = instant) |
 | `scene_cut` | `43` | Per-LED delta that bypasses EMA |
 | `adaptive_min` | `3` | Minimum adaptive depth % |

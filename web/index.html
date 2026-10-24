@@ -331,7 +331,7 @@
 
                 <div class="panel">
                     <div class="panel-body" style="padding:16px 20px;">
-                        <div class="param-eyebrow">Output <button type="button" class="info-btn" aria-label="Info: Output" data-info-title="Output" data-info="Final adjustment applied to the colors before they are sent to the devices.&#10;Saturation boost ▲|More vivid, intense colors (2.5 = max).&#10;Saturation boost ▼|Paler colors, closer to the real picture (1.0 = no change, below 1.0 = desaturated).">i</button></div>
+                        <div class="param-eyebrow">Output <button type="button" class="info-btn" aria-label="Info: Output" data-info-title="Output" data-info="Final adjustment applied to the colors before they are sent to the devices.&#10;Saturation boost ▲|More vivid, intense colors (2.5 = max).&#10;Saturation boost ▼|Paler colors, closer to the real picture (1.0 = no change, below 1.0 = desaturated).&#10;Min brightness ▲|Dark colors are brightened to this level (hue kept), so LEDs over dim areas stay visible.&#10;Min brightness ▼|0 = off: dark areas are shown as they are. Pure black always stays off.">i</button></div>
                         <div class="slider-row">
                             <div class="slider-label">
                                 <span class="slider-label-text">Saturation boost</span>
@@ -340,6 +340,15 @@
                             <input id="ctrl-sat" type="range" min="0.5" max="2.5" step="0.1" value="1.4"
                                 oninput="liveUpdate('saturation_boost', +this.value, 'val-sat'); updateFill(this);">
                             <div class="slider-hint">1.0 = none · 2.5 = max vivid</div>
+                        </div>
+                        <div class="slider-row">
+                            <div class="slider-label">
+                                <span class="slider-label-text">Min brightness</span>
+                                <span id="val-min-lum" class="slider-val">0</span>
+                            </div>
+                            <input id="ctrl-min-lum" type="range" min="0" max="80" step="5" value="0"
+                                oninput="liveUpdate('min_luminance', +this.value, 'val-min-lum'); updateFill(this);">
+                            <div class="slider-hint">0 = off · dark colors lifted to this level, pure black stays off</div>
                         </div>
                     </div>
                 </div>
