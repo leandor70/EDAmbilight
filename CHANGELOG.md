@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.0.9] — 2026-10-25
+
+### Fixed
+
+- The FPS badge on the Control page is now white: it was almost invisible.
+
+---
+
 ## [1.0.8] — 2026-10-25
 
 ### Changed
