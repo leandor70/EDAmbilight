@@ -6,6 +6,28 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.0.8] — 2026-10-25
+
+### Changed
+
+- At startup and after every OpenRGB reconnect, `device_topologies.json` is
+  checked against the hardware, which always wins. New devices are imported;
+  zones whose name or LED count differ are re-synced, keeping the layout of
+  the zones that still exist. Devices that are no longer detected are left
+  alone and simply receive no colors.
+
+### Fixed
+
+- Zones with segments now get unique indexes. Before, two segmented zones
+  shared the same indexes, so changes could go undetected and a re-sync could
+  mix up their layout. Topologies saved by older versions are renumbered
+  automatically on first start.
+- DXGI capture is restarted also when dxcam clears its own capture thread
+  after a crash (the LEDs used to stay frozen). Capture restart and FPS
+  changes no longer race.
+
+---
+
 ## [1.0.7] — 2026-10-24
 
 ### Added

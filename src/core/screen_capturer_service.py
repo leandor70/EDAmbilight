@@ -90,6 +90,9 @@ class _DxcamCapturer:
         import dxcam
         self._dxcam = dxcam
         self._fps   = fps
+        # set_fps() (thread API) e grab() (thread ambilight) toccano la camera:
+        # senza lock grab() vedrebbe is_capturing False durante il riavvio.
+        self._cam_lock = threading.RLock()
         self._cam   = dxcam.create(output_color="BGRA")
         self._cam.start(target_fps=fps)
         print(f"[ScreenCapturer] DXGI (dxcam, target {fps} fps)")
@@ -99,17 +102,26 @@ class _DxcamCapturer:
         # lock screen, UAC, driver reset) il thread di cattura muore in silenzio:
         # get_latest_frame() continua a restituire l'ultimo frame senza eccezioni.
         thread = getattr(self._cam, "_DXCamera__thread", None)
-        return thread is not None and not thread.is_alive()
+        if thread is not None and not thread.is_alive():
+            return True
+        # Quando il loop va in errore dxcam azzera il proprio thread (None) e
+        # mette is_capturing a False prima di rilanciare: il controllo sul
+        # thread da solo non lo vede. Noi fermiamo la camera solo dentro
+        # _recover/set_fps/stop, quindi qui is_capturing False = loop morto.
+        return not getattr(self._cam, "is_capturing", True)
 
     def grab(self) -> Optional[np.ndarray]:
         try:
-            if self._capture_thread_dead():
-                self._recover()
-            frame = self._cam.get_latest_frame()
+            with self._cam_lock:
+                if self._capture_thread_dead():
+                    self._recover()
+                cam = self._cam
+            frame = cam.get_latest_frame()
             return None if frame is None else frame[::DOWNSAMPLE, ::DOWNSAMPLE, :3]
         except Exception as exc:
             if any(t in str(exc).lower() for t in self._RECOVERABLE):
-                self._recover()
+                with self._cam_lock:
+                    self._recover()
             return None
 
     def _recover(self) -> None:
@@ -141,19 +153,21 @@ class _DxcamCapturer:
     def set_fps(self, fps: int) -> None:
         if fps == self._fps:
             return
-        try:
-            self._cam.stop()
-        except Exception:
-            pass
-        self._fps = fps
-        self._cam = self._dxcam.create(output_color="BGRA")
-        self._cam.start(target_fps=fps)
+        with self._cam_lock:
+            try:
+                self._cam.stop()
+            except Exception:
+                pass
+            self._fps = fps
+            self._cam = self._dxcam.create(output_color="BGRA")
+            self._cam.start(target_fps=fps)
 
     def stop(self) -> None:
-        try:
-            self._cam.stop()
-        except Exception:
-            pass
+        with self._cam_lock:
+            try:
+                self._cam.stop()
+            except Exception:
+                pass
 
 
 class _MssCapturer:

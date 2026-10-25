@@ -74,6 +74,10 @@ def reconnect_openrgb() -> dict:
         if _openrgb_manager is not None:
             ok = _openrgb_manager.reconnect(host, port)
             if ok:
+                # The hardware may differ from before the disconnect:
+                # re-align the topology (also refreshes the zone cache).
+                from api.topology_api import sync_topologies_with_hardware
+                sync_topologies_with_hardware()
                 return {"ok": True, "devices": len(_openrgb_manager.devices)}
             return {"ok": False, "error": f"Cannot connect to {host}:{port}"}
 

@@ -28,9 +28,75 @@ def init_topology_api(openrgb_manager=None, ambilight_service=None) -> None:
     if ambilight_service:
         _ambilight_service = ambilight_service
     _ensure_config_exists()
+    sync_topologies_with_hardware()
     config         = _load_topologies()
     topology_count = len(config.get("topologies", {}))
     print(f"[TopologyAPI] Initialized ({topology_count} device topologies configured)")
+
+
+def sync_topologies_with_hardware() -> List[str]:
+    """At startup, make device_topologies.json agree with the hardware OpenRGB
+    reports; the hardware always wins. Hardware is not expected to change
+    while the app runs, so this is the only automatic check.
+
+    - LINEAR device without a topology: its zones are imported.
+    - LINEAR device whose zones differ from the hardware (zone count, name or
+      LED count): re-synced via reload_device_from_openrgb, which keeps the
+      layout of the zones that still exist.
+    - Topology of a device that is no longer detected: left untouched, the
+      device simply receives no colors.
+
+    Runs at startup and after every successful OpenRGB reconnect. Returns the
+    keys of the devices whose topology was written.
+    """
+    changed: List[str] = []
+    if not _openrgb_manager:
+        return changed
+    from effects.openrgb_manager import TopologyType
+
+    known = _load_topologies().get("topologies", {})
+    for ctrl in _openrgb_manager.devices:
+        if ctrl.topology.topology_type != TopologyType.LINEAR:
+            continue
+        device_key = _openrgb_manager._make_device_key(ctrl)
+
+        if device_key not in known:
+            result = reload_device_from_openrgb(device_key)
+            if result["success"]:
+                changed.append(device_key)
+                print(f"[TopologyAPI] New device '{device_key}': imported "
+                      f"{len(result['zones'])} zone(s) from OpenRGB")
+            else:
+                print(f"[TopologyAPI] New device '{device_key}': import failed "
+                      f"({result.get('error')})")
+            continue
+
+        hw   = {z["zone_index"]: z for z in _read_openrgb_zones(ctrl.topology.device)}
+        saved = known[device_key].get("zones", [])
+        cfg   = {z.get("zone_index"): z for z in _renumber_legacy_zones(saved)}
+        diff  = []
+        if _has_duplicate_indexes(saved):
+            diff.append("repeated zone indexes renumbered")
+        for idx in sorted(hw.keys() | cfg.keys(), key=lambda i: (i is None, i)):
+            h, c = hw.get(idx), cfg.get(idx)
+            if c is None:
+                diff.append(f"zone '{h['name']}' added")
+            elif h is None:
+                diff.append(f"zone '{c.get('name')}' removed")
+            else:
+                if c.get("name") != h["name"]:
+                    diff.append(f"zone '{c.get('name')}' renamed '{h['name']}'")
+                if c.get("led_count") != h["led_count"]:
+                    diff.append(f"zone '{h['name']}' LEDs {c.get('led_count')}->{h['led_count']}")
+        if not diff:
+            continue
+
+        result = reload_device_from_openrgb(device_key)
+        if result["success"]:
+            changed.append(device_key)
+        status = "re-synced" if result["success"] else f"re-sync failed ({result.get('error')})"
+        print(f"[TopologyAPI] '{device_key}' differs from hardware, {status}: " + "; ".join(diff))
+    return changed
 
 
 def _ensure_config_exists():
@@ -271,6 +337,46 @@ def save_scene_topology(zones: list, global_effect_center: dict) -> dict:
 # ── Reload from OpenRGB ───────────────────────────────────────────────────────
 
 
+def _read_openrgb_zones(device) -> List[dict]:
+    """Zones (or segments, when a zone has them) as reported by the hardware.
+
+    zone_index is a progressive counter over every zone/segment of the device,
+    in hardware order: unique even when several zones have segments, and equal
+    to the zone position for devices without segments.
+    """
+    zones = []
+    for zone in device.zones:
+        if hasattr(zone, "segments") and len(zone.segments) > 0:
+            for segment in zone.segments:
+                idx = len(zones)
+                zones.append({
+                    "zone_index": idx,
+                    "name":       segment.name if hasattr(segment, "name") else f"Segment {idx}",
+                    "led_count":  getattr(segment, "leds_count", len(getattr(segment, "leds", [])))
+                })
+        else:
+            zones.append({
+                "zone_index": len(zones),
+                "name":       zone.name,
+                "led_count":  len(zone.leds),
+            })
+    return zones
+
+
+def _has_duplicate_indexes(zones: List[dict]) -> bool:
+    indexes = [z.get("zone_index") for z in zones]
+    return len(indexes) != len(set(indexes))
+
+
+def _renumber_legacy_zones(zones: List[dict]) -> List[dict]:
+    """Topologies saved with segments by older versions have repeated
+    zone_index values (the segment counter restarted for every zone). The
+    saved list is in hardware order, so renumber it by position."""
+    if not _has_duplicate_indexes(zones):
+        return zones
+    return [{**z, "zone_index": i} for i, z in enumerate(zones)]
+
+
 @eel.expose
 def reload_device_from_openrgb(device_id: str) -> dict:
     """Sync LED counts from live OpenRGB device data."""
@@ -294,25 +400,11 @@ def reload_device_from_openrgb(device_id: str) -> dict:
         ZONE_COLORS = ["#14F5FF", "#FF6600", "#00FF00", "#FF00FF",
                        "#FFFF00", "#FF0088", "#00FF88", "#8800FF"]
 
-        openrgb_zones = []
-        for zone_idx, zone in enumerate(device.zones):
-            if hasattr(zone, "segments") and len(zone.segments) > 0:
-                for seg_idx, segment in enumerate(zone.segments):
-                    openrgb_zones.append({
-                        "zone_index": seg_idx,
-                        "name":       segment.name if hasattr(segment, "name") else f"Segment {seg_idx}",
-                        "led_count":  getattr(segment, "leds_count", len(getattr(segment, "leds", [])))
-                    })
-            else:
-                openrgb_zones.append({
-                    "zone_index": zone_idx,
-                    "name":       zone.name,
-                    "led_count":  len(zone.leds),
-                })
+        openrgb_zones = _read_openrgb_zones(device)
 
         config        = _load_topologies()
         topologies    = config.get("topologies", {})
-        existing_zones = topologies.get(device_id, {}).get("zones", [])
+        existing_zones = _renumber_legacy_zones(topologies.get(device_id, {}).get("zones", []))
 
         updated_zones = []
         changes       = {"led_count_changes": [], "new_zones": [], "removed_zones": []}
