@@ -32,9 +32,9 @@
 
   /* Text */
   --c-text:       #CDD6E0;
-  --c-text-mid:   rgba(255,255,255,.50);
-  --c-text-dim:   rgba(255,255,255,.30);
-  --c-text-ghost: rgba(255,255,255,.14);
+  --c-text-mid:   rgba(255,255,255,.74);
+  --c-text-dim:   rgba(255,255,255,.60);
+  --c-text-ghost: rgba(255,255,255,.50);
 
   /* Glass hairlines */
   --hair-1: rgba(255,255,255,.06);
@@ -530,7 +530,7 @@ input[type=text]:focus, input[type=number]:focus {
 
 .badge, .ds-badge {
   display:inline-block;
-  font-family:var(--f-body); font-size:9px; font-weight:700;
+  font-family:var(--f-body); font-size:11px; font-weight:700;
   text-transform:uppercase; letter-spacing:.08em;
   padding:2px 7px; border-radius:3px;
 }
@@ -539,8 +539,8 @@ input[type=text]:focus, input[type=number]:focus {
 .badge-single,  .ds-badge-muted  { background:rgba(255,255,255,.05); color:var(--c-text-dim); border:1px solid rgba(255,255,255,.09); }
 .ds-badge-amber                  { background:rgba(255,159,28,.12); color:rgba(255,159,28,.78); border:1px solid rgba(255,159,28,.20); }
 
-.has-topology { background:var(--c-cyan-08); border:1px solid rgba(20,245,255,.18); border-radius:4px; padding:2px 7px; font-size:9px; color:var(--c-cyan-80); }
-.no-topology  { background:rgba(251,191,36,.07); border:1px solid rgba(251,191,36,.18); border-radius:4px; padding:2px 7px; font-size:9px; color:rgba(251,191,36,.70); }
+.has-topology { background:var(--c-cyan-08); border:1px solid rgba(20,245,255,.18); border-radius:4px; padding:2px 7px; font-size:11px; color:var(--c-cyan-80); }
+.no-topology  { background:rgba(251,191,36,.07); border:1px solid rgba(251,191,36,.18); border-radius:4px; padding:2px 7px; font-size:11px; color:rgba(251,191,36,.70); }
 
 /* ── Status dots ────────────────────────────────────────────────────────── */
 
@@ -603,7 +603,7 @@ input[type=text]:focus, input[type=number]:focus {
 }
 .dev-card--on .dev-name { color:rgba(255,255,255,.88); }
 .dev-meta {
-  font-family:var(--f-body); font-size:10px;
+  font-family:var(--f-body); font-size:12px;
   color:var(--c-text-ghost); margin-top:2px;
 }
 
@@ -657,12 +657,12 @@ input[type=text]:focus, input[type=number]:focus {
   margin-top:10px; padding:6px 10px;
   border-radius:var(--r-sm);
   border:1px solid rgba(251,191,36,.14);
-  font-size:10px; color:rgba(251,191,36,.60);
+  font-size:12px; color:rgba(251,191,36,.60);
   font-family:var(--f-body);
 }
 .dev-zones { margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,.04); }
 .dev-zones:empty { display:none; }
-.dev-zones-loading { font-size:10px; font-style:italic; color:var(--c-text-ghost); font-family:var(--f-body); }
+.dev-zones-loading { font-size:12px; font-style:italic; color:var(--c-text-ghost); font-family:var(--f-body); }
 .dev-zones-grid { display:flex; flex-wrap:wrap; gap:5px; }
 .dev-zone-item {
   display:inline-flex; align-items:center; gap:5px;
@@ -674,8 +674,8 @@ input[type=text]:focus, input[type=number]:focus {
 }
 .dev-zone-item:hover { border-color:rgba(20,245,255,.26); background:rgba(20,245,255,.08); }
 .dev-zone-check  { width:11px; height:11px; accent-color:var(--c-cyan); cursor:pointer; flex-shrink:0; }
-.dev-zone-name   { font-size:10px; font-family:var(--f-body); font-weight:600; color:rgba(255,255,255,.60); letter-spacing:.03em; }
-.dev-zone-edge   { font-size:9px;  font-family:var(--f-body); color:var(--c-text-ghost); letter-spacing:.04em; }
+.dev-zone-name   { font-size:12px; font-family:var(--f-body); font-weight:600; color:rgba(255,255,255,.60); letter-spacing:.03em; }
+.dev-zone-edge   { font-size:11px;  font-family:var(--f-body); color:var(--c-text-ghost); letter-spacing:.04em; }
 
 /* ── Settings divider ───────────────────────────────────────────────────── */
 
@@ -711,4 +711,14 @@ input[type=text]:focus, input[type=number]:focus {
   display:inline-block; line-height:1;
   text-transform:none; letter-spacing:normal;
   white-space:nowrap; -webkit-font-smoothing:antialiased;
+}
+
+/* ── Reduced motion: drop decorative and looping animations ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+  .ds-scan, .ds-grain { display: none; }
 }

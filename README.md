@@ -3,7 +3,7 @@
 **Real-time screen ambient lighting controller for OpenRGB**
 
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue)
-![Version](https://img.shields.io/badge/version-1.0.0-cyan)
+![Version](https://img.shields.io/badge/version-1.1.0-cyan)
 ![OpenRGB](https://img.shields.io/badge/requires-OpenRGB-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -61,8 +61,9 @@ No Python or extra dependencies needed.
 1. Start **OpenRGB** → *Settings → SDK Server → Start Server*
 2. Extract the release zip and run **EDAmbilight.exe**
 3. The splash screen initialises and the dashboard opens automatically
-4. On the **Devices** page, enable the LED zones you want to drive
-5. Back on the **Dashboard**, toggle **Enable** — LEDs follow your screen in real time
+4. Open **Topology** and check that your strip's zones are mapped (MonitorTop / Right / Bottom / Left)
+5. On the **Dashboard**, switch on the devices you want to drive and toggle **Enable** —
+   LEDs follow your screen in real time. The *Getting started* checklist shows what is missing.
 
 ---
 
@@ -94,6 +95,12 @@ The main page. All sampling parameters are adjustable in real time with instant 
 | **EMA Alpha** | Smoothing factor — higher = faster color response |
 | **Scene-cut threshold** | Delta that triggers an instant cut instead of EMA |
 | **Saturation boost** | Color intensity multiplier |
+| **Min brightness** | Lifts dark colors to a minimum level |
+| **Presets** | Balanced / Cinema / Gaming / Calm in one click; *Reset* restores the defaults |
+| **Advanced** | Shows or hides the fine-tuning sliders |
+
+The **Status** panel reports `ACTIVE`, `INACTIVE`, `NO ZONES` (running, but no zone receives colors)
+or `NO DEVICES` (OpenRGB reports nothing), with a hint on how to fix it.
 
 * * *
 
@@ -103,7 +110,8 @@ Enable or disable individual LED devices and zones. Only enabled zones receive c
 
 ![Devices](docs/ss-devices.png)
 
-Click **Edit Topology** on any device to open the topology editor and map its zones to screen regions.
+Click **Edit topology** (or **Map zones** for a device without topology) to open the topology editor.
+**Flash** / **Flash All** blink the LEDs so you can identify each device.
 
 * * *
 
@@ -117,7 +125,8 @@ Drag LED zones onto the screen canvas and assign them to a monitor edge (Right /
 
 ### Settings
 
-Configure the OpenRGB connection (host, port, executable path) and the web UI port.
+Configure the OpenRGB connection (host, port, executable path, auto-start) and the web UI port,
+restart or quit the app, and open the log folder.
 
 ![Settings](docs/ss-settings.png)
 

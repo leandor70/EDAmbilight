@@ -915,8 +915,15 @@ class TopologyCanvas {
         }
 
         // Show/hide warning
-        const hasAnyOverlap = this.zones.some(z => z.hasOverlap);
-        document.getElementById('overlap-warning').classList.toggle('hidden', !hasAnyOverlap);
+        const overlapping = this.zones.filter(z => z.hasOverlap);
+        document.getElementById('overlap-warning').classList.toggle('hidden', overlapping.length === 0);
+        const overlapText = document.getElementById('overlap-text');
+        if (overlapText) {
+            const names = overlapping.map(z => z.name || `Zone ${z.zone_index}`);
+            overlapText.textContent = names.length
+                ? `Overlapping: ${names.slice(0, 4).join(', ')}${names.length > 4 ? ` +${names.length - 4}` : ''}`
+                : 'Zone overlaps detected!';
+        }
     }
 
     zonesOverlap(zone1, zone2) {
@@ -1443,8 +1450,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         showNotification('✓ Auto layout applied', 'success');
     });
 
-    document.getElementById('btn-reset').addEventListener('click', () => {
-        if (confirm('Reset all zones to default positions?')) {
+    document.getElementById('btn-reset').addEventListener('click', async () => {
+        if (await confirmDialog('Reset all zones to their default positions? Unsaved layout changes are lost.', 'Reset all', { danger: true })) {
             canvas.reset();
             showNotification('✓ Topology reset', 'success');
         }
@@ -1510,6 +1517,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const result = await eel.save_scene_topology(canvas.zones, canvas.effectCenter)();
             if (result.success) {
+                markTopologySaved();
                 showNotification(result.message || 'Scene saved', 'success');
             } else {
                 showNotification(result.error || 'Save failed', 'error');
@@ -1526,8 +1534,66 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    initUnsavedTracking();
+    initAdvancedToggle();
+
     console.log('[Topology Editor] Ready');
 });
+
+// ── Unsaved-changes tracking ─────────────────────────────────────────────────
+// Compares a snapshot of the editable state with the last saved one, so it works
+// no matter which control changed the zones.
+
+let _savedSnapshot = null;
+
+function _topologySnapshot() {
+    return JSON.stringify([canvas.zones, canvas.effectCenter],
+        (k, v) => (k === 'hasOverlap' ? undefined : v));
+}
+
+function markTopologySaved() {
+    _savedSnapshot = _topologySnapshot();
+    _refreshDirty();
+}
+
+function isTopologyDirty() {
+    return _savedSnapshot !== null && _topologySnapshot() !== _savedSnapshot;
+}
+
+function _refreshDirty() {
+    const dirty = isTopologyDirty();
+    document.getElementById('btn-save').classList.toggle('dirty', dirty);
+    document.getElementById('dirty-chip').classList.toggle('show', dirty);
+}
+
+function initUnsavedTracking() {
+    markTopologySaved();
+    setInterval(_refreshDirty, 400);
+    window.addEventListener('beforeunload', (e) => {
+        if (isTopologyDirty()) { e.preventDefault(); e.returnValue = ''; }
+    });
+}
+
+// ── Advanced block (grid, effect center, calibration, measurements) ──────────
+
+function setAdvanced(on, { persist = true } = {}) {
+    document.body.classList.toggle('adv-open', on);
+    const btn = document.getElementById('btn-advanced');
+    btn.classList.toggle('active', on);
+    btn.setAttribute('aria-pressed', String(on));
+    if (persist) { try { localStorage.setItem('edambi.topoAdvanced', on ? '1' : '0'); } catch (_) {} }
+    // Hiding the calibration controls must also stop the hardware calibration
+    if (!on && canvas.showCalibration) document.getElementById('btn-calibration-toggle').click();
+    if (typeof canvas.render === 'function') canvas.render();
+}
+
+function initAdvancedToggle() {
+    let on = false;
+    try { on = localStorage.getItem('edambi.topoAdvanced') === '1'; } catch (_) {}
+    setAdvanced(on, { persist: false });
+    document.getElementById('btn-advanced').addEventListener('click',
+        () => setAdvanced(!document.body.classList.contains('adv-open')));
+}
 
 // Fade in page
 window.addEventListener('load', () => {

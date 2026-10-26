@@ -34,7 +34,7 @@
 
     /* Restart notice */
     .restart-notice {
-        font-size:10px; color:var(--c-text-ghost);
+        font-size:12px; color:var(--c-text-ghost);
         letter-spacing:.03em; margin-top:6px;
         font-family:var(--f-body);
     }
@@ -77,7 +77,7 @@
         <div class="ds-title-line" style="width:28px;"></div>
         <span class="orbitron" style="font-size:.9rem;font-weight:700;letter-spacing:.34em;color:#fff;">SETTINGS</span>
         <div class="ds-title-line rev" style="width:28px;"></div>
-        <span style="font-size:8px;text-transform:uppercase;letter-spacing:.28em;color:rgba(255,255,255,.18);padding-left:6px;">Configuration</span>
+        <span style="font-size:11px;text-transform:uppercase;letter-spacing:.2em;color:rgba(255,255,255,.45);padding-left:6px;">Configuration</span>
     </header>
 
     <div class="flex-1 overflow-y-auto" style="padding:14px 20px 20px;">
@@ -93,7 +93,7 @@
                         </div>
                         <div>
                             <div class="ds-label">OpenRGB Connection</div>
-                            <div style="font-size:10px;color:var(--c-text-ghost);margin-top:2px;">LED device server</div>
+                            <div style="font-size:12px;color:var(--c-text-ghost);margin-top:2px;">LED device server</div>
                         </div>
                     </div>
 
@@ -107,6 +107,16 @@
                             <input id="inp-port" type="number" value="6742" min="1" max="65535" placeholder="6742"/>
                         </div>
                     </div>
+
+                    <div style="margin-bottom:14px;">
+                        <div class="field-label">OpenRGB executable <span style="font-weight:400;color:var(--c-text-ghost);">(optional)</span></div>
+                        <input id="inp-path" type="text" placeholder="Leave empty to auto-detect, e.g. C:\Program Files\OpenRGB\OpenRGB.exe"/>
+                    </div>
+                    <label class="glass-toggle-container" style="margin-bottom:18px;">
+                        <input id="inp-autostart" type="checkbox" class="glass-toggle-input">
+                        <div class="glass-toggle-track"><div class="glass-toggle-thumb"></div></div>
+                        <span class="glass-toggle-label">Start OpenRGB automatically</span>
+                    </label>
 
                     <div class="settings-divider" style="margin-bottom:16px;"></div>
 
@@ -140,7 +150,7 @@
                         </div>
                         <div>
                             <div class="ds-label">Web Server</div>
-                            <div style="font-size:10px;color:var(--c-text-ghost);margin-top:2px;">Local Eel server port</div>
+                            <div style="font-size:12px;color:var(--c-text-ghost);margin-top:2px;">Local Eel server port</div>
                         </div>
                     </div>
 
@@ -149,10 +159,48 @@
                         <input id="inp-webport" type="number" value="8001" min="1024" max="65535"/>
                     </div>
                     <div class="restart-notice">Change takes effect on next application start.</div>
-                    <button class="btn-secondary" style="margin-top:14px;" onclick="saveWebPort()">
-                        <span class="material-symbols-outlined" style="font-size:15px;">save</span>
-                        Save port
-                    </button>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">
+                        <button class="btn-secondary" onclick="saveWebPort()">
+                            <span class="material-symbols-outlined" style="font-size:15px;">save</span>
+                            Save port
+                        </button>
+                        <button id="btn-restart-port" class="btn" style="display:none;" onclick="restartApp()">
+                            <span class="material-symbols-outlined" style="font-size:15px;">restart_alt</span>
+                            Restart now
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Application -->
+            <div class="panel ds-appear" style="animation-delay:.15s;">
+                <div class="panel-body" style="padding:22px 24px;">
+
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+                        <div class="section-icon">
+                            <span class="material-symbols-outlined" style="font-size:18px;color:rgba(20,245,255,.65);">power_settings_new</span>
+                        </div>
+                        <div>
+                            <div class="ds-label">Application</div>
+                            <div style="font-size:12px;color:var(--c-text-ghost);margin-top:2px;">Closing the window keeps EDAmbilight running in the system tray</div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button class="btn-secondary" onclick="restartApp()">
+                            <span class="material-symbols-outlined" style="font-size:15px;">restart_alt</span>
+                            Restart
+                        </button>
+                        <button class="btn-secondary" onclick="quitApp()">
+                            <span class="material-symbols-outlined" style="font-size:15px;">power_settings_new</span>
+                            Quit EDAmbilight
+                        </button>
+                        <button class="btn-secondary" onclick="openLogFolder()">
+                            <span class="material-symbols-outlined" style="font-size:15px;">folder_open</span>
+                            Open log folder
+                        </button>
+                    </div>
 
                 </div>
             </div>
@@ -167,13 +215,13 @@
                         </div>
                         <div>
                             <div class="ds-label">About</div>
-                            <div style="font-size:10px;color:var(--c-text-ghost);margin-top:2px;">Application info</div>
+                            <div style="font-size:12px;color:var(--c-text-ghost);margin-top:2px;">Application info</div>
                         </div>
                     </div>
 
                     <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:14px;">
                         <span class="about-name">EDAmbilight</span>
-                        <span class="about-ver">v1.0</span>
+                        <span id="about-ver" class="about-ver">v—</span>
                     </div>
                     <div class="settings-divider" style="margin-bottom:14px;"></div>
                     <p style="font-size:12px;line-height:1.7;color:var(--c-text-dim);">
@@ -200,6 +248,10 @@ window.addEventListener('load', async () => {
     if (s.openrgb_host) document.getElementById('inp-host').value    = s.openrgb_host;
     if (s.openrgb_port) document.getElementById('inp-port').value    = s.openrgb_port;
     if (s.web_port)     document.getElementById('inp-webport').value = s.web_port;
+    document.getElementById('inp-path').value        = s.openrgb_path || '';
+    document.getElementById('inp-autostart').checked = s.openrgb_autostart !== false;
+    const v = await api('get_app_version');
+    if (typeof v === 'string') document.getElementById('about-ver').textContent = 'v' + v;
 });
 
 function setConnStatus(state, text) {
@@ -238,7 +290,12 @@ async function saveAndReconnect() {
     const host = document.getElementById('inp-host').value.trim();
     const port = _parsePort('inp-port', 1, 65535);
     if (!port) { setConnStatus('err', 'Invalid port (1–65535)'); showNotification('Invalid port number', 'error'); return; }
-    await api('save_settings', { openrgb_host: host, openrgb_port: port });
+    const saved = await api('save_settings', {
+        openrgb_host: host, openrgb_port: port,
+        openrgb_path: document.getElementById('inp-path').value.trim(),
+        openrgb_autostart: document.getElementById('inp-autostart').checked,
+    });
+    if (!apiOk(saved)) { setConnStatus('err', 'Could not save settings'); showNotification('Could not save settings: ' + (saved.error || ''), 'error'); return; }
     const r = await api('reconnect_openrgb');
     if (r.ok) {
         setConnStatus('ok', `Connected — ${r.devices} device(s)`);
@@ -252,8 +309,29 @@ async function saveAndReconnect() {
 async function saveWebPort() {
     const port = _parsePort('inp-webport', 1024, 65535);
     if (!port) { showNotification('Invalid port (1024–65535)', 'error'); return; }
-    await api('save_settings', { web_port: port });
-    showNotification('Web port saved. Restart app to apply.', 'info');
+    const saved = await api('save_settings', { web_port: port });
+    if (!apiOk(saved)) { showNotification('Could not save port: ' + (saved.error || ''), 'error'); return; }
+    showNotification('Web port saved. Restart the app to apply.', 'info');
+    document.getElementById('btn-restart-port').style.display = '';
+}
+
+async function restartApp() {
+    if (!await confirmDialog('Restart EDAmbilight? The LEDs stop following the screen for a few seconds.', 'Restart')) return;
+    const r = await api('restart_app');
+    if (!apiOk(r)) { showNotification('Could not restart: ' + (r.error || ''), 'error'); return; }
+    showNotification('Restarting… a new browser tab will open.', 'info', 8000);
+}
+
+async function quitApp() {
+    if (!await confirmDialog('Quit EDAmbilight? The LEDs will stop following the screen.', 'Quit', { danger: true })) return;
+    const r = await api('quit_app');
+    if (!apiOk(r)) { showNotification('Could not quit: ' + (r.error || ''), 'error'); return; }
+    showNotification('EDAmbilight is closing. You can close this tab.', 'info', 0);
+}
+
+async function openLogFolder() {
+    const r = await api('open_log_folder');
+    if (!apiOk(r)) showNotification('Could not open the log folder: ' + (r.error || ''), 'error');
 }
 </script>
 </body>

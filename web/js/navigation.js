@@ -134,7 +134,7 @@ function _buildSidebar() {
                             transition: font-variation-settings .2s cubic-bezier(0.23,1,0.32,1);
                         ">${item.icon}</span>
                         <span style="
-                            font-size:10px; letter-spacing:.07em;
+                            font-size:11px; letter-spacing:.07em;
                             font-family:'Rajdhani',sans-serif;
                             text-transform:uppercase; font-weight:700;
                             line-height:1;
@@ -148,11 +148,20 @@ function _buildSidebar() {
                 padding:12px 0; text-align:center;
                 border-top:1px solid rgba(255,255,255,.04);
             ">
-                <span style="font-size:9px; color:rgba(255,255,255,.15);
-                             font-family:monospace; letter-spacing:.06em;">v1.0</span>
+                <span id="nav-version" style="font-size:10px; color:rgba(255,255,255,.4);
+                             font-family:monospace; letter-spacing:.06em;"></span>
             </div>
         </nav>
     `;
+
+    try {
+        if (typeof eel !== 'undefined') {
+            eel.get_app_version()(v => {
+                const el = document.getElementById('nav-version');
+                if (el && typeof v === 'string') el.textContent = 'v' + v;
+            });
+        }
+    } catch (_) {}
 
     container.querySelectorAll('.nav-item').forEach(el => {
         if (el.dataset.active === 'true') return;

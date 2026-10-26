@@ -6,6 +6,47 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.0] — 2026-10-26
+
+### Added
+
+- Control: the status now tells the truth. Besides ACTIVE / INACTIVE it shows
+  **NO ZONES** (running, but no zone receives colors) and **NO DEVICES**
+  (OpenRGB reports nothing), with a hint and a link to fix it. A summary
+  ("2 devices · 5 zones · WGC") replaces the empty space in the Status panel.
+- Control: a "Getting started" checklist (OpenRGB connected / zones mapped /
+  Enable on) and an amber dot on the sidebar item of the next step.
+- Control: presets (Balanced, Cinema, Gaming, Calm), a Reset button, a
+  collapsible Advanced section and a Live preview shortcut.
+- Control: the FPS badge turns amber when the real rate stays well below the
+  target.
+- Settings: OpenRGB executable path and auto-start, Restart / Quit buttons,
+  Open log folder, and the real app version.
+- Devices: "Map zones" shortcut for devices without topology, Flash All with
+  progress and Stop, Rescan button.
+- Topology Editor: an Advanced section (grid, effect center, calibration,
+  measurements) closed by default, an "Unsaved changes" indicator with a leave
+  warning, and the names of the overlapping zones.
+- Connection-lost banner when the app stops answering.
+
+### Changed
+
+- Devices and Control now agree on whether a never-configured device is on
+  (it is off, as the engine already assumed).
+- Slider changes are sent to the app with a short debounce.
+- Control scrolls on small windows instead of hiding the Devices list.
+- Larger, higher-contrast secondary text; animations are off with the
+  system "reduce motion" setting.
+- UI texts are English only (the remaining Italian strings are gone) and the
+  confirmation dialogs match the rest of the interface.
+
+### Fixed
+
+- Toggling a device on the Devices page did not roll back when the change failed.
+- Save errors in Settings were reported as success.
+
+---
+
 ## [1.0.9] — 2026-10-25
 
 ### Fixed

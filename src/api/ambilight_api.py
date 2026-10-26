@@ -48,16 +48,54 @@ def set_ambilight_config(updates: dict) -> dict:
 @eel.expose
 def get_ambilight_status() -> dict:
     if _ambilight_service is None:
-        return {"running": False, "fps": 0.0, "capturer": "—", "enabled": False}
+        return {"running": False, "fps": 0.0, "capturer": "—", "enabled": False,
+                "active_devices": 0, "active_zones": 0, "devices_total": 0,
+                "mapped_devices": 0}
     cfg  = _ambilight_service.get_config()
     rect = _ambilight_service.content_rect
+
+    # How many devices/zones actually receive colors right now
+    active_devices = active_zones = 0
+    for device_key, dev_cfg in cfg.get("devices", {}).items():
+        if not dev_cfg.get("enabled", False):
+            continue
+        try:
+            zones, _ = _ambilight_service.get_device_zones(device_key)
+        except Exception:
+            continue
+        zones_enabled = dev_cfg.get("zones_enabled", {})
+        n = sum(1 for z in zones if zones_enabled.get(z["name"], True))
+        if n:
+            active_devices += 1
+            active_zones   += n
+
     return {
-        "running":      _ambilight_service.is_running,
-        "fps":          _ambilight_service.actual_fps,
-        "capturer":     _ambilight_service.capturer_name,
-        "enabled":      cfg.get("enabled", False),
-        "content_rect": list(rect) if rect else None,
+        "running":        _ambilight_service.is_running,
+        "fps":            _ambilight_service.actual_fps,
+        "capturer":       _ambilight_service.capturer_name,
+        "enabled":        cfg.get("enabled", False),
+        "content_rect":   list(rect) if rect else None,
+        "active_devices": active_devices,
+        "active_zones":   active_zones,
+        "devices_total":  len(_openrgb_manager.devices) if _openrgb_manager else 0,
+        "mapped_devices": len(_mapped_device_keys()),
     }
+
+
+def _mapped_device_keys() -> list:
+    """Device keys (non-matrix) that have at least one mapped zone."""
+    if _openrgb_manager is None or _ambilight_service is None:
+        return []
+    keys = []
+    for ctrl in _openrgb_manager.devices:
+        key = _openrgb_manager._make_device_key(ctrl)
+        try:
+            zones, _ = _ambilight_service.get_device_zones(key)
+        except Exception:
+            continue
+        if zones:
+            keys.append(key)
+    return keys
 
 
 # ── Device enumeration ────────────────────────────────────────────────────────
@@ -83,7 +121,7 @@ def get_ambilight_devices() -> list:
         device_key   = _openrgb_manager._make_device_key(ctrl)
         zones, _     = build_device_zones(device_key)
         ambi_entry   = ambi_devices.get(device_key, {})
-        enabled      = ambi_entry.get("enabled", True)
+        enabled      = ambi_entry.get("enabled", False)  # same default as the engine
 
         result.append({
             "device_key":    device_key,

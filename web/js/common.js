@@ -12,8 +12,14 @@ async function api(funcName, ...args) {
         return result || {};
     } catch (error) {
         console.error(`[API] Error calling ${funcName}:`, error);
+        window.dispatchEvent(new CustomEvent('api-error', { detail: { funcName, error } }));
         return { success: false, error: error.message || 'Connection error' };
     }
+}
+
+// True when an api() result is not a failure (backend returns {ok:false} or {success:false})
+function apiOk(res) {
+    return !!res && res.ok !== false && res.success !== false;
 }
 
 // ── Notifications ────────────────────────────────────────────────────────────
@@ -56,6 +62,51 @@ function showNotification(message, type = 'info', duration = 4000) {
             setTimeout(() => toast.remove(), 300);
         }, duration);
     }
+}
+
+// ── Confirm dialog (replaces window.confirm, matches the design system) ──────
+
+function confirmDialog(message, okLabel = 'Confirm', { danger = false } = {}) {
+    return new Promise(resolve => {
+        const prevFocus = document.activeElement;
+        const overlay = document.createElement('div');
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        Object.assign(overlay.style, {
+            position: 'fixed', inset: '0', zIndex: '10001', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.6)',
+            backdropFilter: 'blur(4px)',
+        });
+        const accent = danger ? '255,90,90' : '20,245,255';
+        overlay.innerHTML = `
+            <div style="width:min(420px,calc(100vw - 40px));padding:22px 24px;border-radius:14px;
+                        background:linear-gradient(160deg,rgba(10,24,36,.98),rgba(4,12,20,.99));
+                        border:1px solid rgba(${accent},.35);box-shadow:0 20px 60px rgba(0,0,0,.6);">
+                <div style="font-size:14px;line-height:1.55;color:#fff;margin-bottom:18px;">${escapeHtml(message)}</div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                    <button type="button" data-act="cancel" class="btn-secondary">Cancel</button>
+                    <button type="button" data-act="ok" class="btn"
+                            style="${danger ? 'border-color:rgba(255,90,90,.6);color:#ff8a8a;' : ''}">${escapeHtml(okLabel)}</button>
+                </div>
+            </div>`;
+        const done = result => {
+            document.removeEventListener('keydown', onKey, true);
+            overlay.remove();
+            if (prevFocus && prevFocus.focus) prevFocus.focus();
+            resolve(result);
+        };
+        const onKey = e => {
+            if (e.key === 'Escape') { e.preventDefault(); done(false); }
+            else if (e.key === 'Enter' && e.target.dataset.act !== 'cancel') { e.preventDefault(); done(true); }
+        };
+        overlay.addEventListener('click', e => {
+            if (e.target === overlay) done(false);
+            else if (e.target.dataset && e.target.dataset.act) done(e.target.dataset.act === 'ok');
+        });
+        document.addEventListener('keydown', onKey, true);
+        document.body.appendChild(overlay);
+        overlay.querySelector('[data-act="ok"]').focus();
+    });
 }
 
 // ── Utilities ─────────────────────────────────────────────────────────────────

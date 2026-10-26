@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -103,6 +103,21 @@
             box-shadow:0 0 16px rgba(20,245,255,.25);
         }
 
+        /* ── Advanced block: hidden until the Advanced button is on ── */
+        body:not(.adv-open) .adv-only { display:none !important; }
+        #btn-advanced.active { background:rgba(20,245,255,.18) !important; border-color:rgba(20,245,255,.55) !important; color:rgba(20,245,255,.95) !important; }
+
+        /* ── Side columns shrink on small windows ───────────── */
+        .side-col { width:clamp(200px, 19vw, 252px) !important; }
+
+        /* ── Destructive + dirty states ─────────────────────── */
+        .btn-danger { border-color:rgba(255,90,90,.35) !important; color:rgba(255,130,130,.9) !important; }
+        .btn-danger:hover { background:rgba(255,90,90,.1) !important; border-color:rgba(255,90,90,.7) !important; }
+        #btn-save.dirty { animation:savePulse 1.6s ease-in-out infinite; }
+        @keyframes savePulse { 0%,100% { box-shadow:0 0 6px rgba(20,245,255,.25); } 50% { box-shadow:0 0 20px rgba(20,245,255,.7); } }
+        #dirty-chip { display:none; font-size:12px; color:#fbbf24; align-self:center; }
+        #dirty-chip.show { display:inline; }
+
         /* ── Overlap warning ─────────────────────────────────── */
         #overlap-warning { border-color:rgba(255,60,60,.35) !important; }
     </style>
@@ -128,27 +143,27 @@
         <div class="ds-title-line" style="width:28px;"></div>
         <span class="orbitron" style="font-size:.9rem; font-weight:700; letter-spacing:.34em; color:#fff;">TOPOLOGY EDITOR</span>
         <div class="ds-title-line rev" style="width:28px;"></div>
-        <span style="font-size:8px; text-transform:uppercase; letter-spacing:.28em; color:rgba(255,255,255,.18); padding-left:6px;">Multi-Zone Spatial Configuration</span>
+        <span style="font-size:11px; text-transform:uppercase; letter-spacing:.2em; color:rgba(255,255,255,.45); padding-left:6px;">Multi-Zone Spatial Configuration</span>
     </header>
 
     <!-- 3-column editor layout -->
     <div style="flex:1; min-height:0; display:flex; gap:8px; padding:10px 14px 12px; overflow:hidden;">
 
         <!-- ── LEFT: Device list + Grid config + Zones list ── -->
-        <aside style="width:252px; flex-shrink:0; display:flex; flex-direction:column; gap:8px; overflow-y:auto; padding-right:2px;">
+        <aside class="side-col" style="width:252px; flex-shrink:0; display:flex; flex-direction:column; gap:8px; overflow-y:auto; padding-right:2px;">
 
             <div class="panel ds-appear" style="flex-shrink:0;">
                 <div class="panel-body" style="padding:14px 16px;">
                     <div class="ds-label" style="margin-bottom:12px;">Multi-Zone Devices</div>
                     <div id="no-devices-state" class="hidden" style="text-align:center; padding:16px 0;">
                         <span class="material-symbols-outlined" style="font-size:36px; color:rgba(255,255,255,.14); display:block; margin-bottom:8px; font-variation-settings:'FILL' 0,'wght' 200,'opsz' 40;">device_unknown</span>
-                        <p style="font-size:11px; color:var(--c-text-ghost); line-height:1.7;">No devices configured.<br>Enable devices in<br><a href="devices.html" style="color:var(--c-cyan);">Device Management</a>.</p>
+                        <p style="font-size:11px; color:var(--c-text-ghost); line-height:1.7;">No devices found.<br>Check that OpenRGB is connected in<br><a href="devices.html" style="color:var(--c-cyan);">Devices</a>.</p>
                     </div>
                     <div id="topology-device-list"></div>
                 </div>
             </div>
 
-            <div class="panel ds-appear" style="flex-shrink:0; animation-delay:.07s;">
+            <div class="panel ds-appear adv-only" style="flex-shrink:0; animation-delay:.07s;">
                 <div class="panel-body" style="padding:14px 16px;">
                     <div class="ds-label" style="margin-bottom:12px;">Grid Config</div>
                     <div style="display:flex; flex-direction:column; gap:10px;">
@@ -185,32 +200,39 @@
                     <div id="canvas-container">
                         <canvas id="topology-canvas" width="800" height="600"></canvas>
                     </div>
-                    <div style="display:flex; gap:5px; margin-top:8px; justify-content:center; flex-wrap:wrap; flex-shrink:0;">
-                        <button id="btn-reload-openrgb" class="btn" title="Reload zone LED counts from OpenRGB hardware">
-                            <span class="material-symbols-outlined" style="font-size:14px; font-variation-settings:'FILL' 0,'wght' 200,'opsz' 20;">refresh</span>
-                            Reload
-                        </button>
-                        <button id="btn-auto-layout" class="btn">
-                            <span class="material-symbols-outlined" style="font-size:14px; font-variation-settings:'FILL' 0,'wght' 200,'opsz' 20;">grid_view</span>
-                            Auto Layout
-                        </button>
-                        <button id="btn-reset" class="btn">
+                    <div style="display:flex; gap:5px; margin-top:8px; align-items:center; flex-wrap:wrap; flex-shrink:0;">
+                        <button id="btn-reset" class="btn btn-danger" title="Put every zone back to its default position">
                             <span class="material-symbols-outlined" style="font-size:14px; font-variation-settings:'FILL' 0,'wght' 200,'opsz' 20;">restart_alt</span>
                             Reset All
                         </button>
-                        <button id="btn-reset-view" class="btn" title="Fit all zones in view">
-                            <span class="material-symbols-outlined" style="font-size:14px; font-variation-settings:'FILL' 0,'wght' 200,'opsz' 20;">fit_screen</span>
-                            Fit View
-                        </button>
-                        <div style="display:flex; align-items:center; gap:4px;">
-                            <button id="btn-calibration-toggle" class="btn" title="Toggle calibration overlay">
-                                <span class="material-symbols-outlined" style="font-size:14px; font-variation-settings:'FILL' 0,'wght' 200,'opsz' 20;">adjust</span>
-                                Calibration
+                        <div style="flex:1; display:flex; gap:5px; justify-content:center; flex-wrap:wrap;">
+                            <button id="btn-reload-openrgb" class="btn" title="Reload zone LED counts from OpenRGB hardware">
+                                <span class="material-symbols-outlined" style="font-size:14px; font-variation-settings:'FILL' 0,'wght' 200,'opsz' 20;">refresh</span>
+                                Reload
                             </button>
-                            <input type="number" id="calibration-spacing" class="calibration-spacing-input"
-                                   min="1" max="1000" step="1" value="10" title="Ring spacing in world units">
-                            <span style="font-size:11px; color:var(--c-text-ghost);">u</span>
+                            <button id="btn-auto-layout" class="btn">
+                                <span class="material-symbols-outlined" style="font-size:14px; font-variation-settings:'FILL' 0,'wght' 200,'opsz' 20;">grid_view</span>
+                                Auto Layout
+                            </button>
+                            <button id="btn-reset-view" class="btn" title="Fit all zones in view">
+                                <span class="material-symbols-outlined" style="font-size:14px; font-variation-settings:'FILL' 0,'wght' 200,'opsz' 20;">fit_screen</span>
+                                Fit View
+                            </button>
+                            <button id="btn-advanced" class="btn" aria-pressed="false" title="Show grid, effect center, calibration and measurements">
+                                <span class="material-symbols-outlined" style="font-size:14px; font-variation-settings:'FILL' 0,'wght' 200,'opsz' 20;">tune</span>
+                                Advanced
+                            </button>
+                            <div class="adv-only" style="display:flex; align-items:center; gap:4px;">
+                                <button id="btn-calibration-toggle" class="btn" title="Toggle calibration overlay">
+                                    <span class="material-symbols-outlined" style="font-size:14px; font-variation-settings:'FILL' 0,'wght' 200,'opsz' 20;">adjust</span>
+                                    Calibration
+                                </button>
+                                <input type="number" id="calibration-spacing" class="calibration-spacing-input"
+                                       min="1" max="1000" step="1" value="10" title="Ring spacing in world units">
+                                <span style="font-size:11px; color:var(--c-text-ghost);">u</span>
+                            </div>
                         </div>
+                        <span id="dirty-chip" role="status">Unsaved changes</span>
                         <button id="btn-save" class="btn">
                             <span class="material-symbols-outlined" style="font-size:14px; font-variation-settings:'FILL' 0,'wght' 200,'opsz' 20;">save</span>
                             Save Topology
@@ -222,12 +244,12 @@
             <div class="panel" style="flex-shrink:0;">
                 <div class="panel-body" style="padding:8px 14px; flex-direction:row; align-items:center; gap:10px;">
                     <span class="material-symbols-outlined" style="font-size:14px; color:var(--c-cyan); flex-shrink:0; font-variation-settings:'FILL' 0,'wght' 200,'opsz' 20;">info</span>
-                    <span style="font-size:11px; color:var(--c-text-ghost);">Drag zones · [R] rotate · [F] flip · Middle-drag to pan · Scroll to zoom</span>
+                    <span style="font-size:12px; color:var(--c-text-dim);">Drag zones · <b>R</b> rotate · <b>F</b> flip · Middle-drag to pan · Scroll to zoom</span>
                     <div style="margin-left:auto; display:flex; align-items:center; gap:12px; flex-shrink:0;">
                         <div id="mouse-pos"  style="font-size:10px; color:rgba(255,255,255,.28); font-family:monospace;">X: 0, Y: 0</div>
                         <div id="zoom-level" style="font-size:10px; color:rgba(255,255,255,.28); font-family:monospace;">100%</div>
-                        <div id="bbox-info"  style="font-size:10px; color:rgba(255,255,255,.28); font-family:monospace;">BBox: 0×0</div>
-                        <div id="vbbox-info" style="font-size:10px; color:var(--c-cyan); font-family:monospace;">VBBox: 0×0</div>
+                        <div id="bbox-info" class="adv-only" style="font-size:10px; color:rgba(255,255,255,.28); font-family:monospace;">BBox: 0×0</div>
+                        <div id="vbbox-info" class="adv-only" style="font-size:10px; color:var(--c-cyan); font-family:monospace;">VBBox: 0×0</div>
                     </div>
                 </div>
             </div>
@@ -235,7 +257,7 @@
         </div>
 
         <!-- ── RIGHT: Inspector + Effect center + Calibration + Overlap ── -->
-        <aside style="width:252px; flex-shrink:0; display:flex; flex-direction:column; gap:8px; overflow-y:auto; padding-left:2px;">
+        <aside class="side-col" style="width:252px; flex-shrink:0; display:flex; flex-direction:column; gap:8px; overflow-y:auto; padding-left:2px;">
 
             <!-- Zone Inspector -->
             <div class="panel ds-appear" style="flex-shrink:0; animation-delay:.04s;">
@@ -289,7 +311,7 @@
                                     <span class="material-symbols-outlined" style="font-size:14px; font-variation-settings:'FILL' 0,'wght' 200,'opsz' 20;">swap_horiz</span>
                                     Flip Direction
                                 </button>
-                                <div style="padding-top:10px; border-top:1px solid rgba(255,255,255,.05);">
+                                <div class="adv-only" style="padding-top:10px; border-top:1px solid rgba(255,255,255,.05);">
                                     <div class="field-label" style="margin-bottom:5px;">
                                         Physical Length (cm)
                                         <span style="color:var(--c-text-ghost); font-weight:400; margin-left:4px;">optional</span>
@@ -312,7 +334,7 @@
             </div>
 
             <!-- Effect Center -->
-            <div class="panel ds-appear" style="flex-shrink:0; animation-delay:.11s;">
+            <div class="panel ds-appear adv-only" style="flex-shrink:0; animation-delay:.11s;">
                 <div class="panel-body" style="padding:14px 16px;">
                     <div class="ds-label" style="margin-bottom:12px; display:flex; align-items:center; gap:6px;">
                         <span class="material-symbols-outlined" style="font-size:14px; color:var(--c-cyan); font-variation-settings:'FILL' 0,'wght' 200,'opsz' 20;">center_focus_strong</span>
@@ -332,11 +354,11 @@
                         <div>
                             <div class="field-label" style="margin-bottom:6px;">Quick Presets</div>
                             <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:4px;">
-                                <button class="preset-btn btn" data-preset="center" title="Center (50,50)" style="font-size:11px; padding:5px 4px; justify-content:center;">Centro</button>
-                                <button class="preset-btn btn" data-preset="top"    title="Top (50,90)"   style="font-size:11px; padding:5px 4px; justify-content:center;">Alto</button>
-                                <button class="preset-btn btn" data-preset="bottom" title="Bottom (50,10)" style="font-size:11px; padding:5px 4px; justify-content:center;">Basso</button>
-                                <button class="preset-btn btn" data-preset="left"   title="Left (10,50)"  style="font-size:11px; padding:5px 4px; justify-content:center;">Sinistra</button>
-                                <button class="preset-btn btn" data-preset="right"  title="Right (90,50)" style="font-size:11px; padding:5px 4px; justify-content:center;">Destra</button>
+                                <button class="preset-btn btn" data-preset="center" title="Center (50,50)" style="font-size:11px; padding:5px 4px; justify-content:center;">Center</button>
+                                <button class="preset-btn btn" data-preset="top"    title="Top (50,90)"   style="font-size:11px; padding:5px 4px; justify-content:center;">Top</button>
+                                <button class="preset-btn btn" data-preset="bottom" title="Bottom (50,10)" style="font-size:11px; padding:5px 4px; justify-content:center;">Bottom</button>
+                                <button class="preset-btn btn" data-preset="left"   title="Left (10,50)"  style="font-size:11px; padding:5px 4px; justify-content:center;">Left</button>
+                                <button class="preset-btn btn" data-preset="right"  title="Right (90,50)" style="font-size:11px; padding:5px 4px; justify-content:center;">Right</button>
                             </div>
                         </div>
                         <div style="padding-top:8px; border-top:1px solid rgba(255,255,255,.05); display:flex; gap:6px; align-items:flex-start;">
@@ -451,7 +473,7 @@
             <div id="overlap-warning" class="panel hidden" style="flex-shrink:0;">
                 <div class="panel-body" style="padding:10px 14px; flex-direction:row; align-items:center; gap:8px;">
                     <span class="material-symbols-outlined" style="font-size:15px; color:rgba(255,70,70,.9); font-variation-settings:'FILL' 0,'wght' 200,'opsz' 20;">warning</span>
-                    <span style="font-size:12px; color:rgba(255,70,70,.9);">Zone overlaps detected!</span>
+                    <span id="overlap-text" style="font-size:12px; color:rgba(255,70,70,.9);">Zone overlaps detected!</span>
                 </div>
             </div>
 

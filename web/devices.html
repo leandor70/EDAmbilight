@@ -66,7 +66,7 @@
         <div class="ds-title-line" style="width:28px;"></div>
         <span class="orbitron" style="font-size:.9rem;font-weight:700;letter-spacing:.34em;color:#fff;">DEVICES</span>
         <div class="ds-title-line rev" style="width:28px;"></div>
-        <span style="font-size:8px;text-transform:uppercase;letter-spacing:.28em;color:rgba(255,255,255,.18);padding-left:6px;">OpenRGB Hardware</span>
+        <span style="font-size:11px;text-transform:uppercase;letter-spacing:.2em;color:rgba(255,255,255,.45);padding-left:6px;">OpenRGB Hardware</span>
     </header>
 
     <div class="flex-1 overflow-y-auto" style="padding:14px 20px 20px;">
@@ -92,7 +92,7 @@
                 <div class="panel-body" style="padding:16px 18px;flex-direction:row;align-items:center;justify-content:space-between;">
                     <div>
                         <div class="ds-label" style="margin-bottom:4px;">Actions</div>
-                        <div style="font-size:10px;color:var(--c-text-ghost);">Flash to identify</div>
+                        <div style="font-size:12px;color:var(--c-text-ghost);">Flash to identify</div>
                     </div>
                     <button class="btn" id="btn-flash-all" onclick="flashAll()">
                         <span class="material-symbols-outlined" style="font-size:16px;">bolt</span>
@@ -144,9 +144,14 @@ function renderDevices(devs) {
                     <span class="material-symbols-outlined"
                           style="font-size:44px;color:var(--c-text-ghost);">device_hub</span>
                     <div style="color:var(--c-text-dim);font-size:.9rem;">No devices found.</div>
-                    <div style="color:var(--c-text-ghost);font-size:.78rem;">
-                        Make sure OpenRGB is running and connected.
+                    <div style="color:var(--c-text-ghost);font-size:.85rem;text-align:center;">
+                        Make sure OpenRGB is running with the SDK server on.<br>
+                        Host and port are in <a href="settings.html" style="color:var(--c-cyan);">Settings</a>.
                     </div>
+                    <button class="btn" onclick="rescanDevices(this)" style="margin-top:6px;">
+                        <span class="material-symbols-outlined" style="font-size:16px;">refresh</span>
+                        Rescan
+                    </button>
                 </div>
             </div>`;
         return;
@@ -186,17 +191,19 @@ function renderDevices(devs) {
                     </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;">
-                    <label class="glass-toggle-container" onclick="event.stopPropagation()" title="Include in ambilight lighting">
+                    <label class="glass-toggle-container" onclick="event.stopPropagation()"
+                           title="${dev.has_topology ? 'Include in ambilight lighting' : 'Map its zones in the Topology Editor first'}">
                         <input type="checkbox" class="glass-toggle-input"
+                               aria-label="Include ${escapeAttr(dev.name)} in ambilight"
                                ${dev.enabled !== false ? 'checked' : ''}
+                               ${dev.has_topology ? '' : 'disabled'}
                                onchange="toggleDevice('${escapeAttr(dev.device_key)}', this.checked, ${idx})">
                         <div class="glass-toggle-track"><div class="glass-toggle-thumb"></div></div>
                     </label>
-                    ${tType === 'linear' ? `
-                    <a href="topology-editor.html" class="btn" style="font-size:11px;padding:6px 12px;">
+                    <a href="topology-editor.html" class="btn" style="font-size:12px;padding:6px 12px;">
                         <span class="material-symbols-outlined" style="font-size:14px;">hub</span>
-                        Edit topology
-                    </a>` : ''}
+                        ${dev.has_topology ? 'Edit topology' : 'Map zones'}
+                    </a>
                     <button class="btn" style="font-size:11px;padding:6px 12px;"
                             id="flash-btn-${idx}"
                             onclick="flashDevice('${escapeAttr(dev.device_key)}', ${idx})">
@@ -214,14 +221,15 @@ async function toggleDevice(deviceKey, enabled, idx) {
     if (dev) dev.enabled = enabled;
     const card = document.getElementById('dev-card-' + idx);
     if (card) card.style.opacity = enabled ? '' : '.45';
-    try {
-        await api('set_ambilight_device_enabled', deviceKey, enabled);
+    const res = await api('set_ambilight_device_enabled', deviceKey, enabled);
+    if (apiOk(res)) {
         showNotification(enabled ? 'Device enabled' : 'Device disabled', 'info', 1800);
-    } catch(e) {
+    } else {
         if (dev) dev.enabled = !enabled;
         if (card) card.style.opacity = !enabled ? '' : '.45';
         const toggle = card && card.querySelector('.glass-toggle-input');
         if (toggle) toggle.checked = !enabled;
+        showNotification('Could not update device: ' + (res.error || 'unknown error'), 'error');
     }
 }
 
@@ -232,13 +240,32 @@ async function flashDevice(deviceKey, idx) {
     await api('flash_topology_device', deviceKey);
 }
 
+let _flashRunning = false;
+
+// Flash every device in turn, with progress ("n/N") and a Stop button
 async function flashAll() {
     const btn = document.getElementById('btn-flash-all');
-    if (btn) { btn.classList.add('flashing'); setTimeout(() => btn.classList.remove('flashing'), 2000); }
-    for (const dev of _devices) {
-        await api('flash_topology_device', dev.device_key);
-        await new Promise(r => setTimeout(r, 200));
+    if (_flashRunning) { _flashRunning = false; return; }          // second click = stop
+    _flashRunning = true;
+    const total = _devices.length;
+    const setLabel = txt => { if (btn) btn.lastChild.textContent = ' ' + txt; };
+    try {
+        for (let i = 0; i < total && _flashRunning; i++) {
+            setLabel(`Stop (${i + 1}/${total})`);
+            await api('flash_topology_device', _devices[i].device_key);
+            await new Promise(r => setTimeout(r, 200));
+        }
+    } finally {
+        _flashRunning = false;
+        setLabel('Flash All');
     }
+}
+
+async function rescanDevices(btn) {
+    if (btn) btn.disabled = true;
+    await loadDevices();
+    if (_devices.length) showNotification(`${_devices.length} device(s) found`, 'success', 1800);
+    else if (btn) btn.disabled = false;
 }
 </script>
 </body>

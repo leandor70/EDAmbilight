@@ -16,6 +16,8 @@ window.addEventListener('load', async () => {
     _devs = devs || [];
 
     applyConfig(_cfg);
+    _labelControls();
+    toggleAdvanced(_lsGet('edambi.advanced') !== '0');
     renderDevices(_devs, _cfg);
 
     // Carica zone per device già abilitati (dopo renderDevices, _devs è già popolato)
@@ -29,6 +31,18 @@ window.addEventListener('load', async () => {
     pollStatus();
     setInterval(pollStatus, 800);
 });
+
+// Give every range input an accessible name taken from its visible label
+function _labelControls() {
+    document.querySelectorAll('input[type=range]').forEach(el => {
+        if (el.getAttribute('aria-label')) return;
+        const row = el.closest('.slider-row');
+        const txt = row && row.querySelector('.slider-label-text');
+        el.setAttribute('aria-label', txt ? txt.textContent.trim() : 'FPS Target');
+    });
+    const dot = document.getElementById('status-dot');
+    if (dot) dot.setAttribute('aria-hidden', 'true');   // state is also written as text
+}
 
 // ── Config apply ──────────────────────────────────────────────────────────────
 
@@ -52,6 +66,7 @@ function applyConfig(cfg) {
         stratSel.value = cfg.strategy ?? 'adaptive_smooth';
         updateStrategyVisibility(stratSel.value);
     }
+    refreshPresetChips();
 }
 
 function setToggle(id, value) {
@@ -68,16 +83,39 @@ function setSlider(inputId, spanId, value) {
 
 // ── Live controls ─────────────────────────────────────────────────────────────
 
+// Label and local state update instantly; the backend call is debounced per key
+// (trailing, so the final slider value is always the one sent).
+const _pendingCfg    = {};
+const _cfgTimers     = {};
+const CFG_DEBOUNCE   = 80;
+
+function _reportApiFailure(what, res) {
+    showNotification(`Could not ${what}: ${(res && res.error) || 'no response from the app'}`, 'error');
+}
+
 function liveUpdate(key, value, spanId) {
     if (spanId) document.getElementById(spanId).textContent = value;
     _cfg[key] = value;
-    api('set_ambilight_config', { [key]: value });
+    _pendingCfg[key] = value;
+    refreshPresetChips();
+    clearTimeout(_cfgTimers[key]);
+    _cfgTimers[key] = setTimeout(async () => {
+        const v = _pendingCfg[key];
+        delete _pendingCfg[key];
+        const res = await api('set_ambilight_config', { [key]: v });
+        if (!apiOk(res)) _reportApiFailure('apply the change', res);
+    }, CFG_DEBOUNCE);
 }
 
-function toggleEnabled(checked) {
+async function toggleEnabled(checked) {
     _cfg.enabled = checked;
-    api('set_ambilight_config', { enabled: checked });
     updateStatusBadge(checked ? null : false);
+    const res = await api('set_ambilight_config', { enabled: checked });
+    if (!apiOk(res)) {
+        _cfg.enabled = !checked;
+        setToggle('ctrl-enabled', !checked);
+        _reportApiFailure('change the Enable state', res);
+    }
 }
 
 function onStrategyChange(value) {
@@ -159,7 +197,9 @@ function renderDevices(devs, cfg) {
                 <button
                     id="dev-btn-${safeId}"
                     class="dev-power-btn${enabled ? ' enabled' : ''}"
-                    title="${enabled ? 'Disabilita' : 'Abilita'} per ambilight"
+                    title="${enabled ? 'Turn off' : 'Turn on'} for ambilight"
+                    aria-label="${escapeAttr(dev.name)}: ${enabled ? 'turn off' : 'turn on'} for ambilight"
+                    aria-pressed="${enabled}"
                     onclick="toggleDevice('${escapeAttr(dev.device_key)}', ${!enabled}, this)"
                     ${!dev.has_topology ? 'disabled' : ''}>
                     ${_powerSVG}
@@ -167,7 +207,7 @@ function renderDevices(devs, cfg) {
             </div>
             ${!dev.has_topology ? `
             <div class="dev-no-topo">
-                Configura le zone nel Topology Editor per abilitare questo device.
+                Map its zones in the <a href="topology-editor.html" style="color:var(--c-cyan);">Topology Editor</a> to use this device.
             </div>` : ''}
             <div id="zones-${safeId}" class="dev-zones"></div>
         `;
@@ -184,8 +224,19 @@ function toggleDevice(deviceKey, enable, btnEl) {
     if (!_cfg.devices) _cfg.devices = {};
     if (!_cfg.devices[deviceKey]) _cfg.devices[deviceKey] = {};
     _cfg.devices[deviceKey].enabled = enable;
-    api('set_ambilight_device_enabled', deviceKey, enable);
+    api('set_ambilight_device_enabled', deviceKey, enable).then(res => {
+        if (apiOk(res)) return;
+        // Roll back the optimistic UI change
+        _reportApiFailure('update the device', res);
+        const rb = document.getElementById('dev-btn-' + _devSafeId(deviceKey));
+        if (!rb) return;
+        _cfg.devices[deviceKey].enabled = !enable;
+        _applyDeviceUi(deviceKey, !enable, rb);
+    });
+    _applyDeviceUi(deviceKey, enable, btnEl);
+}
 
+function _applyDeviceUi(deviceKey, enable, btnEl) {
     const safeId  = _devSafeId(deviceKey);
     const card    = document.getElementById('dev-card-'  + safeId);
     const btn     = btnEl || document.getElementById('dev-btn-'  + safeId);
@@ -197,8 +248,9 @@ function toggleDevice(deviceKey, enable, btnEl) {
     // Button state + ripple animation
     if (btn) {
         btn.classList.toggle('enabled', enable);
-        btn.title = (enable ? 'Disabilita' : 'Abilita') + ' per ambilight';
+        btn.title = (enable ? 'Turn off' : 'Turn on') + ' for ambilight';
         btn.onclick = () => toggleDevice(deviceKey, !enable, btn);
+        btn.setAttribute('aria-pressed', String(enable));
 
         const ripple = document.createElement('span');
         ripple.className = 'dev-power-ripple';
@@ -246,7 +298,9 @@ async function loadDeviceZones(deviceKey) {
 }
 
 function toggleZone(deviceKey, zoneName, enabled) {
-    api('set_ambilight_zone_enabled', deviceKey, zoneName, enabled);
+    api('set_ambilight_zone_enabled', deviceKey, zoneName, enabled).then(res => {
+        if (!apiOk(res)) _reportApiFailure('update the zone', res);
+    });
     if (!_cfg.devices) _cfg.devices = {};
     if (!_cfg.devices[deviceKey]) _cfg.devices[deviceKey] = {};
     if (!_cfg.devices[deviceKey].zones_enabled) _cfg.devices[deviceKey].zones_enabled = {};
@@ -255,12 +309,49 @@ function toggleZone(deviceKey, zoneName, enabled) {
 
 // ── Status polling ────────────────────────────────────────────────────────────
 
+let _pollFailures = 0;
+
+function _setConnectionBanner(lost) {
+    let b = document.getElementById('conn-banner');
+    if (!lost) { if (b) b.remove(); return; }
+    if (b) return;
+    b = document.createElement('div');
+    b.id = 'conn-banner';
+    b.setAttribute('role', 'alert');
+    Object.assign(b.style, {
+        position: 'fixed', top: '0', left: '80px', right: '0', zIndex: '9000',
+        padding: '8px 20px', textAlign: 'center', fontSize: '13px',
+        background: 'rgba(60,10,10,.96)', color: '#ff9a9a',
+        borderBottom: '1px solid rgba(255,70,70,.45)',
+    });
+    b.textContent = 'Connection to EDAmbilight lost — changes are not being applied. Reconnecting…';
+    document.body.appendChild(b);
+}
+
 async function pollStatus() {
     const s = await api('get_ambilight_status');
-    if (!s) return;
+    if (!apiOk(s)) {
+        if (++_pollFailures >= 3) {
+            _setConnectionBanner(true);
+            updateStatusBadge(false);
+            const fpsBadge = document.getElementById('fps-badge');
+            if (fpsBadge) fpsBadge.textContent = '— fps';
+        }
+        return;
+    }
+    if (_pollFailures) { _pollFailures = 0; _setConnectionBanner(false); }
 
     const fpsBadge = document.getElementById('fps-badge');
-    if (fpsBadge) fpsBadge.textContent = s.running ? `${s.fps} fps` : '— fps';
+    if (fpsBadge) {
+        fpsBadge.textContent = s.running ? `${s.fps} fps` : '— fps';
+        // Warn when the real rate stays well under the target (system overloaded)
+        const target = _cfg.fps || 15;
+        _lowFpsPolls = (s.enabled && s.running && s.fps < target * 0.7) ? _lowFpsPolls + 1 : 0;
+        const low = _lowFpsPolls >= 3;
+        fpsBadge.style.color = low ? '#fbbf24' : '#fff';
+        fpsBadge.title = low ? `Reaching ${s.fps} of ${target} fps — try lowering FPS Target or switching Capture Engine`
+                             : 'Frame rate actually reached';
+    }
 
     const capEl = document.getElementById('stat-capturer');
     if (capEl) capEl.textContent = s.capturer || '—';
@@ -276,20 +367,169 @@ async function pollStatus() {
         }
     }
 
-    updateStatusBadge(s.enabled && s.running);
+    const kind = _statusKind(s);
+    updateStatusBadge(kind === 'active', kind);
+    _renderStatusInfo(s, kind);
+    _renderChecklist(s);
 }
 
-function updateStatusBadge(active) {
+let _lowFpsPolls = 0;
+
+// inactive | no-devices | no-zones | active
+function _statusKind(s) {
+    if (!(s.enabled && s.running)) return 'inactive';
+    if (!s.devices_total)          return 'no-devices';
+    if (!s.active_zones)           return 'no-zones';
+    return 'active';
+}
+
+const _STATUS_STYLE = {
+    'inactive':   { label: 'INACTIVE',   color: 'rgba(255,255,255,0.4)', dot: '' },
+    'active':     { label: 'ACTIVE',     color: 'rgba(20,245,255,0.9)',  dot: 'rgba(20,245,255,0.9)' },
+    'no-zones':   { label: 'NO ZONES',   color: '#fbbf24',               dot: '#fbbf24' },
+    'no-devices': { label: 'NO DEVICES', color: '#f87171',               dot: '#f87171' },
+};
+
+function updateStatusBadge(active, kind) {
     const el = document.getElementById('status-dot');
     if (!el || active === null || active === undefined) return;
+    const st = _STATUS_STYLE[kind || (active ? 'active' : 'inactive')];
     el.className = active
         ? 'w-2 h-2 rounded-full nav-dot-active'
         : 'w-2 h-2 rounded-full bg-white/20';
-    el.style.background = active ? 'rgba(20,245,255,0.9)' : '';
+    el.style.background = st.dot;
     const lbl = document.getElementById('status-label');
     if (lbl) {
-        lbl.textContent = active ? 'ACTIVE' : 'INACTIVE';
-        lbl.style.color = active ? 'rgba(20,245,255,0.9)' : 'rgba(255,255,255,0.4)';
+        lbl.textContent = st.label;
+        lbl.style.color = st.color;
     }
+}
+
+function _renderStatusInfo(s, kind) {
+    const sum  = document.getElementById('status-summary');
+    const hint = document.getElementById('status-hint');
+    const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+    if (sum) {
+        sum.textContent = kind === 'active'
+            ? `${plural(s.active_devices, 'device')} · ${plural(s.active_zones, 'zone')} · ${s.capturer || '—'}`
+            : 'Ambilight service';
+    }
+    if (!hint) return;
+    const html = {
+        'no-devices': 'OpenRGB reports no devices. Make sure OpenRGB is running with the SDK server on — see <a href="settings.html">Settings</a>.',
+        'no-zones':   s.mapped_devices
+            ? 'Running, but no device receives colors. Switch on a device in the list below.'
+            : 'Running, but no zone is mapped to the screen. Map them in the <a href="topology-editor.html">Topology Editor</a>.',
+    }[kind] || '';
+    if (hint.dataset.kind !== kind) { hint.innerHTML = html; hint.dataset.kind = kind; }
+}
+
+// ── Getting-started checklist ─────────────────────────────────────────────────
+
+function _lsGet(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
+function _lsSet(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
+
+function dismissChecklist() {
+    _lsSet('edambi.checklistDismissed', '1');
+    const c = document.getElementById('checklist');
+    if (c) c.hidden = true;
+}
+
+// Amber dot on a sidebar item = "this is the next thing to do"
+function _setNavHint(href, on) {
+    const a = document.querySelector(`#sidebar-nav a[href="${href}"]`);
+    if (!a) return;
+    let dot = a.querySelector('.nav-hint');
+    if (!on) { if (dot) dot.remove(); return; }
+    if (dot) return;
+    dot = document.createElement('span');
+    dot.className = 'nav-hint';
+    dot.setAttribute('aria-label', 'Next step');
+    Object.assign(dot.style, {
+        position: 'absolute', top: '10px', right: '18px', width: '8px', height: '8px',
+        borderRadius: '50%', background: '#fbbf24', boxShadow: '0 0 8px rgba(251,191,36,.8)',
+    });
+    a.appendChild(dot);
+}
+
+function _renderChecklist(s) {
+    _setNavHint('settings.html',        !s.devices_total);
+    _setNavHint('topology-editor.html', s.devices_total > 0 && !s.mapped_devices);
+    const box   = document.getElementById('checklist');
+    const items = document.getElementById('checklist-items');
+    if (!box || !items) return;
+    const steps = [
+        { done: s.devices_total > 0,
+          text: 'OpenRGB connected and devices found', link: ['Settings', 'settings.html'] },
+        { done: s.mapped_devices > 0,
+          text: 'At least one device has zones mapped to the screen', link: ['Open Topology Editor', 'topology-editor.html'] },
+        { done: !!(s.enabled && s.active_zones > 0),
+          text: 'Enable switched on and a device selected below', link: null },
+    ];
+    const allDone = steps.every(x => x.done);
+    box.hidden = allDone || _lsGet('edambi.checklistDismissed') === '1';
+    if (box.hidden) return;
+    items.innerHTML = steps.map(x => `
+        <li class="${x.done ? 'done' : ''}">
+            <span class="ck" aria-hidden="true">${x.done ? '✓' : ''}</span>
+            <span>${x.text}${!x.done && x.link ? ` — <a href="${x.link[1]}">${x.link[0]}</a>` : ''}</span>
+        </li>`).join('');
+}
+
+// ── Presets / reset / advanced ────────────────────────────────────────────────
+
+const DEFAULT_CFG = {
+    fps: 15, strategy: 'adaptive_smooth', depth: 10, saturation_boost: 1.4, min_luminance: 0,
+    ema_alpha: 0.35, scene_cut: 60, adaptive_min: 3, adaptive_max: 20,
+};
+
+const PRESETS = {
+    balanced: { ...DEFAULT_CFG },
+    cinema:   { ...DEFAULT_CFG, fps: 24, ema_alpha: 0.25, scene_cut: 50, saturation_boost: 1.5 },
+    gaming:   { ...DEFAULT_CFG, fps: 30, ema_alpha: 0.6,  scene_cut: 45, saturation_boost: 1.7, adaptive_max: 15 },
+    calm:     { ...DEFAULT_CFG, fps: 15, ema_alpha: 0.15, scene_cut: 80, saturation_boost: 1.2, adaptive_min: 5, adaptive_max: 25, min_luminance: 10 },
+};
+
+async function _applyValues(values, okMsg) {
+    Object.keys(values).forEach(k => { clearTimeout(_cfgTimers[k]); delete _pendingCfg[k]; });
+    Object.assign(_cfg, values);
+    applyConfig(_cfg);
+    document.querySelectorAll('input[type=range]').forEach(el => { if (typeof updateFill === 'function') updateFill(el); });
+    refreshPresetChips();
+    const res = await api('set_ambilight_config', values);
+    if (apiOk(res)) showNotification(okMsg, 'success', 1800);
+    else _reportApiFailure('apply the preset', res);
+}
+
+function applyPreset(name) {
+    const p = PRESETS[name];
+    if (p) _applyValues(p, `Preset applied: ${name[0].toUpperCase()}${name.slice(1)}`);
+}
+
+function resetToDefaults() { _applyValues({ ...DEFAULT_CFG }, 'Defaults restored'); }
+
+function refreshPresetChips() {
+    const val  = k => _cfg[k] ?? DEFAULT_CFG[k];
+    const same = p => Object.keys(p).every(k =>
+        typeof p[k] === 'string' ? val(k) === p[k] : Math.abs(Number(val(k)) - p[k]) < 1e-9);
+    let match = null;
+    document.querySelectorAll('.preset-chip').forEach(btn => {
+        const on = same(PRESETS[btn.dataset.preset]);
+        btn.classList.toggle('active', on);
+        btn.setAttribute('aria-pressed', String(on));
+        if (on) match = btn.dataset.preset;
+    });
+    const custom = document.getElementById('preset-custom');
+    if (custom) custom.classList.toggle('show', !match);
+}
+
+function toggleAdvanced(force) {
+    const row = document.getElementById('param-row');
+    const btn = document.getElementById('btn-advanced');
+    if (!row || !btn) return;
+    const show = typeof force === 'boolean' ? force : row.hidden;
+    row.hidden = !show;
+    btn.setAttribute('aria-expanded', String(show));
+    _lsSet('edambi.advanced', show ? '1' : '0');
 }
 

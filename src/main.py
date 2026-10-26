@@ -109,6 +109,45 @@ def get_init_status():
 
 
 @eel.expose
+def get_app_version():
+    from version import __version__
+    return __version__
+
+
+@eel.expose
+def quit_app():
+    """Close the whole app (same as tray → Exit). Delayed so the UI gets its reply."""
+    threading.Timer(0.3, _exit_app).start()
+    return {"ok": True}
+
+
+@eel.expose
+def restart_app():
+    """Start a fresh instance, then exit this one (frees the web port first)."""
+    import subprocess
+    try:
+        args  = [sys.executable] if getattr(sys, "frozen", False) else [sys.executable, *sys.argv]
+        flags = (getattr(subprocess, "DETACHED_PROCESS", 0)
+                 | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
+        subprocess.Popen(args, cwd=str(get_base_dir()), creationflags=flags, close_fds=True)
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+    threading.Timer(0.4, _exit_app).start()
+    return {"ok": True}
+
+
+@eel.expose
+def open_log_folder():
+    log_dir = get_base_dir() / "log"
+    try:
+        log_dir.mkdir(exist_ok=True)
+        os.startfile(str(log_dir))
+        return {"ok": True}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+@eel.expose
 def cancel_shutdown():
     global _shutdown_timer
     if _shutdown_timer is not None:

@@ -21,17 +21,19 @@
         flex: 1; min-height: 0;
         display: flex; gap: 10px;
         padding: 12px 20px 16px;
+        overflow-y: auto;            /* small windows scroll instead of clipping the Devices list */
     }
     .status-panel { width: 240px; flex-shrink: 0; align-self: flex-start; }
     .right-col {
-        flex: 1; min-width: 0; min-height: 0;
+        flex: 1; min-width: 0;
+        min-height: min-content;     /* never squash the rows: let .main-content scroll */
         display: flex; flex-direction: column; gap: 10px;
     }
     .ctrl-row { display: flex; gap: 10px; flex-shrink: 0; }
     .ctrl-row > .panel { flex: 1; min-width: 0; }
     .param-row { display: flex; gap: 10px; flex-shrink: 0; }
     .param-row > .panel { flex: 1; min-width: 0; }
-    .devices-row { flex: 1; min-height: 0; }
+    .devices-row { flex: 1; min-height: 340px; }
 
     /* ── Status visual ── */
     #status-visual .sv-ring {
@@ -59,9 +61,40 @@
         animation: panelActiveGlow 5s cubic-bezier(0.77,0,0.175,1) infinite;
     }
 
-    /* ── Devices note ── */
-    #devices-note a { color:var(--c-cyan); text-decoration:none; transition:opacity .2s; }
-    #devices-note a:hover { opacity:.72; }
+    /* ── Status hint / checklist ── */
+    .status-hint { font-size:12px; line-height:1.5; margin-top:10px; color:var(--c-text-dim); }
+    .status-hint a, .checklist a { color:var(--c-cyan); text-decoration:none; transition:opacity .2s; }
+    .status-hint a:hover, .checklist a:hover { opacity:.72; }
+    .checklist {
+        flex-shrink:0; margin-top:12px; padding:10px 14px; border-radius:10px;
+        border:1px solid rgba(20,245,255,.14); background:rgba(20,245,255,.03);
+    }
+    .checklist[hidden] { display:none; }
+    .checklist-head {
+        display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;
+        font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.14em; color:var(--c-cyan);
+    }
+    .checklist-close { background:none; border:0; color:var(--c-text-dim); font-size:18px; line-height:1; cursor:pointer; padding:0 4px; }
+    .checklist-close:hover { color:#fff; }
+    .checklist ul { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
+    .checklist li { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--c-text-mid); }
+    .checklist li .ck {
+        width:16px; height:16px; border-radius:50%; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center;
+        border:1px solid rgba(255,255,255,.28); font-size:11px; color:transparent;
+    }
+    .checklist li.done { color:var(--c-text-dim); }
+    .checklist li.done .ck { border-color:rgba(20,245,255,.7); background:rgba(20,245,255,.14); color:var(--c-cyan); }
+
+    /* ── Presets bar ── */
+    .preset-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; flex-shrink:0; padding:0 4px; }
+    .preset-bar-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.14em; color:var(--c-text-dim); }
+    .preset-chip.active {
+        background:rgba(20,245,255,.18) !important; border-color:rgba(20,245,255,.55) !important;
+        color:rgba(20,245,255,.95) !important; box-shadow:0 0 12px rgba(20,245,255,.18) !important;
+    }
+    .preset-custom { display:none; font-size:11px; color:var(--c-text-dim); letter-spacing:.08em; }
+    .preset-custom.show { display:inline; }
+    .param-row[hidden] { display:none; }
 
     /* ── Sliders ── */
     .slider-row { margin-bottom:16px; }
@@ -70,7 +103,7 @@
     .slider-label-text { font-size:13px; color:var(--c-text-mid); font-family:var(--f-body); }
     .slider-val { font-family:var(--f-display); font-size:1.05rem; font-weight:700; color:var(--c-cyan); line-height:1; }
     .slider-unit { font-size:11px; color:var(--c-text-dim); font-family:var(--f-body); margin-left:2px; }
-    .slider-hint { font-size:11px; margin-top:6px; color:var(--c-text-ghost); line-height:1.4; }
+    .slider-hint { font-size:12px; margin-top:6px; color:var(--c-text-ghost); line-height:1.4; }
 
     /* ── Param eyebrow ── */
     .param-eyebrow {
@@ -158,7 +191,7 @@
         <div class="ds-title-line" style="width:28px;"></div>
         <span class="orbitron" style="font-size:.9rem;font-weight:700;letter-spacing:.34em;color:#fff;">AMBILIGHT</span>
         <div class="ds-title-line rev" style="width:28px;"></div>
-        <span style="font-size:8px;text-transform:uppercase;letter-spacing:.28em;color:rgba(255,255,255,.18);padding-left:6px;">Control Panel</span>
+        <span style="font-size:11px;text-transform:uppercase;letter-spacing:.2em;color:rgba(255,255,255,.45);padding-left:6px;">Control Panel</span>
     </header>
 
     <!-- 2-column layout -->
@@ -181,7 +214,8 @@
                             color:rgba(255,255,255,.18); transition:color .5s;
                         ">—</span>
                     </div>
-                    <div style="font-size:13px; color:var(--c-text-ghost);">Ambilight service</div>
+                    <div id="status-summary" style="font-size:13px; color:var(--c-text-dim);">Ambilight service</div>
+                    <div id="status-hint" class="status-hint" aria-live="polite"></div>
                 </div>
 
                 <div id="status-visual" style="display:flex; align-items:center; justify-content:center; padding:24px 0;">
@@ -214,7 +248,7 @@
                     <div class="panel-body" style="padding:16px 20px;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
                             <div class="ds-label">FPS Target <button type="button" class="info-btn" aria-label="Info: FPS Target" data-info-title="FPS Target" data-info="How many times per second the screen is captured and the LEDs are updated.&#10;Higher|Smoother and more reactive LEDs, but more CPU/GPU load.&#10;Lower|Lighter on the system, but colors follow the image with visible lag or steps.&#10;The badge shows the real rate being reached.">i</button></div>
-                            <div id="fps-badge" style="font-size:11px; color:#fff;">— live</div>
+                            <div id="fps-badge" title="Frame rate actually reached" style="font-size:13px; font-weight:700; color:#fff;">— live</div>
                         </div>
                         <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:14px;">
                             <span id="val-fps" class="fps-num">15</span>
@@ -229,10 +263,10 @@
                     <div class="panel-body" style="padding:16px 20px;">
                         <div class="ds-label" style="margin-bottom:10px;">Capture Engine <button type="button" class="info-btn" aria-label="Info: Capture Engine" data-info-title="Capture Engine" data-info="The method used to grab the screen image.&#10;Auto|Tries WGC, then DXGI, then mss. Best choice for most setups.&#10;WGC|Works with browsers and windowed apps.&#10;DXGI|Needed for exclusive-fullscreen games.&#10;mss|Slow CPU-only fallback, use it only if the others fail.&#10;Protected (HDCP) content may appear black with any engine.">i</button></div>
                         <select id="ctrl-capturer" onchange="liveUpdate('capturer', this.value, null)">
-                            <option value="auto">Auto (WGC → DXGI → mss)</option>
-                            <option value="wgc">WGC — Chrome-safe</option>
-                            <option value="dxcam">DXGI — Exclusive fullscreen</option>
-                            <option value="mss">mss — CPU-only</option>
+                            <option value="auto">Auto (recommended)</option>
+                            <option value="wgc">WGC — windows, browsers</option>
+                            <option value="dxcam">DXGI — fullscreen games</option>
+                            <option value="mss">mss — CPU fallback</option>
                         </select>
                         <div style="display:flex; align-items:center; gap:8px; margin-top:10px;">
                             <span style="font-size:12px; color:var(--c-text-ghost);">Active:</span>
@@ -265,8 +299,31 @@
 
             </div>
 
+            <!-- Presets bar -->
+            <div class="preset-bar ds-appear" style="animation-delay:.14s;">
+                <span class="preset-bar-label">Presets</span>
+                <div id="preset-chips" style="display:flex; gap:6px; flex-wrap:wrap;">
+                    <button type="button" class="btn preset-chip" data-preset="balanced" onclick="applyPreset('balanced')">Balanced</button>
+                    <button type="button" class="btn preset-chip" data-preset="cinema"   onclick="applyPreset('cinema')">Cinema</button>
+                    <button type="button" class="btn preset-chip" data-preset="gaming"   onclick="applyPreset('gaming')">Gaming</button>
+                    <button type="button" class="btn preset-chip" data-preset="calm"     onclick="applyPreset('calm')">Calm</button>
+                </div>
+                <span id="preset-custom" class="preset-custom">Custom</span>
+                <div style="margin-left:auto; display:flex; gap:6px; flex-wrap:wrap;">
+                    <a class="btn" href="preview.html" title="See the effect in the browser">
+                        <span class="material-symbols-outlined" style="font-size:14px;">auto_awesome</span>Live preview
+                    </a>
+                    <button type="button" class="btn" onclick="resetToDefaults()" title="Restore the default values of all sliders">
+                        <span class="material-symbols-outlined" style="font-size:14px;">restart_alt</span>Reset
+                    </button>
+                    <button type="button" id="btn-advanced" class="btn" aria-expanded="true" aria-controls="param-row" onclick="toggleAdvanced()">
+                        <span class="material-symbols-outlined" style="font-size:14px;">tune</span>Advanced
+                    </button>
+                </div>
+            </div>
+
             <!-- Params: Sampling | Smoothing | Output (horizontal row) -->
-            <div class="param-row ds-appear" style="animation-delay:.18s;">
+            <div id="param-row" class="param-row ds-appear" style="animation-delay:.18s;">
 
                 <div id="group-depth" class="panel">
                     <div class="panel-body" style="padding:16px 20px;">
@@ -367,15 +424,12 @@
                             Loading...
                         </div>
                     </div>
-                    <div id="devices-note"
-                         style="flex-shrink:0; margin-top:12px; padding:8px 12px; border-radius:8px;
-                                font-size:11px; line-height:1.6;
-                                border:1px solid rgba(20,245,255,.08);
-                                color:var(--c-text-ghost);">
-                        <span style="color:rgba(20,245,255,.55); font-weight:700;">NOTE —</span>
-                        Configure zones in the
-                        <a href="topology-editor.html">Topology Editor</a>
-                        first (MonitorTop, MonitorRight, MonitorBottom, MonitorLeft).
+                    <div id="checklist" class="checklist" hidden>
+                        <div class="checklist-head">
+                            <span>Getting started</span>
+                            <button type="button" class="checklist-close" aria-label="Dismiss checklist" onclick="dismissChecklist()">&times;</button>
+                        </div>
+                        <ul id="checklist-items"></ul>
                     </div>
                 </div>
             </div>
@@ -442,8 +496,8 @@
 
     // Wrap updateStatusBadge to animate the status visual
     const _origStatus = window.updateStatusBadge;
-    window.updateStatusBadge = function(active) {
-        _origStatus && _origStatus(active);
+    window.updateStatusBadge = function(active, ...rest) {
+        _origStatus && _origStatus(active, ...rest);
         const card = document.getElementById('card-status');
         if (card) card.classList.toggle('panel--active', !!active);
         const vis = document.getElementById('status-visual');

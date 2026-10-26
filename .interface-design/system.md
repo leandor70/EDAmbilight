@@ -144,3 +144,16 @@ Contiene backward-compat per: `.sci-fi-border`, `.carbon-pattern`, `.glass-toggl
 | `settings.html` | Form connessione OpenRGB + web port + about |
 | `topology-editor.html` | **Non modificato** — canvas editor autocontenuto, rischio rottura troppo alto |
 | `js/navigation.js` | Sidebar 72px con sonar rings dinamici in JS |
+
+---
+
+## Pattern aggiunti in v1.1.0
+
+- **Stato Status a 4 livelli** (`index.html` + `ambilight.js:_statusKind`): `INACTIVE` (grigio) · `ACTIVE` (ciano) · `NO ZONES` (ambra `#fbbf24`) · `NO DEVICES` (rosso `#f87171`). "ACTIVE" solo se almeno una zona riceve colori. Un hint con link d'azione sta sotto il titolo.
+- **Checklist "Getting started"** (`.checklist`): 3 passi con spunta, nascosta quando completa o chiusa (`localStorage edambi.checklistDismissed`). Un punto ambra (`.nav-hint`) sulla sidebar indica la prossima azione.
+- **Barra preset** (`.preset-bar`, `.preset-chip.active`): Balanced / Cinema / Gaming / Calm + Reset + Advanced + Live preview. `Custom` compare quando i valori non corrispondono a nessun preset. I default stanno in `DEFAULT_CFG` (`ambilight.js`).
+- **Banner di connessione persa** (`#conn-banner`, 3 poll falliti) e `apiOk(res)` / evento `api-error` in `common.js`. Ogni chiamata che modifica stato deve controllare `apiOk` e mostrare un toast d'errore.
+- **`confirmDialog(msg, okLabel, {danger})`** in `common.js` sostituisce `window.confirm` (Esc annulla, Invio conferma).
+- **Blocco Advanced** del Topology Editor: classe `.adv-only` visibile solo con `body.adv-open` (`localStorage edambi.topoAdvanced`). Dirty state dell'editor: confronto snapshot (`markTopologySaved`, `isTopologyDirty`) + `beforeunload`. Nota: `topology-editor.html` ora è stato modificato in modo additivo (nessun cambio al modello dati).
+- **Testo**: minimo 11–12px; `--c-text-ghost/dim/mid` portati a .50/.60/.74 per contrasto ≥ 4.5:1. `prefers-reduced-motion` disattiva animazioni e overlay (`design-system.css`, in fondo).
+- **Lingua UI**: solo inglese.
