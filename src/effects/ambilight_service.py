@@ -300,6 +300,25 @@ def _sample_edge(
 # ── Zone discovery ────────────────────────────────────────────────────────────
 
 
+def _is_unreadable_name(name: str) -> bool:
+    """OpenRGB hands over some zone names as '???' (non-Latin chars lost upstream).
+
+    Such zones can't be told apart or identified by the user, so they are left out.
+    """
+    return not name.strip().strip("?")
+
+
+def is_zone_enabled(zones_enabled: dict, zone: dict) -> bool:
+    """Zones are keyed by zone_index (names can repeat or be unreadable).
+
+    Falls back to the legacy name key written by older versions.
+    """
+    idx_key = str(zone.get("zone_index"))
+    if idx_key in zones_enabled:
+        return bool(zones_enabled[idx_key])
+    return bool(zones_enabled.get(zone.get("name", ""), True))
+
+
 def build_device_zones(device_key: str) -> Tuple[List[dict], int]:
     """Load zone sampling parameters for a device from device_topologies.json."""
     try:
@@ -401,7 +420,7 @@ def build_device_zones(device_key: str) -> Tuple[List[dict], int]:
 
     for z_idx, zone in enumerate(all_zones):
         name = zone.get("name", "")
-        if name in _ZONE_SCREEN_MAP:
+        if name in _ZONE_SCREEN_MAP or _is_unreadable_name(name):
             continue
 
         led_pts = _led_world_positions(zone)
@@ -727,14 +746,14 @@ class AmbilightService:
             zones_enabled = dev_cfg.get("zones_enabled", {})
 
             for zone in zones:
-                if not zones_enabled.get(zone["name"], True):
+                if not is_zone_enabled(zones_enabled, zone):
                     continue
 
                 led_start = zone["led_start"]
                 led_end   = zone["led_end"]
                 active    = led_end - led_start
                 off       = zone["led_offset"] + led_start
-                zone_key  = f"{device_key}:{zone['name']}"
+                zone_key  = f"{device_key}:{zone['zone_index']}"
 
                 if zone["edge"] == "area":
                     color = _sample_area_point(

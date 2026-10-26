@@ -284,27 +284,32 @@ async function loadDeviceZones(deviceKey) {
     const cfg      = _cfg.devices?.[deviceKey] || {};
     const zonesEna = cfg.zones_enabled || {};
 
+    // Zones are keyed by index; the name key is what older versions saved.
+    const isOn = z => (zonesEna[String(z.zone_index)] ?? zonesEna[z.name]) !== false;
+    // OpenRGB sometimes hands over unreadable names ("???")
+    const label = z => /^[?\s]*$/.test(z.name || '') ? `Zone ${z.zone_index}` : z.name;
+
     container.innerHTML = `
         <div class="dev-zones-grid">
             ${zones.map(z => `
             <label class="dev-zone-item">
                 <input type="checkbox" class="dev-zone-check"
-                    ${zonesEna[z.name] !== false ? 'checked' : ''}
-                    onchange="toggleZone('${escapeAttr(deviceKey)}', '${escapeAttr(z.name)}', this.checked)">
-                <span class="dev-zone-name">${escapeHtml(z.name)}</span>
+                    ${isOn(z) ? 'checked' : ''}
+                    onchange="toggleZone('${escapeAttr(deviceKey)}', ${Number(z.zone_index)}, this.checked)">
+                <span class="dev-zone-name">${escapeHtml(label(z))}</span>
                 <span class="dev-zone-edge">${escapeHtml(z.edge)}</span>
             </label>`).join('')}
         </div>`;
 }
 
-function toggleZone(deviceKey, zoneName, enabled) {
-    api('set_ambilight_zone_enabled', deviceKey, zoneName, enabled).then(res => {
+function toggleZone(deviceKey, zoneIndex, enabled) {
+    api('set_ambilight_zone_enabled', deviceKey, zoneIndex, enabled).then(res => {
         if (!apiOk(res)) _reportApiFailure('update the zone', res);
     });
     if (!_cfg.devices) _cfg.devices = {};
     if (!_cfg.devices[deviceKey]) _cfg.devices[deviceKey] = {};
     if (!_cfg.devices[deviceKey].zones_enabled) _cfg.devices[deviceKey].zones_enabled = {};
-    _cfg.devices[deviceKey].zones_enabled[zoneName] = enabled;
+    _cfg.devices[deviceKey].zones_enabled[String(zoneIndex)] = enabled;
 }
 
 // ── Status polling ────────────────────────────────────────────────────────────

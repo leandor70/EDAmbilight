@@ -51,6 +51,40 @@ def test_status_no_enabled_device_means_zero_active_zones():
     assert s["active_zones"] == 0 and s["mapped_devices"] == 1
 
 
+def test_zones_with_same_name_are_toggled_by_index():
+    from effects.ambilight_service import is_zone_enabled
+    zones = [{"name": "???", "zone_index": i} for i in (1, 5, 6)]
+    legacy = {"???": False}
+    assert not any(is_zone_enabled(legacy, z) for z in zones)   # old files keep working
+    by_index = {"???": False, "5": True}                         # index wins over name
+    assert [is_zone_enabled(by_index, z) for z in zones] == [False, True, False]
+
+
+def test_unreadable_zone_names_are_skipped(tmp_path, monkeypatch):
+    import json
+    from effects import ambilight_service as svc
+    def z(i, name):
+        return {"zone_index": i, "name": name, "led_count": 1, "position": {"x": 5, "y": i},
+                "rotation": 0, "direction": "forward"}
+    topo = {"topologies": {"D": {"zones": [z(0, "CPU"), z(1, "???"), z(2, "Case")]}}}
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config" / "device_topologies.json").write_text(json.dumps(topo))
+    monkeypatch.chdir(tmp_path)
+    zones, total = svc.build_device_zones("D")
+    assert [x["name"] for x in zones] == ["CPU", "Case"]
+    assert total == 3                      # LED offsets still count the hidden zone
+    assert [x["led_offset"] for x in zones] == [0, 2]
+
+
+def test_set_zone_enabled_stores_index_key():
+    saved = {}
+    svc = _FakeService({"devices": {}}, {})
+    svc.set_config = lambda u: saved.update(u)
+    ambilight_api._ambilight_service = svc
+    ambilight_api.set_ambilight_zone_enabled("A", 5, True)
+    assert saved["devices"]["A"]["zones_enabled"] == {"5": True}
+
+
 def test_status_without_service_has_new_keys():
     ambilight_api._ambilight_service = None
     s = ambilight_api.get_ambilight_status()
