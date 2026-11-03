@@ -57,6 +57,9 @@ function applyConfig(cfg) {
     setSlider('ctrl-adap-min',  'val-adap-min',  cfg.adaptive_min     ?? 3);
     setSlider('ctrl-adap-max',  'val-adap-max',  cfg.adaptive_max     ?? 20);
     setToggle('ctrl-bb', cfg.black_bar_detect ?? true);
+    setSlider('ctrl-standby-bri', 'val-standby-bri', cfg.standby_brightness ?? 60);
+    const sbSel = document.getElementById('ctrl-standby');
+    if (sbSel) sbSel.value = cfg.standby_mode ?? 'hold';
 
     const capSel = document.getElementById('ctrl-capturer');
     if (capSel) capSel.value = cfg.capturer ?? 'auto';
@@ -385,6 +388,7 @@ function _statusKind(s) {
     if (!(s.enabled && s.running)) return 'inactive';
     if (!s.devices_total)          return 'no-devices';
     if (!s.active_zones)           return 'no-zones';
+    if (s.standby)                 return 'standby';
     return 'active';
 }
 
@@ -392,6 +396,7 @@ const _STATUS_STYLE = {
     'inactive':   { label: 'INACTIVE',   color: 'rgba(255,255,255,0.4)', dot: '' },
     'active':     { label: 'ACTIVE',     color: 'rgba(20,245,255,0.9)',  dot: 'rgba(20,245,255,0.9)' },
     'no-zones':   { label: 'NO ZONES',   color: '#fbbf24',               dot: '#fbbf24' },
+    'standby':    { label: 'STANDBY',    color: 'rgba(167,139,250,0.9)', dot: 'rgba(167,139,250,0.9)' },
     'no-devices': { label: 'NO DEVICES', color: '#f87171',               dot: '#f87171' },
 };
 
@@ -425,6 +430,7 @@ function _renderStatusInfo(s, kind) {
         'no-zones':   s.mapped_devices
             ? 'Running, but no device receives colors. Switch on a device in the list below.'
             : 'Running, but no zone is mapped to the screen. Map them in the <a href="topology-editor.html">Topology Editor</a>.',
+        'standby':    'The screen is not providing frames (display asleep or locked). LEDs follow the Screen standby setting and resume by themselves.',
     }[kind] || '';
     if (hint.dataset.kind !== kind) { hint.innerHTML = html; hint.dataset.kind = kind; }
 }

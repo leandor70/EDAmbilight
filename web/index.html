@@ -277,6 +277,31 @@
 
                 <div class="panel">
                     <div class="panel-body" style="padding:16px 20px;">
+                        <div class="ds-label" style="margin-bottom:10px;">Screen standby <button type="button" class="info-btn" aria-label="Info: Screen standby" data-info-title="Screen standby" data-info="What the LEDs do while the screen gives no image (display asleep, lock screen). Normal ambilight resumes by itself.&#10;Hold|Keep the last colors, as before.&#10;Slow fade|Fades to black over 20 s.&#10;Dim glow|Fades to a faint glow of the last colors.&#10;Pulse|Last colors breathe slowly.&#10;Rotating colors|Rainbow drifting along the LEDs.&#10;Aurora|Slow cyan, green and violet waves.&#10;Ember|Warm flickering orange.&#10;Lights off|Black immediately.">i</button></div>
+                        <select id="ctrl-standby" onchange="liveUpdate('standby_mode', this.value, null)">
+                            <option value="hold">Hold last colors</option>
+                            <option value="fade">Slow fade to black</option>
+                            <option value="dim">Fade to dim glow</option>
+                            <option value="pulse">Pulse (breathing)</option>
+                            <option value="rainbow">Rotating colors</option>
+                            <option value="aurora">Aurora</option>
+                            <option value="ember">Ember glow</option>
+                            <option value="off">Lights off</option>
+                        </select>
+                        <div class="slider-row" style="margin-top:12px;">
+                            <div class="slider-label">
+                                <span class="slider-label-text">Standby brightness</span>
+                                <span id="val-standby-bri" class="slider-val">60</span>
+                            </div>
+                            <input id="ctrl-standby-bri" type="range" min="5" max="100" step="5" value="60"
+                                oninput="liveUpdate('standby_brightness', +this.value, 'val-standby-bri'); updateFill(this);">
+                            <div class="slider-hint">Rotating colors, Aurora and Ember only</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-body" style="padding:16px 20px;">
                         <div class="ds-label" style="margin-bottom:10px;">Algorithm <button type="button" class="info-btn" aria-label="Info: Algorithm" data-info-title="Algorithm" data-info="How each LED color is calculated from the screen edge. It decides which parameters below are active.&#10;Adaptive + EMA|Auto sampling depth plus smoothing. Best overall.&#10;Adaptive depth|Auto depth, no smoothing: reacts instantly.&#10;Percentile + EMA|Fixed depth, bright-pixel color, smoothed.&#10;Percentile 80%|Picks a bright pixel of the area: vivid colors, may flicker.&#10;Dominant color|Median color: ignores small bright details.&#10;RGB mean|Plain average: calm but washed-out colors.&#10;Black bar detect|Ignores black letterbox bars so colors match the actual picture.">i</button></div>
                         <select id="ctrl-strategy" onchange="onStrategyChange(this.value)">
                             <option value="adaptive_smooth">Adaptive + EMA (best)</option>

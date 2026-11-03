@@ -75,6 +75,7 @@ def get_ambilight_status() -> dict:
         "fps":            _ambilight_service.actual_fps,
         "capturer":       _ambilight_service.capturer_name,
         "enabled":        cfg.get("enabled", False),
+        "standby":        bool(getattr(_ambilight_service, "standby_active", False)),
         "content_rect":   list(rect) if rect else None,
         "active_devices": active_devices,
         "active_zones":   active_zones,

@@ -14,8 +14,13 @@ from typing import Optional, Dict, List, Tuple
 import numpy as np
 
 from core.screen_capturer_service import ScreenCapturerService
+from effects import standby_effects
 
 CONFIG_PATH = Path("config/ambilight_config.json")
+
+# Secondi senza frame prima di considerare lo schermo in standby (i buchi brevi,
+# es. avvio o cambio capturer, non devono far partire gli effetti).
+STANDBY_GRACE = 3.0
 
 # Zone name -> screen edge mapping
 _ZONE_SCREEN_MAP = {
@@ -467,6 +472,12 @@ class AmbilightService:
         self._paused: bool = False
         self._zone_cache: Dict[str, Tuple[List[dict], int]] = {}
         self._topology_warned: set = set()
+        # Standby (schermo non disponibile): ultimi colori + maschera LED attivi
+        # per device, e istanti di inizio dell'assenza di frame / dello standby.
+        self._standby_ctx: Dict[str, Tuple[np.ndarray, np.ndarray]] = {}
+        self._no_frame_since: Optional[float] = None
+        self._standby_since:  Optional[float] = None
+        self._standby_last_write: float = 0.0
         # Black-border detection: None = schermo intero
         self._bb_rect:        Optional[Tuple[int, int, int, int]] = None
         self._bb_candidate:   Optional[Tuple[int, int, int, int]] = None
@@ -489,6 +500,7 @@ class AmbilightService:
                 "adaptive_min": 3, "adaptive_max": 20,
                 "black_bar_detect": True, "bb_interval": 1.0,
                 "bb_threshold": 18, "bb_consistent": 3,
+                "standby_mode": "hold", "standby_brightness": 60,
                 "devices": {},
             }
 
@@ -524,6 +536,11 @@ class AmbilightService:
     @property
     def capturer_name(self) -> str:
         return ScreenCapturerService.get_instance().capturer_name
+
+    @property
+    def standby_active(self) -> bool:
+        """True quando lo schermo non fornisce frame da oltre STANDBY_GRACE."""
+        return self._standby_since is not None
 
     @property
     def content_rect(self) -> Optional[Tuple[int, int, int, int]]:
@@ -701,8 +718,9 @@ class AmbilightService:
 
                 frame = svc.get_latest_frame()
                 if frame is None:
-                    self._stop_event.wait(0.02)
+                    self._on_no_frame(cfg)
                     continue
+                self._no_frame_since = self._standby_since = None
 
                 self._process_frame(frame, cfg)
 
@@ -717,6 +735,37 @@ class AmbilightService:
             if _timer_ok:
                 import ctypes as _ct
                 _ct.windll.winmm.timeEndPeriod(1)
+
+    def _on_no_frame(self, cfg: dict) -> None:
+        now = time.monotonic()
+        if self._no_frame_since is None:
+            self._no_frame_since = now
+        if now - self._no_frame_since < STANDBY_GRACE:
+            self._stop_event.wait(0.02)
+            return
+        if self._standby_since is None:
+            self._standby_since = now
+            self._standby_last_write = 0.0
+            print(f"[AmbilightService] Schermo non disponibile: standby ({cfg.get('standby_mode', 'hold')})")
+        self._run_standby(cfg, now)
+        self._stop_event.wait(0.05)
+
+    def _run_standby(self, cfg: dict, now: float) -> None:
+        mode = cfg.get("standby_mode", "hold")
+        if not self._manager or mode not in standby_effects.MODE_IDS or mode == "hold":
+            return
+        t = now - self._standby_since
+        # Fade completato / luci spente: basta riscrivere una volta al secondo
+        if standby_effects.is_static(mode, t) and now - self._standby_last_write < 1.0:
+            return
+        self._standby_last_write = now
+        level = float(cfg.get("standby_brightness", 60)) / 100.0
+        for device_key, (base, mask) in list(self._standby_ctx.items()):
+            if not cfg.get("devices", {}).get(device_key, {}).get("enabled", False):
+                continue
+            colors = standby_effects.render(mode, t, base, mask, level)
+            if colors is not None and not self._paused:
+                self._manager.apply_direct_colors(device_key, colors)
 
     def _process_frame(self, frame: np.ndarray, cfg: dict) -> None:
         if cfg.get("black_bar_detect", True):
@@ -743,6 +792,7 @@ class AmbilightService:
                 continue
 
             colors: List[Tuple[int, int, int]] = [(0, 0, 0)] * total_leds
+            lit = np.zeros(total_leds, dtype=bool)
             zones_enabled = dev_cfg.get("zones_enabled", {})
 
             for zone in zones:
@@ -769,6 +819,7 @@ class AmbilightService:
                             cut_threshold=cfg.get("scene_cut", 60.0),
                         )
                     colors[off: off + active] = _apply_min_luminance(zone_colors, min_lum)
+                    lit[off: off + active] = True
                     continue
 
                 zone_colors = _sample_edge(
@@ -790,6 +841,9 @@ class AmbilightService:
                     zone_colors = _boost_saturation(zone_colors, sat_boost)
 
                 colors[off: off + active] = _apply_min_luminance(zone_colors, min_lum)
+                lit[off: off + active] = True
+
+            self._standby_ctx[device_key] = (np.asarray(colors, dtype=np.float32), lit)
 
             # Skip the write if a pause arrived mid-frame (e.g. calibration
             # just started) — avoids a stray ambilight frame fighting it.

@@ -6,6 +6,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.2.0] — 2026-11-03
+
+### Added
+
+- Control: **Screen standby** — choose what the LEDs do while the screen gives
+  no image (display asleep, lock screen): hold the last colors (default), slow
+  fade to black, fade to a dim glow, pulse, rotating colors, aurora, ember
+  glow or lights off. A "Standby brightness" slider sets the level of the
+  generative effects. The status badge shows STANDBY and normal ambilight
+  resumes on its own.
+
+### Fixed
+
+- DXGI capture: after a failed recovery (e.g. display wake-up) the app retries
+  quietly every 5 s instead of repeating the full recovery cycle and log noise
+  on every frame.
+- Zone toggles are keyed by zone index and zones with unreadable names are
+  skipped.
+
+---
+
 ## [1.1.0] — 2026-10-26
 
 ### Added

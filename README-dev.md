@@ -20,6 +20,7 @@ EDAmbilight-src/
 │   │   └── screen_capturer_service.py  # WGC → DXGI → mss capture backend
 │   ├── effects/
 │   │   ├── ambilight_service.py # Main sampling loop + color processing
+│   │   ├── standby_effects.py   # LED effects while the screen is unavailable
 │   │   └── openrgb_manager.py   # OpenRGB device/zone abstraction
 │   └── utils/
 │       ├── openrgb_bootstrap.py # Auto-detect / auto-start OpenRGB
@@ -204,7 +205,7 @@ python -m pytest tests/
 
 ## Release Checklist
 
-- [ ] Bump version string in `README.md` and `CHANGELOG.md`
+- [ ] Bump version in `src/version.py`, the `README.md` badge and `CHANGELOG.md`
 - [ ] Run `.\build.ps1` and smoke-test the exe
 - [ ] Create release zip: `Compress-Archive dist\EDAmbilight\* EDAmbilight-vX.X.X.zip`
 - [ ] Tag the commit: `git tag vX.X.X`

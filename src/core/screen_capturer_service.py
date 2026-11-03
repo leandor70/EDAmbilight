@@ -85,11 +85,16 @@ class _DxcamCapturer:
     comportamento di Windows per rispettare le restrizioni DRM."""
 
     _RECOVERABLE = ("0x887a0026", "access lost", "access_lost", "output-change")
+    _RETRY_SECS = 5.0
 
     def __init__(self, fps: int):
         import dxcam
         self._dxcam = dxcam
         self._fps   = fps
+        # Dopo 10 recuperi falliti (es. schermo in standby) si ritenta in silenzio
+        # ogni _RETRY_SECS invece di rifare il ciclo completo a ogni grab().
+        self._gave_up = False
+        self._retry_after = 0.0
         # set_fps() (thread API) e grab() (thread ambilight) toccano la camera:
         # senza lock grab() vedrebbe is_capturing False durante il riavvio.
         self._cam_lock = threading.RLock()
@@ -114,41 +119,59 @@ class _DxcamCapturer:
         try:
             with self._cam_lock:
                 if self._capture_thread_dead():
+                    if time.monotonic() < self._retry_after:
+                        return None
                     self._recover()
                 cam = self._cam
             frame = cam.get_latest_frame()
             return None if frame is None else frame[::DOWNSAMPLE, ::DOWNSAMPLE, :3]
         except Exception as exc:
             if any(t in str(exc).lower() for t in self._RECOVERABLE):
-                with self._cam_lock:
-                    self._recover()
+                try:
+                    with self._cam_lock:
+                        self._recover()
+                except Exception:
+                    pass
             return None
 
     def _recover(self) -> None:
-        print("[ScreenCapturer] DXGI access lost — recupero...")
+        quiet = self._gave_up
+        if not quiet:
+            print("[ScreenCapturer] DXGI access lost — recupero...")
         for fn in ("stop", "release"):
             try:
                 getattr(self._cam, fn)()
             except Exception:
                 pass
-        time.sleep(0.5)
+        if not quiet:
+            time.sleep(0.5)
         # Il desktop puo' restare in transizione a lungo (cambio modalita',
-        # lock screen): riprova con backoff crescente invece di arrendersi.
-        for attempt in range(1, 11):
+        # lock screen, standby): riprova con backoff crescente invece di arrendersi.
+        attempts = 1 if quiet else 10
+        for attempt in range(1, attempts + 1):
             try:
                 self._cam = self._dxcam.create(output_color="BGRA")
                 self._cam.start(target_fps=self._fps)
-                print(f"[ScreenCapturer] DXGI recuperato ({attempt}/10)")
+                print(f"[ScreenCapturer] DXGI recuperato ({attempt}/{attempts})")
+                self._gave_up = False
+                self._retry_after = 0.0
                 return
             except Exception as exc:
-                print(f"[ScreenCapturer] Recupero {attempt}/10 fallito: {exc}")
+                if not quiet:
+                    print(f"[ScreenCapturer] Recupero {attempt}/{attempts} fallito: {exc}")
                 for fn in ("stop", "release"):
                     try:
                         getattr(self._cam, fn)()
                     except Exception:
                         pass
-                time.sleep(min(1.0 * attempt, 5.0))
-        raise RuntimeError("[ScreenCapturer] DXGI: impossibile recuperare dopo 10 tentativi")
+                if not quiet:
+                    time.sleep(min(1.0 * attempt, 5.0))
+        if not self._gave_up:
+            print("[ScreenCapturer] DXGI non recuperabile (schermo in standby?): "
+                  f"riprovo in silenzio ogni {self._RETRY_SECS:.0f}s")
+        self._gave_up = True
+        self._retry_after = time.monotonic() + self._RETRY_SECS
+        raise RuntimeError("[ScreenCapturer] DXGI: impossibile recuperare")
 
     def set_fps(self, fps: int) -> None:
         if fps == self._fps:

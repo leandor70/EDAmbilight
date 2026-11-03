@@ -3,7 +3,7 @@
 **Real-time screen ambient lighting controller for OpenRGB**
 
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue)
-![Version](https://img.shields.io/badge/version-1.1.0-cyan)
+![Version](https://img.shields.io/badge/version-1.2.0-cyan)
 ![OpenRGB](https://img.shields.io/badge/requires-OpenRGB-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -36,6 +36,7 @@ No Python or extra dependencies needed.
 - **Black bar detection** — automatically ignores letterbox / pillarbox borders
 - **Scene-cut bypass** — instant color jump on hard cuts, smooth EMA transitions otherwise
 - **Saturation boost** — vivid LED output without oversaturation
+- **Screen standby effects** — when the display sleeps or locks, the LEDs can hold, fade out, pulse, rotate colors, show an aurora or an ember glow
 - **WebGL live preview** — visualise the ambient effect in the browser before it hits the LEDs
 
 ![Live Preview](docs/ss-preview.png)
@@ -96,11 +97,17 @@ The main page. All sampling parameters are adjustable in real time with instant 
 | **Scene-cut threshold** | Delta that triggers an instant cut instead of EMA |
 | **Saturation boost** | Color intensity multiplier |
 | **Min brightness** | Lifts dark colors to a minimum level |
+| **Screen standby** | What the LEDs do while the screen gives no image: hold, slow fade, dim glow, pulse, rotating colors, aurora, ember or off |
+| **Standby brightness** | Level of the rotating colors, aurora and ember effects |
 | **Presets** | Balanced / Cinema / Gaming / Calm in one click; *Reset* restores the defaults |
 | **Advanced** | Shows or hides the fine-tuning sliders |
 
-The **Status** panel reports `ACTIVE`, `INACTIVE`, `NO ZONES` (running, but no zone receives colors)
-or `NO DEVICES` (OpenRGB reports nothing), with a hint on how to fix it.
+The **Status** panel reports `ACTIVE`, `INACTIVE`, `STANDBY` (the screen gives no frames: display asleep or locked),
+`NO ZONES` (running, but no zone receives colors) or `NO DEVICES` (OpenRGB reports nothing), with a hint on how to fix it.
+
+> **Screen standby** starts when the capture stops delivering frames. With the DXGI engine (also
+> chosen by *Auto*) this happens about 45 s after the display turns off, because the app first tries
+> to recover the capture. Normal ambilight resumes by itself when the screen is back.
 
 * * *
 
