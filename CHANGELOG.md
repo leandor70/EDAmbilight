@@ -6,6 +6,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- Control: **Test effect** button in Screen standby — plays the selected
+  standby effect on the LEDs right away (stops by itself after 60 s).
+
+### Changed
+
+- License: now a freeware license (personal, non-commercial use) instead of MIT.
+
+---
+
 ## [1.2.0] — 2026-11-03
 
 ### Added

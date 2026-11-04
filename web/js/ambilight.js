@@ -110,6 +110,27 @@ function liveUpdate(key, value, spanId) {
     }, CFG_DEBOUNCE);
 }
 
+// ── Screen standby test ───────────────────────────────────────────────────────
+
+function _renderStandbyTest(on) {
+    const b = document.getElementById('btn-standby-test');
+    if (!b) return;
+    b.textContent = on ? 'Stop test' : 'Test effect';
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+}
+
+async function toggleStandbyPreview() {
+    const b = document.getElementById('btn-standby-test');
+    const on = b && b.getAttribute('aria-pressed') !== 'true';
+    // Apply the dropdown choice first: the change is debounced
+    if (on && _pendingCfg.standby_mode !== undefined) {
+        await api('set_ambilight_config', { standby_mode: _pendingCfg.standby_mode });
+    }
+    const res = await api('set_standby_preview', on);
+    if (!apiOk(res)) { _reportApiFailure('start the test', res); return; }
+    _renderStandbyTest(on);
+}
+
 async function toggleEnabled(checked) {
     _cfg.enabled = checked;
     updateStatusBadge(checked ? null : false);
@@ -360,6 +381,8 @@ async function pollStatus() {
         fpsBadge.title = low ? `Reaching ${s.fps} of ${target} fps — try lowering FPS Target or switching Capture Engine`
                              : 'Frame rate actually reached';
     }
+
+    _renderStandbyTest(!!s.standby_preview);
 
     const capEl = document.getElementById('stat-capturer');
     if (capEl) capEl.textContent = s.capturer || '—';

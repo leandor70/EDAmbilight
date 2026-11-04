@@ -5,7 +5,7 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue)
 ![Version](https://img.shields.io/badge/version-1.2.0-cyan)
 ![OpenRGB](https://img.shields.io/badge/requires-OpenRGB-orange)
-![License](https://img.shields.io/badge/license-MIT-green)
+![License](https://img.shields.io/badge/license-Freeware-green)
 
 ![Dashboard](docs/ss-dashboard.png)
 
@@ -278,4 +278,4 @@ EDAmbilight/
 
 ## 📄 License
 
-MIT License — see [LICENSE](LICENSE).
+Freeware, for personal non-commercial use — see [LICENSE](LICENSE).

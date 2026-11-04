@@ -21,6 +21,8 @@ CONFIG_PATH = Path("config/ambilight_config.json")
 # Secondi senza frame prima di considerare lo schermo in standby (i buchi brevi,
 # es. avvio o cambio capturer, non devono far partire gli effetti).
 STANDBY_GRACE = 3.0
+# Durata massima dell'anteprima manuale dello standby (s)
+STANDBY_PREVIEW_MAX = 60.0
 
 # Zone name -> screen edge mapping
 _ZONE_SCREEN_MAP = {
@@ -478,6 +480,8 @@ class AmbilightService:
         self._no_frame_since: Optional[float] = None
         self._standby_since:  Optional[float] = None
         self._standby_last_write: float = 0.0
+        # Anteprima manuale dello standby: monotonic() di scadenza (0 = spenta)
+        self._standby_preview_until: float = 0.0
         # Black-border detection: None = schermo intero
         self._bb_rect:        Optional[Tuple[int, int, int, int]] = None
         self._bb_candidate:   Optional[Tuple[int, int, int, int]] = None
@@ -541,6 +545,22 @@ class AmbilightService:
     def standby_active(self) -> bool:
         """True quando lo schermo non fornisce frame da oltre STANDBY_GRACE."""
         return self._standby_since is not None
+
+    def set_standby_preview(self, active: bool) -> bool:
+        """Simula lo standby con l'effetto scelto, anche se lo schermo e' attivo.
+
+        Si spegne da solo dopo STANDBY_PREVIEW_MAX secondi. Ritorna lo stato.
+        """
+        if active:
+            self._standby_preview_until = time.monotonic() + STANDBY_PREVIEW_MAX
+        else:
+            self._standby_preview_until = 0.0
+            self._standby_since = None
+        return active
+
+    @property
+    def standby_preview_active(self) -> bool:
+        return time.monotonic() < self._standby_preview_until
 
     @property
     def content_rect(self) -> Optional[Tuple[int, int, int, int]]:
@@ -715,6 +735,19 @@ class AmbilightService:
                 if self._paused:
                     self._stop_event.wait(0.1)
                     continue
+
+                if self._standby_preview_until:
+                    now = time.monotonic()
+                    if now < self._standby_preview_until:
+                        if self._standby_since is None:
+                            self._standby_since = now
+                            self._standby_last_write = 0.0
+                        self._run_standby(cfg, now)
+                        self._stop_event.wait(0.05)
+                        continue
+                    # Scaduta: riprende l'ambilight normale
+                    self._standby_preview_until = 0.0
+                    self._no_frame_since = self._standby_since = None
 
                 frame = svc.get_latest_frame()
                 if frame is None:

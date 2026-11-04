@@ -42,6 +42,14 @@ def set_ambilight_config(updates: dict) -> dict:
         return {"ok": False, "error": str(exc)}
 
 
+@eel.expose
+def set_standby_preview(active: bool) -> dict:
+    """Start/stop a manual test of the selected Screen standby effect."""
+    if _ambilight_service is None:
+        return {"ok": False, "error": "Service not initialized"}
+    return {"ok": True, "active": _ambilight_service.set_standby_preview(bool(active))}
+
+
 # ── Status ────────────────────────────────────────────────────────────────────
 
 
@@ -76,6 +84,7 @@ def get_ambilight_status() -> dict:
         "capturer":       _ambilight_service.capturer_name,
         "enabled":        cfg.get("enabled", False),
         "standby":        bool(getattr(_ambilight_service, "standby_active", False)),
+        "standby_preview": bool(getattr(_ambilight_service, "standby_preview_active", False)),
         "content_rect":   list(rect) if rect else None,
         "active_devices": active_devices,
         "active_zones":   active_zones,
