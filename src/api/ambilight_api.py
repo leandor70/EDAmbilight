@@ -93,6 +93,29 @@ def get_ambilight_status() -> dict:
     }
 
 
+@eel.expose
+def get_sampling_preview() -> dict:
+    """Dati per il mini-schermo della card Status: dove e come si campiona.
+
+    `snapshot` e' None finche' non e' stato elaborato un frame; `snapshot.age`
+    permette alla UI di scartare dati vecchi (servizio spento, standby).
+    """
+    if _ambilight_service is None:
+        return {"running": False, "snapshot": None}
+    cfg = _ambilight_service.get_config()
+    strategy = cfg.get("strategy", "adaptive_smooth")
+    return {
+        "running":      _ambilight_service.is_running and cfg.get("enabled", False),
+        "standby":      bool(getattr(_ambilight_service, "standby_active", False)),
+        "strategy":     strategy,
+        "adaptive":     strategy in ("adaptive", "adaptive_smooth"),
+        "depth":        cfg.get("depth", 10),
+        "adaptive_min": cfg.get("adaptive_min", 3),
+        "adaptive_max": cfg.get("adaptive_max", 20),
+        "snapshot":     _ambilight_service.get_sampling_snapshot(),
+    }
+
+
 def _mapped_device_keys() -> list:
     """Device keys (non-matrix) that have at least one mapped zone."""
     if _openrgb_manager is None or _ambilight_service is None:

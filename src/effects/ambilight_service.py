@@ -136,6 +136,11 @@ def _boost_saturation(
 _MIN_LUM_BLACK = 4   # sotto questo valore (max canale) il colore è nero vero: resta spento
 
 
+def _hex_colors(colors: List[Tuple[int, int, int]]) -> str:
+    """Colori compattati in una stringa 'rrggbbrrggbb…' (6 caratteri per LED)."""
+    return "".join(f"{r:02x}{g:02x}{b:02x}" for r, g, b in colors)
+
+
 def _apply_min_luminance(
     colors: List[Tuple[int, int, int]],
     floor: float,
@@ -488,6 +493,9 @@ class AmbilightService:
         self._bb_count:       int = 0
         self._bb_last_check:  float = 0.0
         self._bb_frame_shape: Optional[Tuple[int, int]] = None
+        # Ultimo snapshot della campionatura (geometria + colori), per l'anteprima UI
+        self._sampling: Optional[dict] = None
+        self._sampling_ts: float = 0.0
 
     # ── Config ────────────────────────────────────────────────────────────────
 
@@ -566,6 +574,17 @@ class AmbilightService:
     def content_rect(self) -> Optional[Tuple[int, int, int, int]]:
         """Rettangolo del contenuto rilevato (px), None = schermo intero."""
         return self._bb_rect
+
+    def get_sampling_snapshot(self) -> Optional[dict]:
+        """Ultima campionatura (frame, area, profondità per bordo, zone con colori).
+
+        Aggiunge `age` (secondi dall'ultimo frame elaborato) così la UI può
+        capire se il dato è fresco. None se non è mai stato elaborato un frame.
+        """
+        snap = self._sampling
+        if snap is None:
+            return None
+        return {**snap, "age": round(time.monotonic() - self._sampling_ts, 2)}
 
     # ── Black-border detection ────────────────────────────────────────────────
 
@@ -801,6 +820,8 @@ class AmbilightService:
                 self._manager.apply_direct_colors(device_key, colors)
 
     def _process_frame(self, frame: np.ndarray, cfg: dict) -> None:
+        full_h, full_w = frame.shape[:2]
+        snap_zones: List[dict] = []
         if cfg.get("black_bar_detect", True):
             self._update_content_rect(frame, cfg)
             if self._bb_rect is not None:
@@ -851,8 +872,15 @@ class AmbilightService:
                             alpha=cfg.get("ema_alpha", 0.35),
                             cut_threshold=cfg.get("scene_cut", 60.0),
                         )
-                    colors[off: off + active] = _apply_min_luminance(zone_colors, min_lum)
+                    zone_colors = _apply_min_luminance(zone_colors, min_lum)
+                    colors[off: off + active] = zone_colors
                     lit[off: off + active] = True
+                    snap_zones.append({
+                        "dev": device_key, "zone": zone["name"],
+                        "edge": "area", "x": round(zone["x_pct"], 4),
+                        "y": round(zone["y_pct"], 4),
+                        "colors": _hex_colors(zone_colors[:1]),
+                    })
                     continue
 
                 zone_colors = _sample_edge(
@@ -873,8 +901,18 @@ class AmbilightService:
                 if strategy != "hsv":
                     zone_colors = _boost_saturation(zone_colors, sat_boost)
 
-                colors[off: off + active] = _apply_min_luminance(zone_colors, min_lum)
+                zone_colors = _apply_min_luminance(zone_colors, min_lum)
+                colors[off: off + active] = zone_colors
                 lit[off: off + active] = True
+                # Ordine "di schermo" (sinistra->destra / alto->basso), non d'ordine LED
+                on_screen = zone_colors[::-1] if zone["reversed"] else zone_colors
+                snap_zones.append({
+                    "dev": device_key, "zone": zone["name"],
+                    "edge": zone["edge"],
+                    "start": round(zone["screen_start"], 4),
+                    "end": round(zone["screen_end"], 4),
+                    "colors": _hex_colors(on_screen),
+                })
 
             self._standby_ctx[device_key] = (np.asarray(colors, dtype=np.float32), lit)
 
@@ -882,3 +920,18 @@ class AmbilightService:
             # just started) — avoids a stray ambilight frame fighting it.
             if self._manager and not self._paused:
                 self._manager.apply_direct_colors(device_key, colors)
+
+        # Snapshot per l'anteprima UI: profondità realmente usata per bordo
+        # (la cache contiene le strisce già ritagliate, anche con profondità adattiva).
+        depth_px = {
+            edge: int(strip.shape[0] if edge in ("top", "bottom") else strip.shape[1])
+            for edge, strip in edge_cache.items()
+        }
+        rect = self._bb_rect or (0, 0, full_w, full_h)
+        self._sampling = {
+            "frame": [full_w, full_h],
+            "rect":  list(rect),
+            "depth": depth_px,
+            "zones": snap_zones,
+        }
+        self._sampling_ts = time.monotonic()

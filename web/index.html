@@ -35,26 +35,45 @@
     .param-row > .panel { flex: 1; min-width: 0; }
     .devices-row { flex: 1; min-height: 340px; }
 
-    /* ── Status visual ── */
-    #status-visual .sv-ring {
-        position:absolute; width:64px; height:64px; border-radius:50%;
-        opacity:0; animation:none;
-        transition: opacity .5s cubic-bezier(0.23,1,0.32,1);
+    /* ── Sampling preview (mini screen) ── */
+    .sampling-panel { flex-shrink:0; }
+    .sampling-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+    .sampling-hint { font-size:11px; color:var(--c-text-ghost); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .sampling-stage { display:flex; justify-content:center; width:100%; }
+    .sampling-tip {
+        position:absolute; z-index:5; pointer-events:none; max-width:240px;
+        padding:7px 10px; border-radius:8px; font-size:11.5px; line-height:1.45;
+        background:rgba(4,12,20,.96); color:var(--c-text);
+        border:1px solid rgba(20,245,255,.35); box-shadow:0 6px 18px rgba(0,0,0,.45);
     }
-    #status-visual.visual--active .sv-ring {
-        animation:sonarRingMd 2.8s cubic-bezier(0.23,1,0.32,1) infinite;
+    .sampling-tip b { color:var(--c-cyan); font-weight:600; }
+    .sampling-tip span { color:var(--c-text-ghost); }
+    .seg {
+        display:inline-flex; border:1px solid rgba(255,255,255,.10); border-radius:7px;
+        overflow:hidden; background:rgba(255,255,255,.03);
     }
-    #status-visual.visual--active .sv-ring:nth-child(2) { animation-delay:1.3s; }
-    .sv-core {
-        width:22px; height:22px; border-radius:50%; position:relative; z-index:1;
-        border:1.5px solid rgba(255,255,255,.12);
-        background:rgba(255,255,255,.04);
-        transition:all .5s cubic-bezier(0.23,1,0.32,1);
+    .seg-btn {
+        font-family:inherit; font-weight:600; font-size:10px; line-height:1;
+        letter-spacing:.08em; text-transform:uppercase;
+        padding:5px 8px; color:var(--c-text-ghost); background:transparent; border:0; cursor:pointer;
+        transition:color .2s, background .2s;
     }
-    #status-visual.visual--active .sv-core {
-        border-color:rgba(20,245,255,.70);
-        background:rgba(20,245,255,.08);
-        box-shadow:0 0 14px rgba(20,245,255,.38), 0 0 32px rgba(20,245,255,.16);
+    .seg-btn:hover { color:var(--c-text-mid); }
+    .seg-btn[aria-pressed="true"] { color:var(--c-cyan); background:rgba(20,245,255,.10); }
+    .seg-btn:focus-visible { outline:2px solid var(--c-cyan); outline-offset:-2px; }
+    .sampling-screen {
+        position:relative; width:100%; border-radius:6px;
+        border:1px solid rgba(255,255,255,.10); background:var(--c-deep, #020a10);
+        transition:border-color .5s, box-shadow .5s;
+    }
+    .sampling-screen canvas { display:block; width:100%; height:100%; border-radius:5px; }
+    #status-visual.visual--active .sampling-screen {
+        border-color:rgba(20,245,255,.45);
+        box-shadow:0 0 14px rgba(20,245,255,.18);
+    }
+    .sampling-caption { font-size:11px; line-height:1.45; color:var(--c-text-ghost); min-height:2.9em; margin-top:10px; text-align:center; }
+    @media (prefers-reduced-motion: reduce) {
+        .sampling-screen, .seg-btn { transition:none; }
     }
     #card-status.panel--active {
         border-color: rgba(20,245,255,.14);
@@ -216,14 +235,6 @@
                     </div>
                     <div id="status-summary" style="font-size:13px; color:var(--c-text-dim);">Ambilight service</div>
                     <div id="status-hint" class="status-hint" aria-live="polite"></div>
-                </div>
-
-                <div id="status-visual" style="display:flex; align-items:center; justify-content:center; padding:24px 0;">
-                    <div style="position:relative; width:64px; height:64px; display:flex; align-items:center; justify-content:center;">
-                        <div class="sv-ring"></div>
-                        <div class="sv-ring"></div>
-                        <div class="sv-core"></div>
-                    </div>
                 </div>
 
                 <div style="padding-top:18px; border-top:1px solid rgba(255,255,255,.04);">
@@ -438,6 +449,29 @@
                     </div>
                 </div>
 
+            </div>
+
+            <!-- Sampling preview: what part of the screen feeds the LEDs -->
+            <div id="status-visual" class="panel sampling-panel ds-appear" style="animation-delay:.22s;">
+                <div class="panel-body" style="padding:16px 20px;">
+                    <div class="sampling-head">
+                        <div style="display:flex; align-items:baseline; gap:10px; min-width:0;">
+                            <div class="ds-label">Sampling <button type="button" class="info-btn" aria-label="Info: Sampling" data-info-title="Sampling" data-info="A scaled copy of the captured screen showing where colors are read from.&#10;Live|Each band segment and dot shows the color currently sent to its LED.&#10;Zones|Shows only the sampled areas, without colors.&#10;Bands|Zones around the monitor frame. Thickness follows the Depth setting (adaptive strategies change it by themselves).&#10;Dots|Devices that are not on the monitor frame: each reads the color at one point of the screen, chosen from its position in the Topology Editor.&#10;Black bars|When detected, bars are greyed out and the bands follow the real picture.">i</button></div>
+                            <span class="sampling-hint">Hover a band or a dot to see which device it feeds</span>
+                        </div>
+                        <div class="seg" role="group" aria-label="Sampling view">
+                            <button type="button" id="seg-live"  class="seg-btn" aria-pressed="true"  onclick="setSamplingMode('live')">Live</button>
+                            <button type="button" id="seg-zones" class="seg-btn" aria-pressed="false" onclick="setSamplingMode('zones')">Zones</button>
+                        </div>
+                    </div>
+                    <div id="sampling-stage" class="sampling-stage">
+                        <div id="sampling-screen" class="sampling-screen">
+                            <canvas id="sampling-canvas" aria-label="Screen sampling preview" role="img"></canvas>
+                            <div id="sampling-tip" class="sampling-tip" role="tooltip" hidden></div>
+                        </div>
+                    </div>
+                    <div id="sampling-caption" class="sampling-caption" aria-live="off"></div>
+                </div>
             </div>
 
             <!-- Devices: takes remaining space -->

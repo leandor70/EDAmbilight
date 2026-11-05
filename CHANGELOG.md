@@ -6,6 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- Control: **Sampling** panel — a scaled copy of the captured screen showing
+  where colors are read from (edge bands at their real depth, black bars,
+  device points), with a Live view (current LED colors) and a Zones view.
+  Hover a band or a dot to see which device and zone it feeds.
+
+---
+
 ## [1.2.1] — 2026-11-05
 
 ### Added
