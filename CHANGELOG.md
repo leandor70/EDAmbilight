@@ -31,6 +31,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   topology instead of a fixed flag per zone name. Top and bottom strips are
   unchanged. **If you had compensated by drawing a side strip upside down in
   the editor, redraw it as it is physically mounted.**
+- Topology Editor: zones OpenRGB reports as `???` are no longer listed (they
+  never receive colors); they stay in the configuration so LED offsets do not
+  shift when you save.
 
 ---
 

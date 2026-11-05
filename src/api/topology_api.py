@@ -128,6 +128,22 @@ def _save_topologies(config: dict) -> bool:
         return False
 
 
+# ── Hidden zones ──────────────────────────────────────────────────────────────
+
+
+def _is_hidden_zone(zone: dict) -> bool:
+    """Zones OpenRGB reports as '???' cannot be recognised on the hardware and
+    never receive colors (the engine skips them), so the editor does not show
+    them. They stay in the config: their LEDs still count for the offsets of
+    the zones that follow."""
+    from effects.ambilight_service import _is_unreadable_name
+    return _is_unreadable_name(zone.get("name", ""))
+
+
+def _visible_zones(zones: list) -> list:
+    return [z for z in zones if not _is_hidden_zone(z)]
+
+
 # ── Device list ───────────────────────────────────────────────────────────────
 
 
@@ -160,7 +176,7 @@ def get_topology_devices() -> dict:
                 "device_id":    device_key,
                 "name":         ctrl.topology.device.name,
                 "led_count":    ctrl.topology.led_count,
-                "zone_count":   topo.get("zone_count", 0),
+                "zone_count":   len(_visible_zones(topo.get("zones", []))),
                 "has_topology": device_key in topologies,
             })
 
@@ -275,7 +291,7 @@ def get_scene_topology() -> dict:
         for dev in devs_result["devices"]:
             device_id     = dev["device_id"]
             topo          = topologies.get(device_id, {})
-            zones         = topo.get("zones", [])
+            zones         = _visible_zones(topo.get("zones", []))
             default_color = zones[0].get("color", "#14F5FF") if zones else "#14F5FF"
 
             for zone in zones:
@@ -317,6 +333,12 @@ def save_scene_topology(zones: list, global_effect_center: dict) -> dict:
         for device_id, device_zones in by_device.items():
             if device_id not in topologies:
                 topologies[device_id] = {"device_id": device_id}
+            # The editor never sees hidden ('???') zones: keep the stored ones,
+            # otherwise saving would drop their LEDs and shift every later zone.
+            hidden = [z for z in topologies[device_id].get("zones", []) if _is_hidden_zone(z)]
+            if hidden:
+                device_zones = sorted(device_zones + hidden,
+                                      key=lambda z: z.get("zone_index", 0))
             topologies[device_id]["zones"]         = device_zones
             topologies[device_id]["zone_count"]    = len(device_zones)
             topologies[device_id]["total_leds"]    = sum(z.get("led_count", 0) for z in device_zones)
@@ -476,7 +498,7 @@ def reload_scene_from_openrgb() -> dict:
     for dev in devs_result["devices"]:
         result = reload_device_from_openrgb(dev["device_id"])
         if result["success"]:
-            for zone in result.get("zones", []):
+            for zone in _visible_zones(result.get("zones", [])):
                 z = zone.copy()
                 z["device_id"] = dev["device_id"]
                 all_zones.append(z)
