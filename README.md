@@ -3,7 +3,7 @@
 **Real-time screen ambient lighting controller for OpenRGB**
 
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue)
-![Version](https://img.shields.io/badge/version-1.2.1-cyan)
+![Version](https://img.shields.io/badge/version-1.3.0-cyan)
 ![OpenRGB](https://img.shields.io/badge/requires-OpenRGB-orange)
 ![License](https://img.shields.io/badge/license-Freeware-green)
 
@@ -36,6 +36,7 @@ No Python or extra dependencies needed.
 - **Black bar detection** — automatically ignores letterbox / pillarbox borders
 - **Scene-cut bypass** — instant color jump on hard cuts, smooth EMA transitions otherwise
 - **Saturation boost** — vivid LED output without oversaturation
+- **Sampling preview** — a scaled copy of your screen showing exactly where each LED reads its color, live or as plain zones; hover a band or a dot to see which device it feeds
 - **Screen standby effects** — when the display sleeps or locks, the LEDs can hold, fade out, pulse, rotate colors, show an aurora or an ember glow
 - **WebGL live preview** — visualise the ambient effect in the browser before it hits the LEDs
 
@@ -101,6 +102,8 @@ The main page. All sampling parameters are adjustable in real time with instant 
 | **Standby brightness** | Level of the rotating colors, aurora and ember effects |
 | **Presets** | Balanced / Cinema / Gaming / Calm in one click; *Reset* restores the defaults |
 | **Advanced** | Shows or hides the fine-tuning sliders |
+
+The **Sampling** panel (above the device list) draws your screen with the same proportions and shows what the LEDs read: the edge bands at their real depth (the adaptive depth changes with the picture), detected black bars, and one dot for each device that is not on the monitor frame. **Live** shows the color each LED is receiving, **Zones** shows only the sampled areas. Hover a band or a dot to see the device and zone it feeds.
 
 The **Status** panel reports `ACTIVE`, `INACTIVE`, `STANDBY` (the screen gives no frames: display asleep or locked),
 `NO ZONES` (running, but no zone receives colors) or `NO DEVICES` (OpenRGB reports nothing), with a hint on how to fix it.
