@@ -63,6 +63,18 @@ def test_colors_in_screen_order():
     print("  ordine colori (schermo) -> primo segmento rosso  OK")
 
 
+def test_legacy_hsv_strategy_falls_back_to_mean():
+    """'hsv' was removed (it needed OpenCV, which is not installed): an old
+    config that still names it must keep working, not stop the service."""
+    svc = _service(depth=3, strategy="hsv")
+    frame = np.zeros((H, W, 3), dtype=np.uint8)
+    frame[:, :, 2] = 200                       # solid red (BGR channel 2)
+    svc._process_frame(frame, svc._config)
+    top = svc.get_sampling_snapshot()["zones"][0]["colors"]
+    assert top[:6] == "c80000", top            # sat_boost 1.0: color untouched
+    print("  strategy 'hsv' legacy  -> mean fallback  OK")
+
+
 def test_content_rect_in_snapshot():
     svc = _service(depth=3, black_bar=True)
     bar = int(W * 0.25)
@@ -82,5 +94,6 @@ if __name__ == "__main__":
     print("test_sampling_snapshot:")
     test_geometry_and_depth()
     test_colors_in_screen_order()
+    test_legacy_hsv_strategy_falls_back_to_mean()
     test_content_rect_in_snapshot()
     print("ALL OK")

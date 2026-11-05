@@ -24,13 +24,14 @@ STANDBY_GRACE = 3.0
 # Durata massima dell'anteprima manuale dello standby (s)
 STANDBY_PREVIEW_MAX = 60.0
 
-# Zone name -> screen edge mapping
+# Zone name -> screen edge mapping. The LED order along the edge is not fixed
+# here: it follows from the LED positions in the topology (see _edge_reversed).
 _ZONE_SCREEN_MAP = {
-    "MonitorRight":  {"edge": "right",  "reversed": False},
-    "MonitorTop":    {"edge": "top",    "reversed": True},
-    "MonitorLeft":   {"edge": "left",   "reversed": True},
-    "MonitorBottom": {"edge": "bottom", "reversed": False},
-    "Desktop":       {"edge": "bottom", "reversed": False},
+    "MonitorRight":  {"edge": "right"},
+    "MonitorTop":    {"edge": "top"},
+    "MonitorLeft":   {"edge": "left"},
+    "MonitorBottom": {"edge": "bottom"},
+    "Desktop":       {"edge": "bottom"},
 }
 
 
@@ -38,13 +39,35 @@ _ZONE_SCREEN_MAP = {
 
 
 def _led_world_positions(zone: dict) -> List[Tuple[float, float]]:
+    """LED positions in screen coordinates: x to the right, y DOWNWARD.
+
+    The Topology Editor draws with y pointing UP (rotation 90 = LEDs going up),
+    so y is flipped here. Everything built on these points (monitor frame,
+    screen fractions, LED order, area points) then reads top-to-bottom like
+    the captured frame.
+    """
     x0      = zone["position"]["x"]
     y0      = zone["position"]["y"]
     spacing = zone.get("led_spacing", 1.0)
     rot     = zone.get("rotation", 0)
     dx = {0: spacing, 90: 0, 180: -spacing, 270: 0      }.get(rot, spacing)
     dy = {0: 0,       90: spacing, 180: 0,  270: -spacing}.get(rot, 0)
-    return [(x0 + i * dx, y0 + i * dy) for i in range(zone["led_count"])]
+    return [(x0 + i * dx, -(y0 + i * dy)) for i in range(zone["led_count"])]
+
+
+def _edge_reversed(edge: str, led_pts: List[Tuple[float, float]]) -> bool:
+    """True when LED 0 sits at the far end of the edge.
+
+    Samples are taken left->right (top/bottom) or top->bottom (left/right),
+    so LED order must be flipped when LED 0 is on the right / at the bottom.
+    A single LED has no direction.
+    """
+    if len(led_pts) < 2:
+        return False
+    (x_first, y_first), (x_last, y_last) = led_pts[0], led_pts[-1]
+    if edge in ("top", "bottom"):
+        return x_first > x_last
+    return y_first > y_last
 
 
 def _sample_segment(seg_2d: np.ndarray, strategy: str) -> Tuple[int, int, int]:
@@ -178,8 +201,8 @@ def _sample_area_point(
     x0, x1 = max(0, cx - r), min(w, cx + r)
     y0, y1 = max(0, cy - r), min(h, cy + r)
     patch = frame[y0:y1, x0:x1, :3].astype(np.float32)
-    # No HSV conversion for area patches — use brightness-based percentile
-    eff = "adaptive_smooth" if strategy in ("hsv", "adaptive", "adaptive_smooth") else strategy
+    # Adaptive strategies use the brightness-based percentile on area patches
+    eff = "adaptive_smooth" if strategy in ("adaptive", "adaptive_smooth") else strategy
     return _sample_segment(patch, eff)
 
 
@@ -227,7 +250,7 @@ def _extract_edge_strip(
     cfg: dict,
     edge_cache: Dict[str, np.ndarray],
 ) -> np.ndarray:
-    """Striscia di bordo a tutta larghezza/altezza, già convertita (float32/HSV).
+    """Striscia di bordo a tutta larghezza/altezza, già convertita (float32).
 
     Cache per-frame condivisa tra device/zone: ritaglio, profondità adattiva
     e astype vengono fatti una sola volta per bordo.
@@ -256,13 +279,7 @@ def _extract_edge_strip(
     else:
         strip = frame[:, -depth:, :]
 
-    if strategy == "hsv":
-        import cv2
-        strip_proc = cv2.cvtColor(
-            np.ascontiguousarray(strip), cv2.COLOR_BGR2HSV
-        ).astype(np.float32)
-    else:
-        strip_proc = strip.astype(np.float32)
+    strip_proc = strip.astype(np.float32)
 
     edge_cache[edge] = strip_proc
     return strip_proc
@@ -408,7 +425,7 @@ def build_device_zones(device_key: str) -> Tuple[List[dict], int]:
             "screen_start": screen_start,
             "screen_end":   screen_end,
             "edge":         edge,
-            "reversed":     mapping["reversed"],
+            "reversed":     _edge_reversed(edge, led_pts),
         })
 
     # Non-Monitor zones: sample screen area proportional to canvas position.
@@ -863,8 +880,7 @@ class AmbilightService:
                     color = _sample_area_point(
                         frame, zone["x_pct"], zone["y_pct"], strategy
                     )
-                    if strategy != "hsv":
-                        color = _boost_saturation([color], sat_boost)[0]
+                    color = _boost_saturation([color], sat_boost)[0]
                     zone_colors = [color] * active
                     if strategy in ("smooth", "adaptive_smooth"):
                         zone_colors = _apply_temporal_smooth(
@@ -898,8 +914,7 @@ class AmbilightService:
                     edge_cache   = edge_cache,
                 )
 
-                if strategy != "hsv":
-                    zone_colors = _boost_saturation(zone_colors, sat_boost)
+                zone_colors = _boost_saturation(zone_colors, sat_boost)
 
                 zone_colors = _apply_min_luminance(zone_colors, min_lum)
                 colors[off: off + active] = zone_colors
