@@ -13,8 +13,9 @@ from typing import Optional, Dict, List, Tuple
 
 import numpy as np
 
+from core.audio_capture import AudioListener
 from core.screen_capturer_service import ScreenCapturerService
-from effects import standby_effects
+from effects import accent_effects, standby_effects
 
 CONFIG_PATH = Path("config/ambilight_config.json")
 
@@ -23,6 +24,9 @@ CONFIG_PATH = Path("config/ambilight_config.json")
 STANDBY_GRACE = 3.0
 # Durata massima dell'anteprima manuale dello standby (s)
 STANDBY_PREVIEW_MAX = 60.0
+# Passo di aggiornamento dei LED mentre un accento e' attivo (s): tra due frame
+# catturati si riapplicano gli ultimi colori con l'accento corrente
+ACCENT_TICK = 1.0 / 60.0
 
 # Zone name -> screen edge mapping. The LED order along the edge is not fixed
 # here: it follows from the LED positions in the topology (see _edge_reversed).
@@ -513,6 +517,10 @@ class AmbilightService:
         # Ultimo snapshot della campionatura (geometria + colori), per l'anteprima UI
         self._sampling: Optional[dict] = None
         self._sampling_ts: float = 0.0
+        # Accento sul battito audio (luminosita' / tinta): stato dell'ultimo battito
+        self._accent = accent_effects.AccentState()
+        # Ascolto dell'audio di sistema: ogni battito rilevato fa partire un accento
+        self._audio = AudioListener(self.trigger_accent)
 
     # ── Config ────────────────────────────────────────────────────────────────
 
@@ -541,7 +549,23 @@ class AmbilightService:
         )
 
     def get_config(self) -> dict:
-        return dict(self._config)
+        # I default dell'accento completano la copia restituita alla UI; il file
+        # di configurazione resta com'e' finche' l'utente non cambia un valore.
+        return {**accent_effects.DEFAULTS, **self._config}
+
+    def audio_status(self) -> dict:
+        """Stato dell'ascolto audio (misuratore della UI)."""
+        return self._audio.status()
+
+    def _sync_audio(self, cfg: dict) -> None:
+        """Avvia/ferma la cattura audio secondo la configurazione (economico)."""
+        p = accent_effects.params_from_cfg(cfg)
+        want = p["enabled"] and bool(cfg.get("enabled", False))
+        self._audio.sync(want, p["device"], p["sensitivity"])
+
+    def trigger_accent(self, strength: float = 1.0) -> bool:
+        """Fa partire un accento (battito audio o prova). False se il limite lo scarta."""
+        return self._accent.trigger(strength, accent_effects.params_from_cfg(self._config))
 
     def set_config(self, updates: dict) -> None:
         if "strategy" in updates and updates["strategy"] != self._config.get("strategy"):
@@ -676,6 +700,7 @@ class AmbilightService:
 
     def stop(self) -> None:
         self._stop_event.set()
+        self._audio.stop()
         ScreenCapturerService.get_instance().stop()
 
     def pause(self) -> None:
@@ -753,6 +778,7 @@ class AmbilightService:
             while not self._stop_event.is_set():
                 t0  = time.perf_counter()
                 cfg = dict(self._config)
+                self._sync_audio(cfg)
 
                 if not cfg.get("enabled", False):
                     if svc.is_running:
@@ -799,7 +825,7 @@ class AmbilightService:
 
                 wait = 1.0 / max(1, int(cfg.get("fps", 15))) - elapsed
                 if wait > 0:
-                    self._stop_event.wait(wait)
+                    self._wait_with_accent(wait, cfg)
         finally:
             if _timer_ok:
                 import ctypes as _ct
@@ -836,6 +862,59 @@ class AmbilightService:
             if colors is not None and not self._paused:
                 self._manager.apply_direct_colors(device_key, colors)
 
+    # ── Accento sul battito ───────────────────────────────────────────────────
+
+    def _accent_now(self, cfg: dict):
+        """(parametri, k, tinta) se c'e' un accento in corso, altrimenti None."""
+        p = accent_effects.params_from_cfg(cfg)
+        k, hue = self._accent.levels(time.monotonic(), p)
+        return (p, k, hue) if self._accent.is_active(k, hue) else None
+
+    @staticmethod
+    def _accented(colors: List[Tuple[int, int, int]], accent) -> List[Tuple[int, int, int]]:
+        """Colori di una zona con l'accento applicato (per l'anteprima Live)."""
+        if not accent or not colors:
+            return colors
+        p, k, hue = accent
+        arr = np.asarray(colors, dtype=np.float32)
+        return accent_effects.to_colors(
+            accent_effects.render(arr, np.ones(len(arr), dtype=bool), k, hue, p))
+
+    def _accent_tick(self, cfg: dict) -> bool:
+        """Riapplica gli ultimi colori base con l'accento corrente.
+
+        Serve tra due frame catturati: un flash di 100 ms non puo' dipendere dai
+        15-30 fps della cattura. False se non c'e' nessun accento in corso.
+        """
+        accent = self._accent_now(cfg)
+        if not accent or self._paused or not self._manager:
+            return bool(accent)
+        p, k, hue = accent
+        for device_key, (base, lit) in list(self._standby_ctx.items()):
+            if not cfg.get("devices", {}).get(device_key, {}).get("enabled", False):
+                continue
+            colors = accent_effects.to_colors(accent_effects.render(base, lit, k, hue, p))
+            self._manager.apply_direct_colors(device_key, colors)
+        return True
+
+    def _wait_with_accent(self, wait: float, cfg: dict) -> None:
+        """Attende `wait` secondi; con l'accento attivo aggiorna i LED a 60 passi/s.
+
+        Con l'accento abilitato (ascolto audio) dorme a fette anche a riposo, cosi'
+        un battito arrivato dal thread audio parte subito e non al frame successivo.
+        """
+        listening = bool(cfg.get("accent_enabled", False))
+        end = time.perf_counter() + wait
+        while not self._stop_event.is_set():
+            remaining = end - time.perf_counter()
+            if remaining <= 0:
+                return
+            if self._accent_tick(cfg) or listening:
+                self._stop_event.wait(min(remaining, ACCENT_TICK))
+            else:
+                self._stop_event.wait(remaining)
+                return
+
     def _process_frame(self, frame: np.ndarray, cfg: dict) -> None:
         full_h, full_w = frame.shape[:2]
         snap_zones: List[dict] = []
@@ -853,6 +932,7 @@ class AmbilightService:
         min_lum     = cfg.get("min_luminance", 0)
         devices_cfg = cfg.get("devices", {})
         edge_cache: Dict[str, np.ndarray] = {}
+        accent = self._accent_now(cfg)     # (params, k, tinta) se attivo, altrimenti None
 
         for device_key, dev_cfg in devices_cfg.items():
             if not dev_cfg.get("enabled", False):
@@ -895,7 +975,7 @@ class AmbilightService:
                         "dev": device_key, "zone": zone["name"],
                         "edge": "area", "x": round(zone["x_pct"], 4),
                         "y": round(zone["y_pct"], 4),
-                        "colors": _hex_colors(zone_colors[:1]),
+                        "colors": _hex_colors(self._accented(zone_colors[:1], accent)),
                     })
                     continue
 
@@ -926,15 +1006,23 @@ class AmbilightService:
                     "edge": zone["edge"],
                     "start": round(zone["screen_start"], 4),
                     "end": round(zone["screen_end"], 4),
-                    "colors": _hex_colors(on_screen),
+                    "colors": _hex_colors(self._accented(on_screen, accent)),
                 })
 
-            self._standby_ctx[device_key] = (np.asarray(colors, dtype=np.float32), lit)
+            # Colori base (senza accento): servono anche allo standby e ai passi
+            # di accento tra un frame catturato e il successivo
+            base = np.asarray(colors, dtype=np.float32)
+            self._standby_ctx[device_key] = (base, lit)
+
+            out = colors
+            if accent:
+                p, k, hue = accent
+                out = accent_effects.to_colors(accent_effects.render(base, lit, k, hue, p))
 
             # Skip the write if a pause arrived mid-frame (e.g. calibration
             # just started) — avoids a stray ambilight frame fighting it.
             if self._manager and not self._paused:
-                self._manager.apply_direct_colors(device_key, colors)
+                self._manager.apply_direct_colors(device_key, out)
 
         # Snapshot per l'anteprima UI: profondità realmente usata per bordo
         # (la cache contiene le strisce già ritagliate, anche con profondità adattiva).

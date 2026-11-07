@@ -31,6 +31,7 @@ window.addEventListener('load', async () => {
     pollStatus();
     setInterval(pollStatus, 800);
     _initSampling();
+    _initAccent();
 });
 
 // Give every range input an accessible name taken from its visible label
@@ -70,6 +71,7 @@ function applyConfig(cfg) {
         stratSel.value = cfg.strategy ?? 'adaptive_smooth';
         updateStrategyVisibility(stratSel.value);
     }
+    applyAccentConfig(cfg);
     refreshPresetChips();
 }
 
@@ -102,6 +104,7 @@ function liveUpdate(key, value, spanId) {
     _cfg[key] = value;
     _pendingCfg[key] = value;
     refreshPresetChips();
+    refreshAccentChips();
     clearTimeout(_cfgTimers[key]);
     _cfgTimers[key] = setTimeout(async () => {
         const v = _pendingCfg[key];
@@ -806,6 +809,7 @@ async function _applyValues(values, okMsg) {
     applyConfig(_cfg);
     document.querySelectorAll('input[type=range]').forEach(el => { if (typeof updateFill === 'function') updateFill(el); });
     refreshPresetChips();
+    refreshAccentChips();
     const res = await api('set_ambilight_config', values);
     if (apiOk(res)) showNotification(okMsg, 'success', 1800);
     else _reportApiFailure('apply the preset', res);
@@ -843,3 +847,176 @@ function toggleAdvanced(force) {
     _lsSet('edambi.advanced', show ? '1' : '0');
 }
 
+// ── Beat accent ───────────────────────────────────────────────────────────────
+
+const ACCENT_DEFAULTS = {
+    accent_mode: 'mix', accent_dark_lift: 20, accent_intensity: 25, accent_duration: 200,
+    accent_color: '#ffffff', accent_hue_mode: 'off', accent_hue_deg: 40, accent_hue_decay: 1500,
+    accent_max_per_sec: 3, accent_max_boost: 100, accent_attack: 15, accent_sensitivity: 50,
+    accent_min_strength: 40,
+};
+
+// Presets leave alone: on/off, audio device, sensitivity and flash color
+const ACCENT_PRESETS = {
+    soft:   { accent_mode: 'mix', accent_dark_lift: 20,  accent_intensity: 15, accent_duration: 250,
+              accent_hue_mode: 'off',   accent_hue_deg: 40, accent_hue_decay: 1500,
+              accent_max_per_sec: 2, accent_max_boost: 60,  accent_attack: 20, accent_min_strength: 40 },
+    punchy: { accent_mode: 'mix', accent_dark_lift: 40,  accent_intensity: 45, accent_duration: 180,
+              accent_hue_mode: 'pulse', accent_hue_deg: 20, accent_hue_decay: 1500,
+              accent_max_per_sec: 3, accent_max_boost: 100, accent_attack: 10, accent_min_strength: 30 },
+    club:   { accent_mode: 'add', accent_dark_lift: 100, accent_intensity: 90, accent_duration: 130,
+              accent_hue_mode: 'step',  accent_hue_deg: 45, accent_hue_decay: 1500,
+              accent_max_per_sec: 5, accent_max_boost: 150, accent_attack: 0,  accent_min_strength: 20 },
+};
+
+function applyAccentConfig(cfg) {
+    const v = k => cfg[k] ?? ACCENT_DEFAULTS[k];
+    setToggle('ctrl-acc-enabled', cfg.accent_enabled);
+    setSlider('ctrl-acc-lift',  'val-acc-lift',  v('accent_dark_lift'));
+    setSlider('ctrl-acc-int',   'val-acc-int',   v('accent_intensity'));
+    setSlider('ctrl-acc-dur',   'val-acc-dur',   v('accent_duration'));
+    setSlider('ctrl-acc-deg',   'val-acc-deg',   v('accent_hue_deg'));
+    setSlider('ctrl-acc-decay', 'val-acc-decay', v('accent_hue_decay'));
+    setSlider('ctrl-acc-rate',  'val-acc-rate',  v('accent_max_per_sec'));
+    setSlider('ctrl-acc-cap',   'val-acc-cap',   v('accent_max_boost'));
+    setSlider('ctrl-acc-att',   'val-acc-att',   v('accent_attack'));
+    setSlider('ctrl-acc-sens',  'val-acc-sens',  v('accent_sensitivity'));
+    setSlider('ctrl-acc-str',   'val-acc-str',   v('accent_min_strength'));
+    setAccentRateLabel(v('accent_max_per_sec'));
+    const mode = document.getElementById('ctrl-acc-mode'); if (mode) mode.value = v('accent_mode');
+    const hue  = document.getElementById('ctrl-acc-hue');  if (hue)  hue.value  = v('accent_hue_mode');
+    const col  = document.getElementById('ctrl-acc-color'); if (col) col.value  = v('accent_color');
+    _setAccentDevice(cfg.accent_device || '');
+    updateAccentVisibility();
+    refreshAccentChips();
+}
+
+function setAccentRateLabel(n) {
+    const el = document.getElementById('val-acc-rate');
+    if (el) el.textContent = n === 0 ? 'off' : n;
+}
+
+function _hideRow(id, hidden) {
+    const el = document.getElementById(id);
+    if (el) el.hidden = hidden;
+}
+
+// Only the controls that matter for the chosen mode are shown
+function updateAccentVisibility() {
+    const mode = (document.getElementById('ctrl-acc-mode') || {}).value;
+    const hue  = (document.getElementById('ctrl-acc-hue')  || {}).value;
+    _hideRow('row-acc-lift',  mode !== 'mix');
+    _hideRow('row-acc-color', mode === 'mul');
+    _hideRow('row-acc-deg',   hue === 'off');
+    _hideRow('row-acc-decay', hue !== 'step');
+}
+
+function onAccentMode(value) { liveUpdate('accent_mode', value, null);     updateAccentVisibility(); }
+function onAccentHue(value)  { liveUpdate('accent_hue_mode', value, null); updateAccentVisibility(); }
+
+function applyAccentPreset(name) {
+    const p = ACCENT_PRESETS[name];
+    if (p) _applyValues(p, `Accent preset applied: ${name[0].toUpperCase()}${name.slice(1)}`);
+}
+
+function refreshAccentChips() {
+    const val  = k => _cfg[k] ?? ACCENT_DEFAULTS[k];
+    const same = p => Object.keys(p).every(k =>
+        typeof p[k] === 'string' ? val(k) === p[k] : Math.abs(Number(val(k)) - p[k]) < 1e-9);
+    let match = null;
+    document.querySelectorAll('.accent-chip').forEach(btn => {
+        const on = same(ACCENT_PRESETS[btn.dataset.accent]);
+        btn.classList.toggle('active', on);
+        btn.setAttribute('aria-pressed', String(on));
+        if (on) match = btn.dataset.accent;
+    });
+    const custom = document.getElementById('accent-custom');
+    if (custom) custom.classList.toggle('show', !match);
+}
+
+// Send the edits still waiting in the debounce, so a test uses what is on screen
+async function _flushPendingCfg() {
+    const keys = Object.keys(_pendingCfg);
+    if (!keys.length) return;
+    const values = {};
+    keys.forEach(k => { clearTimeout(_cfgTimers[k]); values[k] = _pendingCfg[k]; delete _pendingCfg[k]; });
+    await api('set_ambilight_config', values);
+}
+
+async function testAccent() {
+    await _flushPendingCfg();
+    const res = await api('test_accent');
+    if (!apiOk(res)) { _reportApiFailure('fire the test accent', res); return; }
+    const b = document.getElementById('btn-accent-test');
+    if (b) { b.classList.add('fired'); setTimeout(() => b.classList.remove('fired'), 220); }
+    if (res.accepted === false) {
+        showNotification('Skipped by the flash limit: wait a moment or raise Max flashes/s', 'info', 2000);
+    }
+}
+
+// ── Audio input: device list and meter ────────────────────────────────────────
+
+function _setAccentDevice(name) {
+    const sel = document.getElementById('ctrl-acc-dev');
+    if (!sel) return;
+    if (name && ![...sel.options].some(o => o.value === name)) {
+        const o = document.createElement('option');
+        o.value = name; o.textContent = `${name} (not found)`;
+        sel.appendChild(o);
+    }
+    sel.value = name;
+}
+
+async function _loadAudioDevices() {
+    const sel = document.getElementById('ctrl-acc-dev');
+    if (!sel) return;
+    const r = await api('list_audio_devices');
+    const keep = _cfg.accent_device || '';
+    sel.querySelectorAll('option:not([value=""])').forEach(o => o.remove());
+    ((r && r.devices) || []).forEach(name => {
+        const o = document.createElement('option');
+        o.value = name; o.textContent = name;
+        sel.appendChild(o);
+    });
+    _setAccentDevice(keep);
+}
+
+let _accentBusy = false;
+
+async function _accentTick() {
+    if (!document.hidden && !_accentBusy) {
+        _accentBusy = true;
+        try { _renderMeter(await api('get_audio_status')); } finally { _accentBusy = false; }
+    }
+    setTimeout(_accentTick, _cfg.accent_enabled ? 200 : 1000);
+}
+
+function _renderMeter(s) {
+    const bar = (id, v) => {
+        const el = document.getElementById(id);
+        if (el) el.style.width = Math.round(Math.max(0, Math.min(1, v || 0)) * 100) + '%';
+    };
+    const listening = !!_cfg.accent_enabled && !!(s && s.running);
+    bar('m-level', listening ? s.level : 0);
+    bar('m-bass',  listening ? s.bass  : 0);
+    bar('m-mid',   listening ? s.mid   : 0);
+    bar('m-high',  listening ? s.high  : 0);
+    const dot = document.getElementById('m-beat');
+    if (dot) dot.classList.toggle('on', listening && s.beat_age != null && s.beat_age < 0.25);
+
+    const st = document.getElementById('m-status');
+    if (!st) return;
+    let text;
+    if (!_cfg.accent_enabled)       text = 'Audio listening is off';
+    else if (s && s.error)          text = s.error;
+    else if (!s || !s.running)      text = 'Starting audio capture…';
+    else if (s.silent)              text = 'Listening: no sound is playing';
+    else                            text = `Listening to ${s.device || 'the default output'}`;
+    if (st.textContent !== text) st.textContent = text;
+}
+
+function _initAccent() {
+    updateAccentVisibility();
+    _loadAudioDevices();
+    _accentTick();
+}

@@ -50,6 +50,32 @@ def set_standby_preview(active: bool) -> dict:
     return {"ok": True, "active": _ambilight_service.set_standby_preview(bool(active))}
 
 
+@eel.expose
+def test_accent() -> dict:
+    """Fire one beat accent with the current settings, without any audio."""
+    if _ambilight_service is None:
+        return {"ok": False, "error": "Service not initialized"}
+    cfg = _ambilight_service.get_config()
+    if not (cfg.get("enabled", False) and _ambilight_service.is_running):
+        return {"ok": False, "error": "Turn on Ambilight first: the accent is drawn on top of it"}
+    return {"ok": True, "accepted": bool(_ambilight_service.trigger_accent(1.0))}
+
+
+@eel.expose
+def list_audio_devices() -> dict:
+    """Output devices whose sound can be listened to: {available, devices, error}."""
+    from core.audio_capture import list_devices
+    return list_devices()
+
+
+@eel.expose
+def get_audio_status() -> dict:
+    """Audio listening state for the meter: level, bands, last beat, errors."""
+    if _ambilight_service is None:
+        return {"running": False, "error": "Service not initialized"}
+    return _ambilight_service.audio_status()
+
+
 # ── Status ────────────────────────────────────────────────────────────────────
 
 

@@ -6,6 +6,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- Control: **Beat accent** — a short accent on the ambilight at every beat of
+  the music playing on the PC (system audio loopback, no microphone). Flash
+  mode multiplicative / additive / mixed, flash color picker, intensity,
+  duration, optional hue shift (pulse or one step per beat), and a safety
+  group (strong beats only, max flashes per second, boost cap, attack). Soft / Punchy / Club
+  presets, a **Test accent** button that needs no audio, an audio device
+  picker, sensitivity and a level / bass / mid / high meter. While an accent
+  is playing the LEDs refresh at 60 steps/s, whatever the capture rate.
+  Audio listening needs the optional `PyAudioWPatch` package; without it
+  everything else works and the panel says what is missing.
+
+---
+
 ## [1.3.1] — 2026-11-07
 
 ### Fixed

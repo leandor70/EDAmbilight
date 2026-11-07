@@ -15,6 +15,7 @@ $pyiArgs = @(
     '--hidden-import', 'bottle_websocket',
     '--collect-all', 'dxcam',
     '--hidden-import', 'comtypes',
+    '--hidden-import', 'pyaudiowpatch',   # opzionale: ascolto audio dell'accento sul battito
     '--workpath', 'build',
     '--distpath', 'dist',
     '--specpath', 'build'

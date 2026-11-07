@@ -75,6 +75,30 @@
     @media (prefers-reduced-motion: reduce) {
         .sampling-screen, .seg-btn { transition:none; }
     }
+    /* ── Beat accent ── */
+    .accent-panel { flex-shrink:0; }
+    .accent-head { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+    .accent-grid { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:22px; }
+    @media (max-width:1180px) { .accent-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+    .accent-chip.active {
+        background:rgba(20,245,255,.18) !important; border-color:rgba(20,245,255,.55) !important;
+        color:rgba(20,245,255,.95) !important; box-shadow:0 0 12px rgba(20,245,255,.18) !important;
+    }
+    .accent-col select { width:100%; margin-bottom:12px; }
+    .accent-color {
+        width:100%; height:34px; padding:3px; border-radius:8px; cursor:pointer;
+        border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.04);
+    }
+    .accent-color:focus-visible { outline:2px solid var(--c-cyan); outline-offset:2px; }
+    .accent-meter { margin-top:4px; display:flex; flex-direction:column; gap:6px; }
+    .meter-row { display:grid; grid-template-columns:42px 1fr; align-items:center; gap:8px; font-size:11px; color:var(--c-text-ghost); }
+    .meter-bar { height:6px; border-radius:3px; background:rgba(255,255,255,.08); overflow:hidden; }
+    .meter-bar > i { display:block; height:100%; width:0; background:var(--c-cyan); transition:width .09s linear; }
+    .meter-foot { display:flex; align-items:center; gap:8px; margin-top:4px; font-size:11.5px; color:var(--c-text-dim); min-height:1.6em; }
+    .beat-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; background:rgba(255,255,255,.14); transition:background .12s, box-shadow .12s; }
+    .beat-dot.on { background:var(--c-cyan); box-shadow:0 0 12px rgba(20,245,255,.7); }
+    #btn-accent-test.fired { border-color:rgba(20,245,255,.6); color:var(--c-cyan); }
+    @media (prefers-reduced-motion: reduce) { .meter-bar > i, .beat-dot { transition:none; } }
     #card-status.panel--active {
         border-color: rgba(20,245,255,.14);
         animation: panelActiveGlow 5s cubic-bezier(0.77,0,0.175,1) infinite;
@@ -449,6 +473,142 @@
                     </div>
                 </div>
 
+            </div>
+
+            <!-- Beat accent: a flash / hue shift on the ambilight at every beat of the music -->
+            <div id="accent-panel" class="panel accent-panel ds-appear" style="animation-delay:.20s;">
+                <div class="panel-body" style="padding:16px 20px;">
+                    <div class="accent-head">
+                        <div class="ds-label" style="margin:0;">Beat accent <button type="button" class="info-btn" aria-label="Info: Beat accent" data-info-title="Beat accent" data-info="A short accent on the ambilight colors at every beat of the music playing on this PC.&#10;Mode|Multiplicative keeps the hue and never lights a black LED. Additive adds the flash color, so dark LEDs light up too. Mixed does both: Light dark LEDs sets how much is additive.&#10;Intensity|How big the jump is at each beat.&#10;Duration|How long the flash takes to fade.&#10;Color shift|Rotates the hue at the beat. Pulse comes back at once; Step adds one notch per beat and fades back slowly.&#10;Safety|Strong beats only skips the weak beats, so the accent follows the main hits instead of every note. Max flashes/s skips beats that come too fast, Boost cap limits the jump, Attack softens the rise. Set Max flashes/s to off to experiment.&#10;Test accent|Fires one beat without any audio, to tune the look.">i</button></div>
+                        <label class="glass-toggle-container">
+                            <input id="ctrl-acc-enabled" type="checkbox" class="glass-toggle-input"
+                                onchange="liveUpdate('accent_enabled', this.checked, null)">
+                            <div class="glass-toggle-track"><div class="glass-toggle-thumb"></div></div>
+                            <span class="glass-toggle-label">Listen to audio</span>
+                        </label>
+                        <div id="accent-chips" style="display:flex; gap:6px; flex-wrap:wrap;">
+                            <button type="button" class="btn accent-chip" data-accent="soft"    onclick="applyAccentPreset('soft')">Soft</button>
+                            <button type="button" class="btn accent-chip" data-accent="punchy"  onclick="applyAccentPreset('punchy')">Punchy</button>
+                            <button type="button" class="btn accent-chip" data-accent="club"    onclick="applyAccentPreset('club')">Club</button>
+                        </div>
+                        <span id="accent-custom" class="preset-custom">Custom</span>
+                        <button type="button" id="btn-accent-test" class="btn" style="margin-left:auto;"
+                                onclick="testAccent()" title="Fire one beat with these settings, without audio">Test accent</button>
+                    </div>
+
+                    <div class="accent-grid">
+
+                        <div class="accent-col">
+                            <div class="param-eyebrow">Flash</div>
+                            <select id="ctrl-acc-mode" aria-label="Flash mode" onchange="onAccentMode(this.value)">
+                                <option value="mul">Multiplicative (keeps hue)</option>
+                                <option value="add">Additive (lights dark LEDs)</option>
+                                <option value="mix">Mixed</option>
+                            </select>
+                            <div id="row-acc-lift" class="slider-row">
+                                <div class="slider-label"><span class="slider-label-text">Light dark LEDs</span>
+                                    <span><span id="val-acc-lift" class="slider-val">20</span><span class="slider-unit">%</span></span></div>
+                                <input id="ctrl-acc-lift" type="range" min="0" max="100" step="5" value="20"
+                                    oninput="liveUpdate('accent_dark_lift', +this.value, 'val-acc-lift'); updateFill(this);">
+                                <div class="slider-hint">0 = only brightens · 100 = fully additive</div>
+                            </div>
+                            <div class="slider-row">
+                                <div class="slider-label"><span class="slider-label-text">Intensity</span>
+                                    <span><span id="val-acc-int" class="slider-val">25</span><span class="slider-unit">%</span></span></div>
+                                <input id="ctrl-acc-int" type="range" min="0" max="200" step="5" value="25"
+                                    oninput="liveUpdate('accent_intensity', +this.value, 'val-acc-int'); updateFill(this);">
+                            </div>
+                            <div class="slider-row">
+                                <div class="slider-label"><span class="slider-label-text">Duration</span>
+                                    <span><span id="val-acc-dur" class="slider-val">200</span><span class="slider-unit">ms</span></span></div>
+                                <input id="ctrl-acc-dur" type="range" min="80" max="600" step="10" value="200"
+                                    oninput="liveUpdate('accent_duration', +this.value, 'val-acc-dur'); updateFill(this);">
+                            </div>
+                            <div id="row-acc-color" class="slider-row">
+                                <div class="slider-label"><span class="slider-label-text">Flash color</span></div>
+                                <input id="ctrl-acc-color" type="color" class="accent-color" value="#ffffff" aria-label="Flash color"
+                                    oninput="liveUpdate('accent_color', this.value, null)">
+                            </div>
+                        </div>
+
+                        <div class="accent-col">
+                            <div class="param-eyebrow">Color shift</div>
+                            <select id="ctrl-acc-hue" aria-label="Color shift mode" onchange="onAccentHue(this.value)">
+                                <option value="off">Off</option>
+                                <option value="pulse">Pulse (comes back at once)</option>
+                                <option value="step">Step (one notch per beat)</option>
+                            </select>
+                            <div id="row-acc-deg" class="slider-row">
+                                <div class="slider-label"><span class="slider-label-text">Amount</span>
+                                    <span><span id="val-acc-deg" class="slider-val">40</span><span class="slider-unit">°</span></span></div>
+                                <input id="ctrl-acc-deg" type="range" min="0" max="180" step="5" value="40"
+                                    oninput="liveUpdate('accent_hue_deg', +this.value, 'val-acc-deg'); updateFill(this);">
+                                <div class="slider-hint">Hue rotation applied at the beat</div>
+                            </div>
+                            <div id="row-acc-decay" class="slider-row">
+                                <div class="slider-label"><span class="slider-label-text">Return time</span>
+                                    <span><span id="val-acc-decay" class="slider-val">1500</span><span class="slider-unit">ms</span></span></div>
+                                <input id="ctrl-acc-decay" type="range" min="200" max="5000" step="100" value="1500"
+                                    oninput="liveUpdate('accent_hue_decay', +this.value, 'val-acc-decay'); updateFill(this);">
+                                <div class="slider-hint">How slowly Step goes back to the real colors</div>
+                            </div>
+                        </div>
+
+                        <div class="accent-col">
+                            <div class="param-eyebrow">Safety</div>
+                            <div class="slider-row">
+                                <div class="slider-label"><span class="slider-label-text">Strong beats only</span>
+                                    <span id="val-acc-str" class="slider-val">40</span></div>
+                                <input id="ctrl-acc-str" type="range" min="0" max="100" step="5" value="40"
+                                    oninput="liveUpdate('accent_min_strength', +this.value, 'val-acc-str'); updateFill(this);">
+                                <div class="slider-hint">0 = every beat · 100 = only the strongest</div>
+                            </div>
+                            <div class="slider-row">
+                                <div class="slider-label"><span class="slider-label-text">Max flashes/s</span>
+                                    <span id="val-acc-rate" class="slider-val">3</span></div>
+                                <input id="ctrl-acc-rate" type="range" min="0" max="10" step="1" value="3"
+                                    oninput="liveUpdate('accent_max_per_sec', +this.value, null); setAccentRateLabel(+this.value); updateFill(this);">
+                                <div class="slider-hint">Faster beats are skipped · off = no limit</div>
+                            </div>
+                            <div class="slider-row">
+                                <div class="slider-label"><span class="slider-label-text">Boost cap</span>
+                                    <span><span id="val-acc-cap" class="slider-val">100</span><span class="slider-unit">%</span></span></div>
+                                <input id="ctrl-acc-cap" type="range" min="20" max="300" step="10" value="100"
+                                    oninput="liveUpdate('accent_max_boost', +this.value, 'val-acc-cap'); updateFill(this);">
+                                <div class="slider-hint">Limits the jump whatever the intensity</div>
+                            </div>
+                            <div class="slider-row">
+                                <div class="slider-label"><span class="slider-label-text">Attack</span>
+                                    <span><span id="val-acc-att" class="slider-val">15</span><span class="slider-unit">ms</span></span></div>
+                                <input id="ctrl-acc-att" type="range" min="0" max="50" step="5" value="15"
+                                    oninput="liveUpdate('accent_attack', +this.value, 'val-acc-att'); updateFill(this);">
+                                <div class="slider-hint">0 = instant · higher = softer rise</div>
+                            </div>
+                        </div>
+
+                        <div class="accent-col">
+                            <div class="param-eyebrow">Audio input</div>
+                            <select id="ctrl-acc-dev" aria-label="Audio device" onchange="liveUpdate('accent_device', this.value, null)">
+                                <option value="">Default output (what you hear)</option>
+                            </select>
+                            <div class="slider-row" style="margin-bottom:12px;">
+                                <div class="slider-label"><span class="slider-label-text">Sensitivity</span>
+                                    <span id="val-acc-sens" class="slider-val">50</span></div>
+                                <input id="ctrl-acc-sens" type="range" min="0" max="100" step="5" value="50"
+                                    oninput="liveUpdate('accent_sensitivity', +this.value, 'val-acc-sens'); updateFill(this);">
+                                <div class="slider-hint">Higher = more beats are detected</div>
+                            </div>
+                            <div id="accent-meter" class="accent-meter" aria-hidden="true">
+                                <div class="meter-row"><span>Level</span><div class="meter-bar"><i id="m-level"></i></div></div>
+                                <div class="meter-row"><span>Bass</span><div class="meter-bar"><i id="m-bass"></i></div></div>
+                                <div class="meter-row"><span>Mid</span><div class="meter-bar"><i id="m-mid"></i></div></div>
+                                <div class="meter-row"><span>High</span><div class="meter-bar"><i id="m-high"></i></div></div>
+                            </div>
+                            <div class="meter-foot"><span id="m-beat" class="beat-dot"></span><span id="m-status" aria-live="polite">Audio listening is off</span></div>
+                        </div>
+
+                    </div>
+                </div>
             </div>
 
             <!-- Sampling preview: what part of the screen feeds the LEDs -->

@@ -5,6 +5,8 @@ mss>=9.0
 # Optional — faster screen capture (Windows only):
 # windows-capture>=1.0   # WGC (requires Rust build)
 # dxcam>=0.0.5           # DXGI Desktop Duplication (incluso nell'exe via build.ps1)
+# Optional — beat accent from the system audio (WASAPI loopback, Windows only):
+# PyAudioWPatch>=0.2.12
 # Optional — system tray:
 # pystray>=0.19
 # Pillow>=9.0
