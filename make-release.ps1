@@ -22,6 +22,17 @@ if (-not (Test-Path "dist\EDAmbilight\EDAmbilight.exe")) {
     exit 1
 }
 
+# Every page linked from the sidebar must be in the package (a page deleted from
+# the working tree once shipped two releases with a dead Preview link).
+$navPages = [regex]::Matches((Get-Content "web\js\navigation.js" -Raw), "href:\s*'([^']+\.html)'") |
+    ForEach-Object { $_.Groups[1].Value }
+$missing = @($navPages + "index.html", "loading.html" | Sort-Object -Unique |
+    Where-Object { -not (Test-Path "dist\EDAmbilight\web\$_") })
+if ($missing.Count -gt 0) {
+    Write-Error "Pages missing from dist\EDAmbilight\web: $($missing -join ', '). Restore them and run build.ps1 again."
+    exit 1
+}
+
 # Create a clean staging area
 $stage = "dist\_release_stage\EDAmbilight"
 Remove-Item -Recurse -Force "dist\_release_stage" -ErrorAction SilentlyContinue
