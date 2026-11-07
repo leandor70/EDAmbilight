@@ -82,7 +82,7 @@ def reconnect_openrgb() -> dict:
             return {"ok": False, "error": f"Cannot connect to {host}:{port}"}
 
         # Manager è None: OpenRGB non era attivo all'avvio. Connessione da zero.
-        from openrgb import OpenRGBClient
+        from core.openrgb_sdk import OpenRGBClient
         from effects.openrgb_manager import OpenRGBManager
         from api.ambilight_api import init_ambilight_api
         from api.topology_api  import init_topology_api
@@ -108,9 +108,9 @@ def reconnect_openrgb() -> dict:
 def test_openrgb_connection(host: str, port: int) -> dict:
     """Test connectivity to OpenRGB without saving settings."""
     try:
-        from openrgb import OpenRGBClient
-        client = OpenRGBClient(host, int(port))
-        return {"ok": True, "devices": len(client.devices)}
+        from core.openrgb_sdk import OpenRGBClient
+        with OpenRGBClient(host, int(port)) as client:
+            return {"ok": True, "devices": len(client.devices)}
     except Exception as exc:
         return {"ok": False, "error": str(exc)}
 

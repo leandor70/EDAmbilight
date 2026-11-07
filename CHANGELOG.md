@@ -21,6 +21,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Audio listening needs the optional `PyAudioWPatch` package; without it
   everything else works and the panel says what is missing.
 
+### Changed
+
+- OpenRGB is now reached with a small built-in client (`src/core/openrgb_sdk.py`)
+  instead of the `openrgb-python` package, which is no longer needed. Behavior is
+  unchanged: same devices, zones and colors.
+
 ---
 
 ## [1.3.1] — 2026-11-07

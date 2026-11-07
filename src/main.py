@@ -211,7 +211,7 @@ def _do_init(settings):
 
         if boot.get("state") in ("connected", "launched"):
             try:
-                from openrgb import OpenRGBClient
+                from core.openrgb_sdk import OpenRGBClient
                 from effects.openrgb_manager import OpenRGBManager
                 client          = OpenRGBClient(settings.get_openrgb_host(), settings.get_openrgb_port())
                 openrgb_manager = OpenRGBManager(client)

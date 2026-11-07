@@ -527,7 +527,7 @@ def flash_topology_device(device_id: str) -> dict:
         _ambilight_service.pause()
     try:
         import time
-        from openrgb.utils import RGBColor
+        from core.openrgb_sdk import RGBColor
         lock = _openrgb_manager._lock
         for ctrl in _openrgb_manager.devices:
             if _openrgb_manager._make_device_key(ctrl) == device_id:
@@ -561,7 +561,7 @@ def _calibration_loop(device_led_data: list, stop_event: threading.Event,
     while not stop_event.is_set():
         t_ms = _time.monotonic() * 1000.0
         try:
-            from openrgb.utils import RGBColor
+            from core.openrgb_sdk import RGBColor
         except ImportError:
             stop_event.wait(0.05)
             continue
@@ -667,7 +667,7 @@ def stop_topology_calibration() -> dict:
     # Turn off all LEDs
     if _openrgb_manager:
         try:
-            from openrgb.utils import RGBColor
+            from core.openrgb_sdk import RGBColor
             from effects.openrgb_manager import TopologyType
             for ctrl in _openrgb_manager.devices:
                 if ctrl.topology.topology_type == TopologyType.LINEAR:

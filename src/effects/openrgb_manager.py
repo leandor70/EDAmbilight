@@ -114,7 +114,6 @@ class OpenRGBManager:
         colors: List[Tuple[int, int, int]],
     ) -> bool:
         """Apply RGB colors directly to a device. Thread-safe."""
-        from openrgb.utils import RGBColor
         with self._lock:
             for ctrl in self.devices:
                 if self._make_device_key(ctrl) == device_key:
@@ -140,8 +139,7 @@ class OpenRGBManager:
                             else:
                                 colors = colors[:hw_led_count]
 
-                        rgb = [RGBColor(r, g, b) for r, g, b in colors]
-                        device.set_colors(rgb)
+                        device.set_colors(colors)
                         return True
                     except Exception as exc:
                         print(f"[OpenRGBManager] apply_direct_colors error ({device_key}): {exc}")
@@ -153,9 +151,11 @@ class OpenRGBManager:
     def reconnect(self, host: str, port: int) -> bool:
         """Attempt to reconnect to OpenRGB with new or same host/port."""
         try:
-            from openrgb import OpenRGBClient
+            from core.openrgb_sdk import OpenRGBClient
             new_client = OpenRGBClient(host, port)
-            self._client = new_client
+            old_client, self._client = self._client, new_client
+            if hasattr(old_client, "close"):
+                old_client.close()
             self.devices.clear()
             self._init_devices()
             print(f"[OpenRGBManager] Reconnected to {host}:{port}")

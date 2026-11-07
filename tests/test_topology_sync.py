@@ -223,11 +223,11 @@ def test_device_without_segments_keeps_its_indexes():
 
 
 def test_sync_runs_when_manager_is_created_after_start(tmp_path, monkeypatch):
-    import openrgb
+    from core import openrgb_sdk
     from api import settings_api
 
     hardware = [_device("Strip", [("Top", 30)])]
-    monkeypatch.setattr(openrgb, "OpenRGBClient", lambda host, port: N(devices=hardware))
+    monkeypatch.setattr(openrgb_sdk, "OpenRGBClient", lambda host, port: N(devices=hardware))
 
     stale = {"Strip::linear": {"zones": [_zone(0, "Top", 60)]}}
     _run(tmp_path, monkeypatch, stale)             # app started with no hardware

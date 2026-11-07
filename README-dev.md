@@ -120,7 +120,7 @@ Python (Eel server, port 8001)
      │     └── ScreenCapturerService  – frame acquisition
      │
      └── OpenRGBManager        – device/zone control
-           └── openrgb-python  – OpenRGB SDK client (TCP 6742)
+           └── core/openrgb_sdk.py – own OpenRGB SDK client (TCP 6742)
 ```
 
 ### Startup sequence
