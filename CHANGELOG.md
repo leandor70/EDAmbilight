@@ -6,6 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.3.1] — 2026-11-07
+
+### Fixed
+
+- The **Preview** page was missing from the 1.2.1 and 1.3.0 packages, so the
+  Preview entry in the sidebar and the "Live preview" button led to an error.
+  It is included again. The release script now refuses to build a package that
+  lacks any page linked from the sidebar.
+
+---
+
 ## [1.3.0] — 2026-11-06
 
 ### Added
