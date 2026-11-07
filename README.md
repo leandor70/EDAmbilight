@@ -106,9 +106,13 @@ The main page. All sampling parameters are adjustable in real time with instant 
 
 The **Sampling** panel (above the device list) draws your screen with the same proportions and shows what the LEDs read: the edge bands at their real depth (the adaptive depth changes with the picture), detected black bars, and one dot for each device that is not on the monitor frame. **Live** shows the color each LED is receiving, **Zones** shows only the sampled areas. Hover a band or a dot to see the device and zone it feeds.
 
+![Sampling panel](docs/ss-sampling.png)
+
 The **Beat accent** panel adds a short accent to the ambilight at every beat of the sound your PC is playing (system audio, no microphone needed). **Mode** chooses how the flash is applied: *Multiplicative* brightens the picture colors and keeps their hue (a black LED stays off), *Additive* adds the **flash color** you pick (dark LEDs light up too), *Mixed* does both, and **Light dark LEDs** sets how much is additive. **Intensity** and **Duration** set the size and the fade of the flash. **Color shift** rotates the hue at the beat: *Pulse* comes back at once, *Step* adds one notch per beat and fades back slowly. **Safety** keeps only the strongest beats (Strong beats only: 0 follows every beat, 100 only the biggest hits), limits the flash rate (Max flashes/s), the size of the jump (Boost cap) and how fast it rises (Attack); set Max flashes/s to *off* to experiment. **Test accent** fires one beat without any audio, and the Soft / Punchy / Club presets are starting points. Turn on **Listen to audio** to follow the music; the meter shows what is heard.
 
-> Audio listening needs the optional `PyAudioWPatch` package (`pip install PyAudioWPatch`). Without it the panel still works with **Test accent**, and the meter explains what is missing.
+![Beat accent panel](docs/ss-accent.png)
+
+> The release already includes audio listening. When running from source it needs the optional `PyAudioWPatch` package (`pip install PyAudioWPatch`); without it the panel still works with **Test accent**, and the meter explains what is missing. If the audio source you picked is no longer there (headset unplugged), the app listens to the default output and says so in the panel.
 
 The **Status** panel reports `ACTIVE`, `INACTIVE`, `STANDBY` (the screen gives no frames: display asleep or locked),
 `NO ZONES` (running, but no zone receives colors) or `NO DEVICES` (OpenRGB reports nothing), with a hint on how to fix it.
