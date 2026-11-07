@@ -43,6 +43,9 @@ Copy-Item -Recurse "dist\EDAmbilight\*" $stage
 Copy-Item "README.md"    $stage
 Copy-Item "CHANGELOG.md" $stage
 Copy-Item "LICENSE"      $stage
+Copy-Item "NOTICE.md"    $stage
+Copy-Item "THIRD-PARTY.md" $stage
+Copy-Item -Recurse "licenses" $stage
 
 # Default config (no personal settings)
 New-Item -ItemType Directory -Force "$stage\config" | Out-Null

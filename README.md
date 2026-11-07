@@ -5,7 +5,7 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue)
 ![Version](https://img.shields.io/badge/version-1.3.1-cyan)
 ![OpenRGB](https://img.shields.io/badge/requires-OpenRGB-orange)
-![License](https://img.shields.io/badge/license-Freeware-green)
+![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-green)
 
 ![Dashboard](docs/ss-dashboard.png)
 
@@ -286,4 +286,13 @@ EDAmbilight/
 
 ## 📄 License
 
-Freeware, for personal non-commercial use — see [LICENSE](LICENSE).
+The source code is public, but EDAmbilight is **source-available, not open source**.
+It is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE): you can
+read, run, modify and share it for any noncommercial purpose; commercial use is
+not allowed.
+
+- [NOTICE.md](NOTICE.md) — the name and logo, official builds, contributions
+- [THIRD-PARTY.md](THIRD-PARTY.md) — licenses of the fonts, icons and libraries used
+
+Releases up to 1.3.1 were distributed under a separate freeware license, which
+still governs those downloads.
