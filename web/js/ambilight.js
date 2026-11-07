@@ -453,7 +453,7 @@ function _renderStatusInfo(s, kind) {
     }
     if (!hint) return;
     const html = {
-        'no-devices': 'OpenRGB reports no devices. Make sure OpenRGB is running with the SDK server on — see <a href="settings.html">Settings</a>.',
+        'no-devices': 'OpenRGB reports no devices. Make sure OpenRGB is running with the SDK server on — see <a href="settings.html">Settings</a>. On Windows, memory and motherboards also need the PawnIO driver (pawnio.eu).',
         'no-zones':   s.mapped_devices
             ? 'Running, but no device receives colors. Switch on a device in the list below.'
             : 'Running, but no zone is mapped to the screen. Map them in the <a href="topology-editor.html">Topology Editor</a>.',

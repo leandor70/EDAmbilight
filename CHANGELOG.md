@@ -8,6 +8,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- A notice when the OpenRGB in use is older than 1.0 (read from its log), shown once per
+  version, recommending the update and the PawnIO driver.
+
+### Changed
+
+- OpenRGB is started with `--gui --server --startminimized`. With only `--server`,
+  OpenRGB 1.x runs without a window or tray icon, so there was nothing to open afterwards.
+- The "OpenRGB not installed", "no devices" and Help texts, and the README requirements,
+  mention the PawnIO driver that OpenRGB 1.x needs for memory and motherboards.
+
 ---
 
 ## [1.4.0] — 2026-11-07

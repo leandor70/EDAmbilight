@@ -76,7 +76,9 @@ def is_openrgb_running() -> bool:
 def launch_as_admin(exe: Path, sdk_port: int) -> str:
     """Start OpenRGB elevated with the SDK server active. Returns
     'launched', 'uac_denied' or 'error'."""
-    params = "--server --startminimized"
+    # --gui keeps the window and tray icon: with only command-line options
+    # OpenRGB 1.x runs headless, with nothing to open afterwards.
+    params = "--gui --server --startminimized"
     if sdk_port != DEFAULT_SDK_PORT:
         params += f" --server-port {sdk_port}"
     try:
@@ -140,7 +142,9 @@ def ensure_openrgb(settings, status_cb=None) -> dict:
     if exe is None:
         return {
             "state":        "not_found",
-            "detail":       "OpenRGB is not installed (or not in a known location).",
+            "detail":       ("OpenRGB is not installed (or not in a known location). After installing "
+                         "it, also install the PawnIO driver (pawnio.eu): without it memory modules "
+                         "and motherboards are not detected."),
             "download_url": DOWNLOAD_URL,
         }
 

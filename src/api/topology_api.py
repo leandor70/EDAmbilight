@@ -56,6 +56,11 @@ def _add_notice(kind: str, device_key: str, text: str) -> None:
             _hardware_notices.append({"kind": kind, "device": device_key, "text": text})
 
 
+def add_hardware_notice(kind: str, key: str, text: str) -> None:
+    """Show a notice at the top of the pages (see _add_notice)."""
+    _add_notice(kind, key, text)
+
+
 def _display_name(device_key: str) -> str:
     """'Strip::linear#2' -> 'Strip #2'."""
     name, _, rest = device_key.partition("::")

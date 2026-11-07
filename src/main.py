@@ -238,6 +238,18 @@ def _do_init(settings):
         init_ambilight_api(ambilight_svc, openrgb_manager)
         init_topology_api(openrgb_manager, ambilight_svc)
 
+        if openrgb_manager is not None:
+            try:
+                from api import topology_api
+                from utils.openrgb_version import check_openrgb_version
+                version = check_openrgb_version(
+                    topology_api.add_hardware_notice,
+                    topology_api.TOPOLOGY_CONFIG_FILE.with_name("openrgb_version.json"))
+                if version:
+                    print(f"       OpenRGB version: {version}")
+            except Exception as e:
+                print(f"       OpenRGB version check skipped: {e}")
+
         _init_status["ready"]   = True
         _init_status["message"] = "Ready!"
         print()

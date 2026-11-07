@@ -55,7 +55,8 @@ No Python or extra dependencies needed.
 | | |
 |---|---|
 | OS | Windows 10 / 11 (64-bit) |
-| [OpenRGB](https://openrgb.org) | v0.9 or later, SDK Server enabled |
+| [OpenRGB](https://openrgb.org) | v1.0 or later recommended (v0.9 works), SDK Server enabled |
+| [PawnIO](https://pawnio.eu) | Driver OpenRGB 1.x uses for memory and motherboards. Without it those devices are not detected |
 
 ---
 

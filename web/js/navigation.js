@@ -187,7 +187,8 @@ document.addEventListener('DOMContentLoaded', _buildSidebar);
 /* ── Hardware change notices ─────────────────────────────────────────────────
    Shown on every page that has the sidebar, until the user dismisses them:
    a device was added, removed or changed since the last start. */
-const _NOTICE_ICONS = { added: 'add_circle', removed: 'link_off', changed: 'sync_alt' };
+const _NOTICE_ICONS = { added: 'add_circle', removed: 'link_off', changed: 'sync_alt', version: 'system_update' };
+const _HARDWARE_KINDS = ['added', 'removed', 'changed'];
 
 function _renderHardwareNotices(notices) {
     const old = document.getElementById('hw-notices');
@@ -208,7 +209,10 @@ function _renderHardwareNotices(notices) {
     const list = document.createElement('div');
     list.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:6px;';
     const title = document.createElement('div');
-    title.textContent = 'Hardware changed since the last start';
+    const onlyHardware = notices.every(n => _HARDWARE_KINDS.includes(n.kind));
+    const noHardware   = notices.every(n => !_HARDWARE_KINDS.includes(n.kind));
+    title.textContent = onlyHardware ? 'Hardware changed since the last start'
+                      : noHardware   ? 'OpenRGB' : 'Notices';
     title.style.cssText = 'font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:13px;color:#f59e0b;';
     list.appendChild(title);
 
