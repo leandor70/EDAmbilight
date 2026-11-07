@@ -8,6 +8,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+---
+
+## [1.4.0] — 2026-11-07
+
 ### Added
 
 - Control: **Beat accent** — a short accent on the ambilight at every beat of
@@ -27,6 +31,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **License.** The source code is now public, under the PolyForm Noncommercial
+  License 1.0.0 (see `LICENSE` and `NOTICE.md`). Releases up to 1.3.1 keep the
+  freeware license they were distributed with.
+- The package is lighter: unused background images are gone.
 - OpenRGB is now reached with a small built-in client (`src/core/openrgb_sdk.py`)
   instead of the `openrgb-python` package, which is no longer needed. Behavior is
   unchanged: same devices, zones and colors.
