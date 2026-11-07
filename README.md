@@ -284,6 +284,16 @@ EDAmbilight/
 
 ---
 
+## 🛠 Source code
+
+The code in this repository is what the releases are built from. To run it from
+source or build the exe yourself, see [README-dev.md](README-dev.md).
+
+Bug reports and ideas are welcome as [issues](../../issues). Pull requests are
+not accepted.
+
+---
+
 ## 📄 License
 
 The source code is public, but EDAmbilight is **source-available, not open source**.

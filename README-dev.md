@@ -8,7 +8,7 @@ For end-user documentation see [README.md](README.md).
 ## Project Structure
 
 ```
-EDAmbilight-src/
+EDAmbilight/
 ├── src/                         # Python backend
 │   ├── main.py                  # Entry point (Eel server + init sequence)
 │   ├── settings.py              # Settings model (config/settings.json)
@@ -17,10 +17,14 @@ EDAmbilight-src/
 │   │   ├── settings_api.py      # Eel-exposed endpoints for settings & OpenRGB
 │   │   └── topology_api.py      # Eel-exposed endpoints for zone topology
 │   ├── core/
-│   │   └── screen_capturer_service.py  # WGC → DXGI → mss capture backend
+│   │   ├── screen_capturer_service.py  # WGC → DXGI → mss capture backend
+│   │   ├── openrgb_sdk.py       # Own OpenRGB SDK client (TCP 6742)
+│   │   └── audio_capture.py     # System audio loopback (WASAPI) → beats
 │   ├── effects/
 │   │   ├── ambilight_service.py # Main sampling loop + color processing
 │   │   ├── standby_effects.py   # LED effects while the screen is unavailable
+│   │   ├── accent_effects.py    # Beat accent: flash / hue shift math and limiter
+│   │   ├── beat_detector.py     # Spectral-flux beat detection
 │   │   └── openrgb_manager.py   # OpenRGB device/zone abstraction
 │   └── utils/
 │       ├── openrgb_bootstrap.py # Auto-detect / auto-start OpenRGB
