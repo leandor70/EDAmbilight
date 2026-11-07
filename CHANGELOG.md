@@ -23,7 +23,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   picker, sensitivity and a level / bass / mid / high meter. While an accent
   is playing the LEDs refresh at 60 steps/s, whatever the capture rate.
   Audio listening needs the optional `PyAudioWPatch` package; without it
-  everything else works and the panel says what is missing.
+  everything else works and the panel says what is missing. If the chosen
+  audio source is gone (headset unplugged, settings copied to another PC) it
+  listens to the default output and says so in the panel.
 - A notice at the top of Control, Devices, Settings and Help when the hardware
   changed since the last start: a device was added (it stays off until you
   enable it), removed (its settings are kept) or changed (zones or LED count,

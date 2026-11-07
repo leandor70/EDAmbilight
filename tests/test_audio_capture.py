@@ -155,10 +155,12 @@ def test_sync_stops_when_not_wanted_and_restarts_on_device_change():
         assert lis.status()["running"] is False
         lis.sync(True, "", 50)
         assert wait_for(lambda: lis.status()["running"], 3)
+        before = lis._capture
         lis.sync(True, "Does not exist", 50)                 # cambio dispositivo: riavvio
-        assert wait_for(lambda: "not found" in lis.status()["error"], 3)
+        assert wait_for(lambda: "not available" in lis.status()["notice"], 3)
+        assert lis._capture is not before and lis.status()["error"] == ""
         first = lis._capture
-        lis.sync(True, "Does not exist", 50)                 # errore: niente riprova immediata
+        lis.sync(True, "Does not exist", 50)                 # stessa scelta: nessun riavvio
         assert lis._capture is first
     finally:
         lis.stop()
@@ -195,3 +197,28 @@ def test_beat_from_audio_triggers_the_accent():
     svc._audio._on_beat(0.8)                                  # come farebbe il rilevatore
     accent = svc._accent_now(svc._config)
     assert accent is not None and abs(accent[1] - 0.8) < 0.01
+
+
+def test_missing_device_falls_back_to_the_default_output():
+    track, _ = kick_track(1)
+    lis = ac.AudioListener(lambda s: None, backend=fake_backend(track))
+    try:
+        lis.sync(True, "Cuffie scollegate [Loopback]", 50)
+        assert wait_for(lambda: lis.status()["running"], 3)
+        st = lis.status()
+        assert st["error"] == ""                              # not an error: it is listening
+        assert st["device"] == LOOPBACK["name"]
+        assert "Cuffie scollegate" in st["notice"] and "default output" in st["notice"]
+    finally:
+        lis.stop()
+
+
+def test_chosen_device_that_exists_has_no_notice():
+    track, _ = kick_track(1)
+    lis = ac.AudioListener(lambda s: None, backend=fake_backend(track))
+    try:
+        lis.sync(True, LOOPBACK["name"], 50)
+        assert wait_for(lambda: lis.status()["running"], 3)
+        assert lis.status()["notice"] == ""
+    finally:
+        lis.stop()

@@ -63,6 +63,7 @@ class AudioCapture:
         self._stop = threading.Event()
         self._opened = threading.Event()
         self.error = ""
+        self.notice = ""       # non e' un errore: si sta ascoltando, ma non la fonte scelta
         self.device_name = ""
         self.sample_rate = 0
 
@@ -85,6 +86,7 @@ class AudioCapture:
         self._stop.clear()
         self._opened.clear()
         self.error = ""
+        self.notice = ""
         self._thread = threading.Thread(
             target=self._run, args=(device,), daemon=True, name="audio-capture")
         self._thread.start()
@@ -99,12 +101,16 @@ class AudioCapture:
     # ── thread ─────────────────────────────────────────────────────────────────
 
     @staticmethod
-    def _pick_device(p, pa_mod, wanted: str) -> dict:
+    def _pick_device(p, pa_mod, wanted: str, notes: Optional[list] = None) -> dict:
+        """Il loopback scelto; se non c'e' piu' (cuffie scollegate, config copiata su
+        un altro PC) ripiega sull'uscita predefinita e lo scrive in `notes`."""
         if wanted:
             for lb in p.get_loopback_device_info_generator():
                 if lb["name"] == wanted:
                     return lb
-            raise RuntimeError(f"Audio device not found: {wanted}")
+            if notes is not None:
+                notes.append(f"Audio source \"{wanted}\" is not available: "
+                             f"using the default output instead")
         wasapi = p.get_host_api_info_by_type(pa_mod.paWASAPI)
         default = p.get_device_info_by_index(wasapi["defaultOutputDevice"])
         if default.get("isLoopbackDevice"):
@@ -123,7 +129,9 @@ class AudioCapture:
         stream = None
         try:
             p = pa_mod.PyAudio()
-            info = self._pick_device(p, pa_mod, device)
+            notes: list = []
+            info = self._pick_device(p, pa_mod, device, notes)
+            self.notice = notes[0] if notes else ""
             channels = max(1, int(info["maxInputChannels"]))
             rate = int(info["defaultSampleRate"])
             self.device_name = info["name"]
@@ -231,6 +239,7 @@ class AudioListener:
             "running": running,
             "error":   (cap.error if cap and cap.error else self._last_error),
             "device":  cap.device_name if cap else "",
+            "notice":  cap.notice if cap else "",
             "level":   round(det.level, 3) if live else 0.0,
             "bass":    round(det.bass, 3) if live else 0.0,
             "mid":     round(det.mid, 3) if live else 0.0,

@@ -1011,6 +1011,7 @@ function _renderMeter(s) {
     else if (s && s.error)          text = s.error;
     else if (!s || !s.running)      text = 'Starting audio capture…';
     else if (s.silent)              text = 'Listening: no sound is playing';
+    else if (s.notice)              text = `${s.notice} (${s.device})`;
     else                            text = `Listening to ${s.device || 'the default output'}`;
     if (st.textContent !== text) st.textContent = text;
 }
