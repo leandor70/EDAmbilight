@@ -183,3 +183,68 @@ function _buildSidebar() {
 }
 
 document.addEventListener('DOMContentLoaded', _buildSidebar);
+
+/* ── Hardware change notices ─────────────────────────────────────────────────
+   Shown on every page that has the sidebar, until the user dismisses them:
+   a device was added, removed or changed since the last start. */
+const _NOTICE_ICONS = { added: 'add_circle', removed: 'link_off', changed: 'sync_alt' };
+
+function _renderHardwareNotices(notices) {
+    const old = document.getElementById('hw-notices');
+    if (old) old.remove();
+    const main = document.querySelector('main');
+    if (!main || !Array.isArray(notices) || notices.length === 0) return;
+
+    const box = document.createElement('div');
+    box.id = 'hw-notices';
+    box.setAttribute('role', 'status');
+    Object.assign(box.style, {
+        flexShrink: '0', margin: '12px 24px 0', padding: '12px 16px',
+        background: 'rgba(245,158,11,.08)', border: '1px solid rgba(245,158,11,.38)',
+        borderRadius: '10px', display: 'flex', gap: '14px', alignItems: 'flex-start',
+        fontFamily: "'Rajdhani', sans-serif", fontSize: '15px', color: 'var(--text-main, #CDD6E0)',
+    });
+
+    const list = document.createElement('div');
+    list.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:6px;';
+    const title = document.createElement('div');
+    title.textContent = 'Hardware changed since the last start';
+    title.style.cssText = 'font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:13px;color:#f59e0b;';
+    list.appendChild(title);
+
+    notices.forEach(n => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;gap:8px;align-items:flex-start;';
+        const icon = document.createElement('span');
+        icon.className = 'material-symbols-outlined';
+        icon.textContent = _NOTICE_ICONS[n.kind] || 'info';
+        icon.style.cssText = 'font-size:20px;line-height:1.2;color:#f59e0b;';
+        const text = document.createElement('span');
+        text.textContent = n.text;           // device names come from the hardware: never HTML
+        row.append(icon, text);
+        list.appendChild(row);
+    });
+
+    const dismiss = document.createElement('button');
+    dismiss.type = 'button';
+    dismiss.className = 'btn';
+    dismiss.textContent = 'Dismiss';
+    dismiss.addEventListener('click', () => {
+        box.remove();
+        try { eel.dismiss_hardware_notices()(); } catch (_) {}
+    });
+
+    box.append(list, dismiss);
+    main.insertBefore(box, main.firstChild);
+}
+
+function _loadHardwareNotices(attempt = 0) {
+    try {
+        if (typeof eel === 'undefined' || typeof eel.get_hardware_notices !== 'function') throw 0;
+        eel.get_hardware_notices()(_renderHardwareNotices);
+    } catch (_) {
+        if (attempt < 10) setTimeout(() => _loadHardwareNotices(attempt + 1), 500);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => _loadHardwareNotices());

@@ -20,6 +20,61 @@ _calib_stop = threading.Event()
 _openrgb_manager = None
 _ambilight_service = None
 
+# What changed on the hardware since the last start, shown to the user until
+# dismissed. Each notice: {"kind": "added" | "changed" | "removed", "device", "text"}.
+_hardware_notices: List[dict] = []
+_notices_lock = threading.Lock()
+
+
+def _seen_file() -> Path:
+    """Devices detected at the previous start (next to the topology file)."""
+    return TOPOLOGY_CONFIG_FILE.with_name("hardware_seen.json")
+
+
+def _load_seen() -> Optional[List[str]]:
+    """Device keys seen last time, or None when there is no record yet."""
+    try:
+        data = json.loads(_seen_file().read_text(encoding="utf-8"))
+        return [str(k) for k in data.get("devices", [])]
+    except Exception:
+        return None
+
+
+def _save_seen(keys: List[str]) -> None:
+    try:
+        _seen_file().write_text(
+            json.dumps({"devices": sorted(keys)}, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
+    except Exception as e:
+        print(f"[TopologyAPI] Cannot save the list of detected devices: {e}")
+
+
+def _add_notice(kind: str, device_key: str, text: str) -> None:
+    with _notices_lock:
+        if not any(n["kind"] == kind and n["device"] == device_key and n["text"] == text
+                   for n in _hardware_notices):
+            _hardware_notices.append({"kind": kind, "device": device_key, "text": text})
+
+
+def _display_name(device_key: str) -> str:
+    """'Strip::linear#2' -> 'Strip #2'."""
+    name, _, rest = device_key.partition("::")
+    suffix = f" {rest[rest.index('#'):]}" if "#" in rest else ""
+    return name + suffix
+
+
+@eel.expose
+def get_hardware_notices() -> List[dict]:
+    with _notices_lock:
+        return [dict(n) for n in _hardware_notices]
+
+
+@eel.expose
+def dismiss_hardware_notices() -> dict:
+    with _notices_lock:
+        _hardware_notices.clear()
+    return {"ok": True}
+
 
 def init_topology_api(openrgb_manager=None, ambilight_service=None) -> None:
     global _openrgb_manager, _ambilight_service
@@ -55,17 +110,27 @@ def sync_topologies_with_hardware() -> List[str]:
     from effects.openrgb_manager import TopologyType
 
     known = _load_topologies().get("topologies", {})
+    seen = _load_seen()
+    notify = seen is not None            # the first run has nothing to compare with
+    current: List[str] = []
     for ctrl in _openrgb_manager.devices:
         if ctrl.topology.topology_type != TopologyType.LINEAR:
             continue
         device_key = _openrgb_manager._make_device_key(ctrl)
+        current.append(device_key)
 
         if device_key not in known:
             result = reload_device_from_openrgb(device_key)
             if result["success"]:
                 changed.append(device_key)
+                n = len(result["zones"])
                 print(f"[TopologyAPI] New device '{device_key}': imported "
-                      f"{len(result['zones'])} zone(s) from OpenRGB")
+                      f"{n} zone(s) from OpenRGB")
+                if notify:
+                    _add_notice("added", device_key,
+                                f"New device detected: {_display_name(device_key)} "
+                                f"({n} zone{'s' if n != 1 else ''} imported). "
+                                f"It is off until you enable it in Control.")
             else:
                 print(f"[TopologyAPI] New device '{device_key}': import failed "
                       f"({result.get('error')})")
@@ -96,6 +161,21 @@ def sync_topologies_with_hardware() -> List[str]:
             changed.append(device_key)
         status = "re-synced" if result["success"] else f"re-sync failed ({result.get('error')})"
         print(f"[TopologyAPI] '{device_key}' differs from hardware, {status}: " + "; ".join(diff))
+        if notify and result["success"]:
+            _add_notice("changed", device_key,
+                        f"{_display_name(device_key)} changed on the hardware ("
+                        + "; ".join(diff) + "). Its layout was updated; check it in Topology.")
+
+    # An empty list means OpenRGB has not detected anything yet (hardware still
+    # starting up): that is not the same as every device being unplugged.
+    if current:
+        if notify:
+            for key in sorted(set(seen) - set(current)):
+                print(f"[TopologyAPI] Device '{key}' is no longer detected")
+                _add_notice("removed", key,
+                            f"Device no longer detected: {_display_name(key)}. "
+                            f"Its settings are kept and it receives no colors.")
+        _save_seen(current)
     return changed
 
 

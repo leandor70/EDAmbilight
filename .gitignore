@@ -24,6 +24,7 @@ dist/
 config/settings.json
 config/ambilight_config.json
 config/device_topologies.json
+config/hardware_seen.json
 log/
 *.log
 
