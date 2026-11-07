@@ -59,3 +59,8 @@ topology-redesigned.png
 
 # mp3 test files
 mp3/
+
+# Local tooling and backups
+.pytest_cache/
+.playwright-mcp/
+*.bak
