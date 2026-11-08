@@ -36,17 +36,20 @@ EDAmbilight/
 │   ├── devices.html             # Device manager
 │   ├── settings.html            # OpenRGB / web-port settings
 │   ├── preview.html             # WebGL live effect preview
-│   ├── topology-editor.html     # Drag-and-drop zone canvas (self-contained)
+│   ├── topology-editor.html     # Drag-and-drop zone canvas
 │   ├── css/
 │   │   ├── design-system.css    # Design tokens + component styles
 │   │   ├── fonts.css            # @font-face declarations
+│   │   ├── glass-select.css     # Translucent dropdown panel (both themes)
 │   │   └── tailwind.min.css     # Tailwind CSS (local, no CDN)
 │   ├── js/
 │   │   ├── ambilight.js         # Dashboard logic (renderDevices, liveUpdate)
 │   │   ├── navigation.js        # Sidebar + sonar-ring animations
 │   │   ├── common.js            # api() wrapper, showNotification(), escapeHtml
+│   │   ├── theme.js             # Light / dark switch (localStorage `edambi.theme`)
+│   │   ├── glass-select.js      # Replaces the native <select> popup
 │   │   └── topology-editor.js   # Topology canvas logic
-│   └── fonts/                   # Self-hosted woff2 (Orbitron, Rajdhani, Material Symbols)
+│   └── fonts/                   # Self-hosted woff2 (Inter, Orbitron, Rajdhani, Material Symbols)
 │
 ├── config/                      # Runtime config (created on first launch)
 │   ├── settings.json
@@ -54,7 +57,7 @@ EDAmbilight/
 │   └── device_topologies.json
 │
 ├── tests/
-│   └── test_blackbar.py
+│   └── test_*.py                # pytest suite: OpenRGB SDK, topology, sampling, accent…
 │
 ├── .interface-design/
 │   └── system.md                # Design-system reference
@@ -194,8 +197,10 @@ Compress-Archive -Path dist\EDAmbilight\* -DestinationPath EDAmbilight-v1.0.0.zi
 
 - **No build step** — plain HTML + vanilla JS + local Tailwind CSS. Editing `web/` takes effect immediately when running from source.
 - **Design system** — use `web/css/design-system.css` tokens for all colors, spacing, and components. See `.interface-design/system.md` for the full reference.
-- **`topology-editor.html`** — self-contained canvas editor. Do not add external dependencies to it.
-- **Font loading** — all fonts are self-hosted in `web/fonts/`; no external requests at runtime.
+- **Themes** — a page takes part when `<html>` carries `data-themeable` and loads `js/theme.js` in `<head>` (before the first paint). Light values live in the `:root[data-theme="light"]` block of `design-system.css`. The topology canvas is drawn by hand, so its colours come from `_pal()` in `js/topology-editor.js` (it redraws on the `themechange` event).
+- **Dropdowns** — include `css/glass-select.css` and `js/glass-select.js`: every `<select>` keeps its native look, id and `onchange`, only the popup list is replaced. Add `data-native` to opt a select out.
+- **`topology-editor.html`** — no external requests; keep its dependencies local like the other pages.
+- **Fonts** — all self-hosted in `web/fonts/`; no external requests at runtime. Inter is the body font in both themes, Orbitron the heading font of the dark theme. Keep body text at 12 px or more: Inter is wider than the Rajdhani it replaced, so check for wrapping when you add labels.
 
 ---
 

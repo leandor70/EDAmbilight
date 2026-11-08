@@ -49,17 +49,12 @@ function _buildSidebar() {
     const isActive   = id => id === activePage || (activePage === '' && id === 'index');
 
     container.innerHTML = `
-        <nav style="
-            width:80px; height:100%; flex-shrink:0; z-index:20; position:relative;
-            background:rgba(2,8,14,.98);
-            border-right:1px solid rgba(255,255,255,.055);
-            display:flex; flex-direction:column;
-        ">
+        <nav class="app-nav">
             <!-- Logo -->
             <div class="nav-logo" style="
                 padding:18px 0 16px;
                 display:flex; justify-content:center; align-items:center;
-                border-bottom:1px solid rgba(255,255,255,.04);
+                border-bottom:1px solid var(--line-soft);
             ">
                 <div style="position:relative; width:46px; height:46px;
                             display:flex; align-items:center; justify-content:center;"
@@ -112,10 +107,8 @@ function _buildSidebar() {
                         display:flex; flex-direction:column; align-items:center;
                         justify-content:center; padding:14px 0; gap:7px;
                         cursor:pointer; text-decoration:none; position:relative;
-                        color:${active ? 'rgba(20,245,255,.92)' : 'rgba(255,255,255,.35)'};
-                        background:${active
-                            ? 'linear-gradient(90deg, rgba(20,245,255,.10) 0%, rgba(20,245,255,.04) 100%)'
-                            : 'transparent'};
+                        color:${active ? 'var(--nav-active)' : 'var(--nav-item)'};
+                        background:${active ? 'var(--nav-active-bg)' : 'transparent'};
                         transition: color .2s cubic-bezier(0.23,1,0.32,1),
                                     background .2s cubic-bezier(0.23,1,0.32,1),
                                     transform .15s cubic-bezier(0.23,1,0.32,1);
@@ -134,7 +127,7 @@ function _buildSidebar() {
                             transition: font-variation-settings .2s cubic-bezier(0.23,1,0.32,1);
                         ">${item.icon}</span>
                         <span style="
-                            font-size:11px; letter-spacing:.07em;
+                            font-size:12px; letter-spacing:.07em;
                             font-family:'Rajdhani',sans-serif;
                             text-transform:uppercase; font-weight:700;
                             line-height:1;
@@ -143,12 +136,17 @@ function _buildSidebar() {
                 }).join('')}
             </div>
 
-            <!-- Version -->
+            <!-- Theme switch (only on pages that have a light theme) + version -->
             <div style="
                 padding:12px 0; text-align:center;
-                border-top:1px solid rgba(255,255,255,.04);
+                border-top:1px solid var(--line-soft);
             ">
-                <span id="nav-version" style="font-size:10px; color:rgba(255,255,255,.4);
+                ${(window.EDTheme && EDTheme.themeable()) ? `
+                <button type="button" id="theme-toggle" class="theme-toggle"
+                        aria-label="Switch to light theme" title="Switch to light theme">
+                    <span class="material-symbols-outlined" aria-hidden="true">light_mode</span>
+                </button>` : ''}
+                <span id="nav-version" style="font-size:11px; color:var(--nav-ver);
                              font-family:monospace; letter-spacing:.06em;"></span>
             </div>
         </nav>
@@ -163,14 +161,29 @@ function _buildSidebar() {
         }
     } catch (_) {}
 
+    const toggle = document.getElementById('theme-toggle');
+    if (toggle) {
+        // The button names the theme it switches TO; the icon shows that theme.
+        const sync = () => {
+            const light = EDTheme.current() === 'light';
+            const label = light ? 'Switch to dark theme' : 'Switch to light theme';
+            toggle.setAttribute('aria-label', label);
+            toggle.title = label;
+            toggle.firstElementChild.textContent = light ? 'dark_mode' : 'light_mode';
+        };
+        toggle.addEventListener('click', () => EDTheme.toggle());
+        document.addEventListener('themechange', sync);
+        sync();
+    }
+
     container.querySelectorAll('.nav-item').forEach(el => {
         if (el.dataset.active === 'true') return;
         el.addEventListener('mouseenter', () => {
-            el.style.color      = 'rgba(20,245,255,.72)';
-            el.style.background = 'rgba(20,245,255,.05)';
+            el.style.color      = 'var(--nav-hover)';
+            el.style.background = 'var(--nav-hover-bg)';
         });
         el.addEventListener('mouseleave', () => {
-            el.style.color      = 'rgba(255,255,255,.35)';
+            el.style.color      = 'var(--nav-item)';
             el.style.background = 'transparent';
         });
         el.addEventListener('mousedown', () => {
@@ -213,7 +226,7 @@ function _renderHardwareNotices(notices) {
     const noHardware   = notices.every(n => !_HARDWARE_KINDS.includes(n.kind));
     title.textContent = onlyHardware ? 'Hardware changed since the last start'
                       : noHardware   ? 'OpenRGB' : 'Notices';
-    title.style.cssText = 'font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:13px;color:#f59e0b;';
+    title.style.cssText = 'font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:14px;color:#f59e0b;';
     list.appendChild(title);
 
     notices.forEach(n => {

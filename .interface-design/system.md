@@ -33,7 +33,8 @@
 ## Typography
 
 - **Display:** `Orbitron` — Numeri grandi, titoli pagina, valori metrici
-- **Body:** `Rajdhani` — Tutto il resto
+- **Body:** `Inter` — Tutto il resto, in entrambi i temi (era Rajdhani: troppo stretto sotto i 13px). Testo di corpo ≥ 12px
+- `Rajdhani` resta solo per le etichette della sidebar e poche etichette del canvas di Preview
 - **Label pattern:** `10px / font-weight:700 / uppercase / tracking:.12em / color:--c-text-dim`
 - **Big number:** classe `ds-num` — Orbitron, colore cyan, `font-size` variabile (1.2rem – 2.4rem)
 - **Titoli pagina:** Orbitron 30px, tracking `.3em`, bianco
@@ -138,11 +139,11 @@ Contiene backward-compat per: `.sci-fi-border`, `.carbon-pattern`, `.glass-toggl
 
 | File | Nota |
 |---|---|
-| `loading.html` | Standalone — no tailwind, no design-system.css (self-contained per velocità) |
+| `loading.html` | Standalone — no tailwind, no design-system.css (self-contained per velocità). Ha un proprio blocco `:root[data-theme="light"]` e carica `theme.js` |
 | `index.html` | Dashboard principale con grid 4col + grid 330px/1fr |
 | `devices.html` | Lista device con flash animato |
 | `settings.html` | Form connessione OpenRGB + web port + about |
-| `topology-editor.html` | **Non modificato** — canvas editor autocontenuto, rischio rottura troppo alto |
+| `topology-editor.html` | Canvas editor; segue il tema. I colori del canvas sono in `_pal()` di `js/topology-editor.js` (si ridisegna su `themechange`) |
 | `js/navigation.js` | Sidebar 72px con sonar rings dinamici in JS |
 
 ---
@@ -157,3 +158,18 @@ Contiene backward-compat per: `.sci-fi-border`, `.carbon-pattern`, `.glass-toggl
 - **Blocco Advanced** del Topology Editor: classe `.adv-only` visibile solo con `body.adv-open` (`localStorage edambi.topoAdvanced`). Dirty state dell'editor: confronto snapshot (`markTopologySaved`, `isTopologyDirty`) + `beforeunload`. Nota: `topology-editor.html` ora è stato modificato in modo additivo (nessun cambio al modello dati).
 - **Testo**: minimo 11–12px; `--c-text-ghost/dim/mid` portati a .50/.60/.74 per contrasto ≥ 4.5:1. `prefers-reduced-motion` disattiva animazioni e overlay (`design-system.css`, in fondo).
 - **Lingua UI**: solo inglese.
+
+---
+
+## Tema chiaro "glass"
+
+- Si attiva con `<html data-theme="light">` (`js/theme.js`, chiave `localStorage` `edambi.theme`); partecipano solo le pagine con `data-themeable` su `<html>`. `theme.js` va in `<head>`, prima del primo paint.
+- Valori nel blocco `:root[data-theme="light"]` di `design-system.css`: fondo perla `#EDF1F7`, inchiostro `#0E1A2B`, un solo accento ocean `#0E7490` (`--c-cyan` mantiene il nome, cambia il valore). Font: Inter, pesi leggeri per i numeri grandi.
+- Pannelli bianchi smerigliati su orb colorati; niente grain, scan-line né glow. Il "sampling screen" della dashboard resta scuro: è il disegno di uno schermo.
+- Contrasti sul fondo perla: inchiostro 15:1, ink-2 7:1, ink-3 5:1, ocean 4.7:1.
+
+## Dropdown di vetro
+
+- `css/glass-select.css` + `js/glass-select.js`: il `<select>` nativo resta il trigger (stile, layout, id, `value`, `onchange` invariati); al clic o con Spazio / F4 / Alt+Freccia si apre un pannello semitrasparente con `backdrop-filter: blur(22px) saturate(1.6)`, al posto della lista del browser.
+- Tastiera: frecce, Home/End, Invio, Esc, Tab. Il pannello si apre sopra se sotto manca spazio. Senza `backdrop-filter` il fondo diventa quasi opaco.
+- Opt-out: attributo `data-native` sul `<select>`. Token propri (`--gs-*`) per funzionare anche in `preview.html`, che non carica `design-system.css`.

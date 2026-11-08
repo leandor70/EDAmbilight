@@ -1,0 +1,78 @@
+/* Glass dropdown: the popup that js/glass-select.js opens in place of the native
+   <select> list. Semi-transparent, blurs whatever is behind it. Self-contained
+   (own tokens) so it works on pages that do not load design-system.css. */
+
+:root {
+  --gs-bg:     rgba(7, 15, 25, .56);
+  --gs-bd:     rgba(20, 245, 255, .22);
+  --gs-shadow: 0 22px 44px -14px rgba(0, 0, 0, .70), 0 2px 8px rgba(0, 0, 0, .35),
+               inset 0 1px 0 rgba(255, 255, 255, .07);
+  --gs-text:   #CDD6E0;
+  --gs-dim:    rgba(205, 214, 224, .50);
+  --gs-hover:  rgba(20, 245, 255, .10);
+  --gs-sel:    rgba(20, 245, 255, .17);
+  --gs-accent: #14F5FF;
+}
+:root[data-theme="light"] {
+  --gs-bg:     rgba(255, 255, 255, .52);
+  --gs-bd:     rgba(255, 255, 255, .92);
+  --gs-shadow: 0 22px 44px -16px rgba(34, 56, 104, .38), 0 2px 8px rgba(34, 56, 104, .10),
+               inset 0 1px 0 rgba(255, 255, 255, .95);
+  --gs-text:   #0E1A2B;
+  --gs-dim:    #5B677C;
+  --gs-hover:  rgba(14, 116, 144, .09);
+  --gs-sel:    rgba(14, 116, 144, .16);
+  --gs-accent: #0E7490;
+}
+
+.gs-pop {
+  position: fixed; z-index: 10000;
+  box-sizing: border-box; padding: 5px;
+  overflow-y: auto; overscroll-behavior: contain;
+  background: var(--gs-bg);
+  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+          backdrop-filter: blur(22px) saturate(1.6);
+  border: 1px solid var(--gs-bd);
+  border-radius: 14px;
+  box-shadow: var(--gs-shadow);
+  color: var(--gs-text);
+  scrollbar-width: thin;
+  scrollbar-color: var(--gs-dim) transparent;
+  opacity: 0; transform: translateY(-4px) scale(.98);
+  transition: opacity .14s cubic-bezier(.23, 1, .32, 1), transform .14s cubic-bezier(.23, 1, .32, 1);
+}
+.gs-pop.gs-up   { transform-origin: bottom; transform: translateY(4px) scale(.98); }
+.gs-pop.gs-down { transform-origin: top; }
+.gs-pop.gs-open { opacity: 1; transform: none; }
+
+/* Without backdrop-filter support the panel would be see-through text on text. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .gs-pop { background: rgba(10, 20, 32, .96); }
+  :root[data-theme="light"] .gs-pop { background: rgba(255, 255, 255, .96); }
+}
+
+.gs-opt {
+  position: relative; box-sizing: border-box;
+  display: flex; align-items: center;
+  padding: 8px 30px 8px 11px; min-height: 34px;
+  border-radius: 9px; cursor: pointer;
+  line-height: 1.3; user-select: none;
+  transition: background-color .08s;
+}
+.gs-opt.gs-active   { background: var(--gs-hover); }
+.gs-opt.gs-selected { background: var(--gs-sel); color: var(--gs-accent); font-weight: 600; }
+.gs-opt.gs-selected::after {
+  content: ''; position: absolute; right: 12px; top: 50%;
+  width: 4px; height: 8px; margin-top: -6px;
+  border: solid var(--gs-accent); border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.gs-opt.gs-disabled { opacity: .38; cursor: default; }
+.gs-group {
+  padding: 9px 11px 4px; font-size: .78em; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--gs-dim);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gs-pop { transition: opacity .01s; transform: none !important; }
+}

@@ -206,7 +206,7 @@ function renderDevices(devs, cfg) {
 
         const zonesTxt = dev.has_topology
             ? `${dev.zone_count} zone${dev.zone_count !== 1 ? 's' : ''}`
-            : `<span style="color:rgba(251,191,36,.62);">no topology</span>`;
+            : `<span style="color:var(--c-notopo);">no topology</span>`;
 
         const card = document.createElement('div');
         card.id        = 'dev-card-' + safeId;
@@ -354,8 +354,8 @@ function _setConnectionBanner(lost) {
     Object.assign(b.style, {
         position: 'fixed', top: '0', left: '80px', right: '0', zIndex: '9000',
         padding: '8px 20px', textAlign: 'center', fontSize: '13px',
-        background: 'rgba(60,10,10,.96)', color: '#ff9a9a',
-        borderBottom: '1px solid rgba(255,70,70,.45)',
+        background: 'var(--err-bg)', color: 'var(--err-fg)',
+        borderBottom: '1px solid var(--err-bd)',
     });
     b.textContent = 'Connection to EDAmbilight lost — changes are not being applied. Reconnecting…';
     document.body.appendChild(b);
@@ -381,7 +381,7 @@ async function pollStatus() {
         const target = _cfg.fps || 15;
         _lowFpsPolls = (s.enabled && s.running && s.fps < target * 0.7) ? _lowFpsPolls + 1 : 0;
         const low = _lowFpsPolls >= 3;
-        fpsBadge.style.color = low ? '#fbbf24' : '#fff';
+        fpsBadge.style.color = low ? 'var(--c-fps-low)' : 'var(--c-strong)';
         fpsBadge.title = low ? `Reaching ${s.fps} of ${target} fps — try lowering FPS Target or switching Capture Engine`
                              : 'Frame rate actually reached';
     }
@@ -396,7 +396,7 @@ async function pollStatus() {
         if (s.content_rect) {
             const [x0, y0, x1, y1] = s.content_rect;
             bbEl.textContent = `Content area: ${x1 - x0}×${y1 - y0} px — bars cropped`;
-            bbEl.style.color = 'rgba(20,245,255,.55)';
+            bbEl.style.color = 'var(--c-bb)';
         } else {
             bbEl.textContent = '';
         }
@@ -420,11 +420,11 @@ function _statusKind(s) {
 }
 
 const _STATUS_STYLE = {
-    'inactive':   { label: 'INACTIVE',   color: 'rgba(255,255,255,0.4)', dot: '' },
-    'active':     { label: 'ACTIVE',     color: 'rgba(20,245,255,0.9)',  dot: 'rgba(20,245,255,0.9)' },
-    'no-zones':   { label: 'NO ZONES',   color: '#fbbf24',               dot: '#fbbf24' },
-    'standby':    { label: 'STANDBY',    color: 'rgba(167,139,250,0.9)', dot: 'rgba(167,139,250,0.9)' },
-    'no-devices': { label: 'NO DEVICES', color: '#f87171',               dot: '#f87171' },
+    'inactive':   { label: 'INACTIVE',   color: 'var(--st-inactive)', dot: '' },
+    'active':     { label: 'ACTIVE',     color: 'var(--st-active)',   dot: 'var(--st-active)' },
+    'no-zones':   { label: 'NO ZONES',   color: 'var(--st-nozones)',  dot: 'var(--st-nozones)' },
+    'standby':    { label: 'STANDBY',    color: 'var(--st-standby)',  dot: 'var(--st-standby)' },
+    'no-devices': { label: 'NO DEVICES', color: 'var(--st-nodev)',    dot: 'var(--st-nodev)' },
 };
 
 function updateStatusBadge(active, kind) {
@@ -433,8 +433,8 @@ function updateStatusBadge(active, kind) {
     const st = _STATUS_STYLE[kind || (active ? 'active' : 'inactive')];
     el.className = active
         ? 'w-2 h-2 rounded-full nav-dot-active'
-        : 'w-2 h-2 rounded-full bg-white/20';
-    el.style.background = st.dot;
+        : 'w-2 h-2 rounded-full';
+    el.style.background = st.dot || 'var(--dot-off)';
     const lbl = document.getElementById('status-label');
     if (lbl) {
         lbl.textContent = st.label;

@@ -9,8 +9,9 @@ are in the [`licenses/`](licenses) folder.
 
 | Component | Use | License | Text |
 |---|---|---|---|
-| Orbitron | Headings font | SIL Open Font License 1.1 | [OFL-orbitron.txt](licenses/OFL-orbitron.txt) |
-| Rajdhani | Body font | SIL Open Font License 1.1 | [OFL-rajdhani.txt](licenses/OFL-rajdhani.txt) |
+| Orbitron | Headings and numbers (dark theme) | SIL Open Font License 1.1 | [OFL-orbitron.txt](licenses/OFL-orbitron.txt) |
+| Rajdhani | Sidebar labels and a few small canvas labels | SIL Open Font License 1.1 | [OFL-rajdhani.txt](licenses/OFL-rajdhani.txt) |
+| Inter | Body font (both themes) and headings of the light theme | SIL Open Font License 1.1 | [OFL-inter.txt](licenses/OFL-inter.txt) |
 | Material Symbols Outlined | Icons | Apache License 2.0 | [Apache-2.0.txt](licenses/Apache-2.0.txt) |
 | Tailwind CSS 3.4 (`tailwind.min.css`, built subset) | Utility styles | MIT | [MIT-Tailwind.txt](licenses/MIT-Tailwind.txt) |
 

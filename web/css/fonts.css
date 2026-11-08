@@ -103,3 +103,13 @@
   font-display: block;
   src: url('../fonts/MaterialSymbolsOutlined.woff2') format('woff2');
 }
+
+/* Inter (variable, weights 100-900): used by the light "glass" theme.
+   Source: @fontsource-variable/inter, SIL Open Font License 1.1. */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../fonts/Inter-variable.woff2') format('woff2');
+}

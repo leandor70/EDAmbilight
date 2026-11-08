@@ -1,12 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-themeable>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="js/theme.js"></script>
     <title>EDAmbilight — Topology Editor</title>
     <link href="css/tailwind.min.css" rel="stylesheet">
     <link href="css/fonts.css" rel="stylesheet">
     <link href="css/design-system.css" rel="stylesheet">
+    <link href="css/glass-select.css" rel="stylesheet">
+    <script src="js/glass-select.js"></script>
     <style>
         @font-face {
             font-family:'Material Symbols Outlined'; font-style:normal; font-weight:100 700;
@@ -47,8 +50,8 @@
         }
         .device-selector-card:hover  { background:rgba(20,245,255,.07); border-color:rgba(20,245,255,.25); }
         .device-selector-card.active { background:rgba(20,245,255,.12); border-color:rgba(20,245,255,.4); box-shadow:0 0 12px rgba(20,245,255,.1); }
-        .device-selector-name { font-size:12px; font-weight:600; color:rgba(255,255,255,.88); font-family:'Rajdhani',sans-serif; letter-spacing:.04em; }
-        .device-selector-meta { font-size:11px; color:rgba(255,255,255,.35); margin-top:2px; }
+        .device-selector-name { font-size:13px; font-weight:600; color:rgba(255,255,255,.88); font-family:var(--f-body); letter-spacing:.04em; }
+        .device-selector-meta { font-size:12px; color:rgba(255,255,255,.35); margin-top:2px; }
 
         /* ── Zone cards ─────────────────────────────────────── */
         .zone-card {
@@ -65,7 +68,7 @@
             border:1px solid rgba(255,255,255,.1);
             color:rgba(255,255,255,.88);
             padding:7px 10px; border-radius:8px;
-            font-family:'Rajdhani',sans-serif; font-size:13px;
+            font-family:var(--f-body); font-size:14px;
             transition:border-color .2s; width:100%;
         }
         .inspector-input:focus { outline:none; border-color:rgba(20,245,255,.5); box-shadow:0 0 8px rgba(20,245,255,.12); }
@@ -75,7 +78,7 @@
             border:1px solid rgba(255,255,255,.1);
             color:rgba(255,255,255,.7);
             padding:5px 6px; border-radius:6px;
-            font-family:'Rajdhani',sans-serif; font-size:12px;
+            font-family:var(--f-body); font-size:13px;
             width:52px; text-align:center;
             transition:border-color .2s;
         }
@@ -115,8 +118,13 @@
         .btn-danger:hover { background:rgba(255,90,90,.1) !important; border-color:rgba(255,90,90,.7) !important; }
         #btn-save.dirty { animation:savePulse 1.6s ease-in-out infinite; }
         @keyframes savePulse { 0%,100% { box-shadow:0 0 6px rgba(20,245,255,.25); } 50% { box-shadow:0 0 20px rgba(20,245,255,.7); } }
-        #dirty-chip { display:none; font-size:12px; color:#fbbf24; align-self:center; }
+        #dirty-chip { display:none; font-size:13px; color:#fbbf24; align-self:center; }
         #dirty-chip.show { display:inline; }
+
+        /* ── Page-specific bits that used Tailwind white/NN utilities ── */
+        .flash-btn { border:1px solid rgba(255,255,255,.2); color:rgba(255,255,255,.5); transition:color .2s, border-color .2s; }
+        .flash-btn:hover { color:var(--primary-accent); border-color:var(--primary-accent); }
+        .zone-group-label, .zone-meta { color:rgba(255,255,255,.4); }
 
         /* ── Overlap warning ─────────────────────────────────── */
         #overlap-warning { border-color:rgba(255,60,60,.35) !important; }
@@ -139,11 +147,11 @@
 <main class="relative z-10 flex-1 flex flex-col h-full overflow-hidden">
 
     <!-- Header -->
-    <header style="padding:14px 28px 10px; flex-shrink:0; display:flex; align-items:center; gap:10px; border-bottom:1px solid rgba(255,255,255,.04);">
+    <header style="padding:14px 28px 10px; flex-shrink:0; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--line-soft);">
         <div class="ds-title-line" style="width:28px;"></div>
-        <span class="orbitron" style="font-size:.9rem; font-weight:700; letter-spacing:.34em; color:#fff;">TOPOLOGY EDITOR</span>
+        <span class="hdr-title">Topology Editor</span>
         <div class="ds-title-line rev" style="width:28px;"></div>
-        <span style="font-size:11px; text-transform:uppercase; letter-spacing:.2em; color:rgba(255,255,255,.45); padding-left:6px;">Multi-Zone Spatial Configuration</span>
+        <span class="hdr-sub">Multi-Zone Spatial Configuration</span>
     </header>
 
     <!-- 3-column editor layout -->

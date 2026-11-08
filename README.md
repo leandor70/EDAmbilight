@@ -3,7 +3,7 @@
 **Real-time screen ambient lighting controller for OpenRGB**
 
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue)
-![Version](https://img.shields.io/badge/version-1.4.1-cyan)
+![Version](https://img.shields.io/badge/version-1.5.0-cyan)
 ![OpenRGB](https://img.shields.io/badge/requires-OpenRGB-orange)
 ![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-green)
 
@@ -39,6 +39,7 @@ No Python or extra dependencies needed.
 - **Sampling preview** — a scaled copy of your screen showing exactly where each LED reads its color, live or as plain zones; hover a band or a dot to see which device it feeds
 - **Beat accent** — at every beat of the music playing on the PC the ambilight gets a short flash and/or hue shift: multiplicative, additive or mixed, with your own flash color, duration, intensity and a flash-rate safety limit (needs the optional `PyAudioWPatch` package)
 - **Screen standby effects** — when the display sleeps or locks, the LEDs can hold, fade out, pulse, rotate colors, show an aurora or an ember glow
+- **Light and dark theme** — a frosted-glass light theme next to the dark one, switched from the sidebar and remembered; dropdown lists are translucent panels that blur what is behind them
 - **WebGL live preview** — visualise the ambient effect in the browser before it hits the LEDs
 
 ![Live Preview](docs/ss-preview.png)
@@ -55,7 +56,7 @@ No Python or extra dependencies needed.
 | | |
 |---|---|
 | OS | Windows 10 / 11 (64-bit) |
-| [OpenRGB](https://openrgb.org) | v1.0 or later recommended (v0.9 works), SDK Server enabled |
+| [OpenRGB](https://openrgb.org) | v1.0 or later recommended, SDK Server enabled. Tested with 1.0rc2 and 1.1. Older servers (SDK protocol 0–4) are handled by the client but not tested on real hardware |
 | [PawnIO](https://pawnio.eu) | Driver OpenRGB 1.x uses for memory and motherboards. Without it those devices are not detected |
 
 ---
@@ -149,6 +150,20 @@ Configure the OpenRGB connection (host, port, executable path, auto-start) and t
 restart or quit the app, and open the log folder.
 
 ![Settings](docs/ss-settings.png)
+
+* * *
+
+### Light theme
+
+Every page also comes in a light "glass" theme. Use the sun / moon button at the bottom of the
+sidebar (in the panel header on Live Preview); the choice is remembered, and the splash screen
+follows it.
+
+| | |
+|---|---|
+| ![Dashboard, light](docs/ss-dashboard-light.png) | ![Splash screen, light](docs/ss-loading-light.png) |
+| ![Devices, light](docs/ss-devices-light.png) | ![Topology Editor, light](docs/ss-topology-light.png) |
+| ![Settings, light](docs/ss-settings-light.png) | ![Live Preview, light](docs/ss-preview-light.png) |
 
 ---
 

@@ -169,3 +169,25 @@ def ensure_openrgb(settings, status_cb=None) -> dict:
                    "In OpenRGB check Settings → SDK Server."),
         "path":   str(exe),
     }
+
+
+def wait_devices_settled(client, stable_secs=5.0, timeout=45.0):
+    """Poll the device list of a freshly started OpenRGB until its count has
+    not changed for `stable_secs` (and is non-zero), or `timeout` elapses."""
+    deadline    = time.monotonic() + timeout
+    last_count  = -1
+    stable_since = time.monotonic()
+    while time.monotonic() < deadline:
+        try:
+            client.refresh()
+        except Exception as e:
+            print(f"       OpenRGB device poll failed: {e}")
+            return
+        count = len(client.devices)
+        now   = time.monotonic()
+        if count != last_count:
+            last_count, stable_since = count, now
+        elif count > 0 and now - stable_since >= stable_secs:
+            break
+        time.sleep(1.0)
+    print(f"       OpenRGB detection settled: {last_count} device(s)")

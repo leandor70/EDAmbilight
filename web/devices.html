@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-themeable>
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<script src="js/theme.js"></script>
 <title>EDAmbilight — Devices</title>
 <link href="css/tailwind.min.css" rel="stylesheet">
 <link href="css/fonts.css" rel="stylesheet">
@@ -61,12 +62,12 @@
     <header style="
         padding:14px 28px 10px; flex-shrink:0;
         display:flex; align-items:center; gap:10px;
-        border-bottom:1px solid rgba(255,255,255,.04);
+        border-bottom:1px solid var(--line-soft);
     ">
         <div class="ds-title-line" style="width:28px;"></div>
-        <span class="orbitron" style="font-size:.9rem;font-weight:700;letter-spacing:.34em;color:#fff;">DEVICES</span>
+        <span class="hdr-title">Devices</span>
         <div class="ds-title-line rev" style="width:28px;"></div>
-        <span style="font-size:11px;text-transform:uppercase;letter-spacing:.2em;color:rgba(255,255,255,.45);padding-left:6px;">OpenRGB Hardware</span>
+        <span class="hdr-sub">OpenRGB Hardware</span>
     </header>
 
     <div class="flex-1 overflow-y-auto" style="padding:14px 20px 20px;">
@@ -84,7 +85,7 @@
             <div class="panel ds-appear" style="animation-delay:.11s;">
                 <div class="panel-body" style="padding:16px 18px;">
                     <div class="ds-label" style="margin-bottom:8px;">With Topology</div>
-                    <div id="stat-topo" class="orbitron" style="font-size:2.1rem;font-weight:700;color:rgba(255,255,255,.45);line-height:1;">—</div>
+                    <div id="stat-topo" class="orbitron" style="font-size:2.1rem;font-weight:700;color:var(--c-faint);line-height:1;">—</div>
                 </div>
             </div>
 
@@ -92,7 +93,7 @@
                 <div class="panel-body" style="padding:16px 18px;flex-direction:row;align-items:center;justify-content:space-between;">
                     <div>
                         <div class="ds-label" style="margin-bottom:4px;">Actions</div>
-                        <div style="font-size:12px;color:var(--c-text-ghost);">Flash to identify</div>
+                        <div style="font-size:13px;color:var(--c-text-ghost);">Flash to identify</div>
                     </div>
                     <button class="btn" id="btn-flash-all" onclick="flashAll()">
                         <span class="material-symbols-outlined" style="font-size:16px;">bolt</span>
@@ -164,9 +165,9 @@ function renderDevices(devs) {
         const iconName = tType === 'matrix'  ? 'keyboard'
                        : tType === 'linear'  ? 'linear_scale'
                        : 'fiber_manual_record';
-        const iconColor = tType === 'matrix'  ? 'rgba(167,139,250,.65)'
-                        : tType === 'linear'  ? 'rgba(20,245,255,.60)'
-                        : 'rgba(255,255,255,.28)';
+        const iconColor = tType === 'matrix'  ? 'var(--ic-matrix)'
+                        : tType === 'linear'  ? 'var(--ic-linear)'
+                        : 'var(--ic-single)';
         const topoEl = dev.has_topology
             ? `<span class="has-topology">${dev.zone_count} zone${dev.zone_count !== 1 ? 's' : ''}</span>`
             : `<span class="no-topology">No topology</span>`;
@@ -180,13 +181,13 @@ function renderDevices(devs) {
                           style="font-size:20px;color:${iconColor};">${iconName}</span>
                 </div>
                 <div style="flex:1;min-width:0;">
-                    <div style="font-weight:700;font-size:14px;color:rgba(255,255,255,.88);
+                    <div style="font-weight:700;font-size:14px;color:var(--c-name);
                                 white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:5px;">
                         ${escapeHtml(dev.name)}
                     </div>
                     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                         <span class="badge ${badgeClass}">${tType}</span>
-                        <span style="font-size:12px;color:var(--c-text-dim);">${dev.led_count} LED</span>
+                        <span style="font-size:13px;color:var(--c-text-dim);">${dev.led_count} LED</span>
                         ${topoEl}
                     </div>
                 </div>
@@ -200,11 +201,11 @@ function renderDevices(devs) {
                                onchange="toggleDevice('${escapeAttr(dev.device_key)}', this.checked, ${idx})">
                         <div class="glass-toggle-track"><div class="glass-toggle-thumb"></div></div>
                     </label>
-                    <a href="topology-editor.html" class="btn" style="font-size:12px;padding:6px 12px;">
+                    <a href="topology-editor.html" class="btn" style="font-size:13px;padding:6px 12px;">
                         <span class="material-symbols-outlined" style="font-size:14px;">hub</span>
                         ${dev.has_topology ? 'Edit topology' : 'Map zones'}
                     </a>
-                    <button class="btn" style="font-size:11px;padding:6px 12px;"
+                    <button class="btn" style="font-size:12px;padding:6px 12px;"
                             id="flash-btn-${idx}"
                             onclick="flashDevice('${escapeAttr(dev.device_key)}', ${idx})">
                         <span class="material-symbols-outlined" style="font-size:14px;">bolt</span>

@@ -354,8 +354,17 @@ class TopologyCanvas {
         this.drawEffectCenter();
     }
 
+    // Colors that depend on the theme (the canvas is drawn by hand, CSS cannot reach it)
+    _pal() {
+        return document.documentElement.getAttribute('data-theme') === 'light'
+            ? { bg: '#F4F7FB', grid: 'rgba(14, 26, 43, 0.09)', ink: '#0E1A2B', ledStroke: '#8A97AB',
+                acc: '#0E7490', accRgb: '14, 116, 144', cenRgb: '14, 116, 144', glow: 'rgba(255, 255, 255, 0.9)' }
+            : { bg: '#0a0a0c', grid: 'rgba(255, 255, 255, 0.05)', ink: '#FFFFFF', ledStroke: '#666666',
+                acc: '#14F5FF', accRgb: '20, 245, 255', cenRgb: '0, 255, 255', glow: 'rgba(255, 255, 255, 0.9)' };
+    }
+
     clear() {
-        this.ctx.fillStyle = '#0a0a0c';
+        this.ctx.fillStyle = this._pal().bg;
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
@@ -373,7 +382,7 @@ class TopologyCanvas {
         const startX = Math.floor(baseX0 / gridSpacing) * gridSpacing;
         const startY = Math.floor(baseY0 / gridSpacing) * gridSpacing;
 
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        this.ctx.strokeStyle = this._pal().grid;
         this.ctx.lineWidth = 1;
 
         for (let bx = startX; bx <= baseX1; bx += gridSpacing) {
@@ -423,7 +432,7 @@ class TopologyCanvas {
 
     _calibrationColor(zone, ledIndex) {
         // Returns CSS color string for a LED based on its distance from the effect center.
-        const RING_COLORS = ['#FFFFFF', '#FF3C3C', '#507FFF', '#3CD250'];
+        const RING_COLORS = [this._pal().ink, '#FF3C3C', '#507FFF', '#3CD250'];
         const center = this._effectCenterWorld();
         if (!center) return zone.color;
         return RING_COLORS[this._ringIndex(zone, ledIndex, center) % 4];
@@ -483,13 +492,13 @@ class TopologyCanvas {
             this.ctx.fillRect(ledX, 0, ledWidth, ledWidth);
 
             this.ctx.globalAlpha = 1;
-            this.ctx.strokeStyle = isSelected ? '#14F5FF' : '#666666';
+            this.ctx.strokeStyle = isSelected ? this._pal().acc : this._pal().ledStroke;
             this.ctx.lineWidth = 1;
             this.ctx.strokeRect(ledX, 0, ledWidth, ledWidth);
 
             if (i === 0 || i === zone.led_count - 1) {
-                this.ctx.fillStyle = '#FFFFFF';
-                this.ctx.font = `${Math.max(7, 9 * this.camera.zoom)}px Rajdhani`;
+                this.ctx.fillStyle = this._pal().ink;
+                this.ctx.font = `${Math.max(7, 9 * this.camera.zoom)}px Inter, system-ui, sans-serif`;
                 this.ctx.textAlign = 'center';
                 this.ctx.textBaseline = 'middle';
                 this.ctx.globalAlpha = 0.6;
@@ -501,15 +510,15 @@ class TopologyCanvas {
 
         // Zone label (fixed screen size, always readable)
         this.ctx.globalAlpha = 1;
-        this.ctx.fillStyle = '#FFFFFF';
-        this.ctx.font = 'bold 11px Rajdhani';
+        this.ctx.fillStyle = this._pal().ink;
+        this.ctx.font = '600 12px Inter, system-ui, sans-serif';
         this.ctx.textAlign = 'left';
         this.ctx.textBaseline = 'top';
         this.ctx.fillText(zone.name, 0, -16);
 
         if (isSelected || isHovered) {
             const outlineWidth = zone.led_count * eff * ledSpacing;
-            this.ctx.strokeStyle = isSelected ? '#14F5FF' : '#FFFFFF';
+            this.ctx.strokeStyle = isSelected ? this._pal().acc : this._pal().ink;
             this.ctx.lineWidth = 1;
             this.ctx.globalAlpha = isSelected ? 1 : 0.5;
             this.ctx.strokeRect(-5, -5, outlineWidth + 10, ledWidth + 10);
@@ -583,7 +592,7 @@ class TopologyCanvas {
 
         // VBBox label
         this.ctx.fillStyle = 'rgba(128, 128, 128, 0.7)';
-        this.ctx.font = '10px Rajdhani';
+        this.ctx.font = '11px Inter, system-ui, sans-serif';
         this.ctx.fillText(
             `VBBox: ${(vbbox.max_x - vbbox.min_x).toFixed(1)} × ${(vbbox.max_y - vbbox.min_y).toFixed(1)}`,
             topLeft.x,
@@ -601,15 +610,15 @@ class TopologyCanvas {
         const width = bottomRight.x - topLeft.x;
         const height = bottomRight.y - topLeft.y;
 
-        this.ctx.strokeStyle = 'rgba(20, 245, 255, 0.3)';
+        this.ctx.strokeStyle = `rgba(${this._pal().accRgb}, 0.3)`;
         this.ctx.lineWidth = 2;
         this.ctx.setLineDash([10, 5]);
         this.ctx.strokeRect(topLeft.x, topLeft.y, width, height);
         this.ctx.setLineDash([]);
 
         // BBox label
-        this.ctx.fillStyle = 'rgba(20, 245, 255, 0.6)';
-        this.ctx.font = '10px Rajdhani';
+        this.ctx.fillStyle = `rgba(${this._pal().accRgb}, 0.7)`;
+        this.ctx.font = '11px Inter, system-ui, sans-serif';
         this.ctx.fillText(
             `BBox: ${(bbox.max_x - bbox.min_x).toFixed(1)} × ${(bbox.max_y - bbox.min_y).toFixed(1)}`,
             topLeft.x,
@@ -628,7 +637,8 @@ class TopologyCanvas {
         const screenPos = this.worldToScreen({ x: cx_world, y: cy_world });
 
         // Disegna crosshair cyan (più grande e visibile)
-        this.ctx.strokeStyle = this.dragCenterState ? '#00FFFF' : 'rgba(0, 255, 255, 0.8)';
+        const cen = this._pal().cenRgb;
+        this.ctx.strokeStyle = this.dragCenterState ? `rgb(${cen})` : `rgba(${cen}, 0.8)`;
         this.ctx.lineWidth = this.dragCenterState ? 3 : 2;
         const size = 15;
 
@@ -641,14 +651,14 @@ class TopologyCanvas {
         this.ctx.stroke();
 
         // Centro dot (draggable handle)
-        this.ctx.fillStyle = this.dragCenterState ? '#00FFFF' : 'rgba(0, 255, 255, 0.7)';
+        this.ctx.fillStyle = this.dragCenterState ? `rgb(${cen})` : `rgba(${cen}, 0.7)`;
         this.ctx.beginPath();
         this.ctx.arc(screenPos.x, screenPos.y, 6, 0, Math.PI * 2);
         this.ctx.fill();
 
         // Outer ring per highlight durante drag
         if (this.dragCenterState) {
-            this.ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
+            this.ctx.strokeStyle = `rgba(${cen}, 0.3)`;
             this.ctx.lineWidth = 2;
             this.ctx.beginPath();
             this.ctx.arc(screenPos.x, screenPos.y, 10, 0, Math.PI * 2);
@@ -699,7 +709,7 @@ class TopologyCanvas {
         if (this.camera.zoom >= 0.25 && ringCount > 0) {
             const labelStep = ringCount > 20 ? Math.ceil(ringCount / 15) : 1;
             const fontSize = Math.max(9, Math.min(13, 10 * this.camera.zoom));
-            this.ctx.font = `${fontSize}px Rajdhani`;
+            this.ctx.font = `${fontSize}px Inter, system-ui, sans-serif`;
 
             // Candidate angles for label placement (right, top, left, bottom)
             const ANGLES = [0, -Math.PI / 2, Math.PI, Math.PI / 2];
@@ -728,9 +738,9 @@ class TopologyCanvas {
         }
 
         // Center dot — solid white with glow
-        this.ctx.shadowColor = 'rgba(255,255,255,0.9)';
+        this.ctx.shadowColor = this._pal().glow;
         this.ctx.shadowBlur = 8;
-        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.fillStyle = this._pal().ink;
         this.ctx.beginPath();
         this.ctx.arc(cs.x, cs.y, Math.max(4, 5 * Math.min(1, this.camera.zoom)), 0, Math.PI * 2);
         this.ctx.fill();
@@ -987,7 +997,7 @@ class TopologyCanvas {
             const label = deviceNames[did] || did.split('::')[0];
             return `
                 <div class="mb-3">
-                    <div class="text-[10px] text-white/40 uppercase tracking-widest mb-1 px-1">${label}</div>
+                    <div class="zone-group-label text-[10px] uppercase tracking-widest mb-1 px-1">${label}</div>
                     ${zones.map(zone => {
                         const uid = `${zone.device_id}::${zone.zone_index}`;
                         return `
@@ -995,7 +1005,7 @@ class TopologyCanvas {
                              data-zone-uid="${uid}"
                              style="border-color: ${zone.color};">
                             <div class="font-bold" style="color: ${zone.color};">${zone.name}</div>
-                            <div class="text-white/40 text-[10px]">${zone.led_count} LEDs · ${zone.rotation}° · ${zone.direction}</div>
+                            <div class="zone-meta text-[10px]">${zone.led_count} LEDs · ${zone.rotation}° · ${zone.direction}</div>
                         </div>`;
                     }).join('')}
                 </div>`;
@@ -1265,7 +1275,7 @@ function renderDeviceLegend(devices) {
                         <div class="device-selector-meta">${dev.zone_count} zones · ${dev.led_count} LEDs</div>
                     </div>
                 </div>
-                <button class="flash-btn shrink-0 w-7 h-7 flex items-center justify-center rounded border border-white/20 text-white/50 hover:text-[var(--primary-accent)] hover:border-[var(--primary-accent)] transition-colors"
+                <button class="flash-btn shrink-0 w-7 h-7 flex items-center justify-center rounded"
                         title="Flash to identify" data-device-id="${dev.device_id}">
                     <span class="material-symbols-outlined" style="font-size:16px;">bolt</span>
                 </button>
@@ -1292,6 +1302,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     canvas.updateInspector();
     canvas.updateEffectCenterInputs();
     canvas.render();
+    document.addEventListener('themechange', () => canvas.render());
+
+    // Canvas labels use Inter: the canvas does not trigger font loading by itself, so load
+    // it explicitly and redraw once it is ready (otherwise labels fall back to a serif).
+    try {
+        Promise.all([document.fonts.load('12px Inter'), document.fonts.load('600 12px Inter')])
+            .then(() => canvas.render());
+    } catch (_) {}
 
     // Load all devices + zones as a unified scene
     await loadAndRenderScene();
@@ -1599,3 +1617,20 @@ function initAdvancedToggle() {
 window.addEventListener('load', () => {
     document.body.classList.add('loaded');
 });
+
+// Range sliders: the design system paints the filled part of the track from
+// --fill (default 30%), so it must be kept in sync with the value.
+(function () {
+    function updateFill(el) {
+        const min = parseFloat(el.min) || 0;
+        const max = parseFloat(el.max) || 100;
+        const pct = ((parseFloat(el.value) - min) / (max - min) * 100).toFixed(1);
+        el.style.setProperty('--fill', pct + '%');
+    }
+    const all = () => document.querySelectorAll('input[type=range]').forEach(updateFill);
+    document.addEventListener('input', e => {
+        if (e.target.matches && e.target.matches('input[type=range]')) updateFill(e.target);
+    });
+    all();
+    window.addEventListener('load', all);
+})();

@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-themeable>
 <head>
 <meta charset="utf-8"/>
 <title>EDAmbilight</title>
+<script src="js/theme.js"></script>
 <link href="css/fonts.css" rel="stylesheet">
 <style>
 @font-face {
@@ -22,7 +23,7 @@
 body {
     background: var(--bg-base);
     color: #CDD6E0;
-    font-family:'Rajdhani','Segoe UI',sans-serif;
+    font-family:'Inter','Segoe UI',sans-serif;
     display:flex; align-items:center; justify-content:center;
     height:100vh; overflow:hidden;
     -webkit-font-smoothing:antialiased;
@@ -154,7 +155,7 @@ body {
 /* ── Title ── */
 
 .eyebrow {
-    font-size:9px; text-transform:uppercase; letter-spacing:.42em;
+    font-size:10px; text-transform:uppercase; letter-spacing:.42em;
     color:rgba(255,255,255,.22);
     margin-bottom:10px;
     animation: fadein .6s var(--ease-out) .3s both;
@@ -177,7 +178,7 @@ body {
 }
 
 .subtitle {
-    font-size:11px; text-transform:uppercase;
+    font-size:12px; text-transform:uppercase;
     letter-spacing:.35em; color:rgba(255,255,255,.25);
     margin-top:10px;
     animation:fadein .8s var(--ease-out) 1.4s both;
@@ -217,7 +218,7 @@ body {
 }
 
 .status-text {
-    font-size:11px; letter-spacing:.08em;
+    font-size:12px; letter-spacing:.08em;
     color:rgba(255,255,255,.22);
     min-height:1.5em; transition:opacity .3s var(--ease-out);
 }
@@ -239,7 +240,7 @@ body {
 }
 .orgb-head {
     display:flex; align-items:center; gap:8px;
-    font-family:'Rajdhani',sans-serif; font-size:13px; font-weight:700;
+    font-family:'Inter',system-ui,sans-serif; font-size:14px; font-weight:700;
     letter-spacing:.10em; text-transform:uppercase; color:#FFB02E;
 }
 .orgb-head .material-symbols-outlined { font-size:18px; color:#FFB02E; }
@@ -249,7 +250,7 @@ body {
 }
 .orgb-actions { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
 .orgb-btn {
-    font-family:'Rajdhani',sans-serif; font-size:11px; font-weight:700;
+    font-family:'Inter',system-ui,sans-serif; font-size:12px; font-weight:700;
     letter-spacing:.08em; text-transform:uppercase;
     padding:6px 14px; border-radius:20px; cursor:pointer;
     background:rgba(20,245,255,.10); color:rgba(20,245,255,.92);
@@ -263,6 +264,53 @@ body {
 }
 .orgb-btn.ghost:hover { color:#fff; border-color:rgba(255,255,255,.34); box-shadow:none; }
 .orgb-btn:disabled { opacity:.4; pointer-events:none; }
+
+/* ── Light "glass" theme (same palette as design-system.css, see js/theme.js) ── */
+:root[data-theme="light"] {
+    color-scheme: light;
+    --c-cyan:  #0E7490;
+    --bg-base: #EDF1F7;
+}
+:root[data-theme="light"] body { color:#0E1A2B; font-family:'Inter','Segoe UI',sans-serif; }
+:root[data-theme="light"] .bg-grain,
+:root[data-theme="light"] .scan { display:none; }
+:root[data-theme="light"] .bg-orb-1 { background:radial-gradient(ellipse, rgba(14,116,144,.16) 0%, transparent 65%); }
+:root[data-theme="light"] .bg-orb-2 { background:radial-gradient(ellipse, rgba(109,79,209,.12) 0%, transparent 65%); }
+:root[data-theme="light"] .bg-orb-3 { background:radial-gradient(ellipse, rgba(14,116,144,.08) 0%, transparent 65%); }
+:root[data-theme="light"] .sonar-ring { border-color:rgba(14,116,144,.45); }
+:root[data-theme="light"] .sonar-ring:nth-child(2) { border-color:rgba(14,116,144,.28); }
+:root[data-theme="light"] .sonar-ring:nth-child(3) { border-color:rgba(14,116,144,.14); }
+:root[data-theme="light"] .logo-bezel {
+    background:rgba(255,255,255,.7); border:1px solid rgba(255,255,255,.95);
+    box-shadow:0 24px 48px -26px rgba(34,56,104,.30), 0 2px 8px rgba(34,56,104,.06);
+}
+:root[data-theme="light"] .logo-core {
+    border-color:rgba(14,116,144,.55);
+    background:radial-gradient(circle, rgba(14,116,144,.10) 0%, rgba(14,116,144,.04) 55%, transparent 100%);
+    box-shadow:none; animation:none;
+}
+:root[data-theme="light"] .logo-core svg [fill="#14F5FF"]   { fill:#0E7490; }
+:root[data-theme="light"] .logo-core svg [stroke="#14F5FF"] { stroke:#0E7490; }
+:root[data-theme="light"] .eyebrow  { color:#5B677C; }
+:root[data-theme="light"] .title    { color:#0E1A2B; font-family:'Inter','Segoe UI',sans-serif; font-weight:300; letter-spacing:.24em; }
+:root[data-theme="light"] .subtitle { color:#5B677C; }
+:root[data-theme="light"] .progress-outer { background:rgba(14,26,43,.10); }
+:root[data-theme="light"] .progress-fill  { background:linear-gradient(90deg, rgba(14,116,144,.6) 0%, #0E7490 100%); box-shadow:0 0 10px rgba(14,116,144,.35); }
+:root[data-theme="light"] .progress-fill::after { animation:none; box-shadow:0 0 0 4px rgba(14,116,144,.18); }
+:root[data-theme="light"] .status-text { color:#44506A; }
+:root[data-theme="light"] .status-text.error { color:#B42318; }
+:root[data-theme="light"] .orgb-warn {
+    background:linear-gradient(150deg, rgba(255,255,255,.88), rgba(255,255,255,.62));
+    border:1px solid rgba(154,91,0,.40);
+    box-shadow:0 24px 48px -26px rgba(34,56,104,.24), 0 2px 8px rgba(34,56,104,.05);
+}
+:root[data-theme="light"] .orgb-head,
+:root[data-theme="light"] .orgb-head .material-symbols-outlined { color:#9A5B00; }
+:root[data-theme="light"] .orgb-detail { color:#44506A; }
+:root[data-theme="light"] .orgb-btn { background:rgba(14,116,144,.10); color:#0E7490; border-color:rgba(14,116,144,.45); }
+:root[data-theme="light"] .orgb-btn:hover { background:rgba(14,116,144,.18); box-shadow:none; }
+:root[data-theme="light"] .orgb-btn.ghost { background:transparent; color:#44506A; border-color:rgba(14,26,43,.22); }
+:root[data-theme="light"] .orgb-btn.ghost:hover { color:#0E1A2B; border-color:rgba(14,26,43,.40); }
 </style>
 <script src="/eel.js"></script>
 </head>

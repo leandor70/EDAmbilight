@@ -62,8 +62,9 @@ def save_settings(updates: dict) -> dict:
 
 
 @eel.expose
-def reconnect_openrgb() -> dict:
-    """Reconnect to OpenRGB with current settings."""
+def reconnect_openrgb(settle: bool = False) -> dict:
+    """Reconnect to OpenRGB with current settings.
+    settle=True: OpenRGB was just launched, wait for device detection."""
     global _openrgb_manager
     if _settings is None:
         return {"ok": False, "error": "Settings not initialized"}
@@ -72,7 +73,7 @@ def reconnect_openrgb() -> dict:
         port = _settings.get_openrgb_port()
 
         if _openrgb_manager is not None:
-            ok = _openrgb_manager.reconnect(host, port)
+            ok = _openrgb_manager.reconnect(host, port, settle=settle)
             if ok:
                 # The hardware may differ from before the disconnect:
                 # re-align the topology (also refreshes the zone cache).
@@ -88,6 +89,9 @@ def reconnect_openrgb() -> dict:
         from api.topology_api  import init_topology_api
 
         client          = OpenRGBClient(host, port)
+        if settle:
+            from utils.openrgb_bootstrap import wait_devices_settled
+            wait_devices_settled(client)
         new_manager     = OpenRGBManager(client)
         _openrgb_manager = new_manager
 

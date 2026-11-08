@@ -1,8 +1,11 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="it" data-themeable>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="js/theme.js"></script>
+    <link href="css/glass-select.css" rel="stylesheet">
+    <script src="js/glass-select.js"></script>
     <title>EDAmbilight — Live Preview</title>
     <link href="css/fonts.css" rel="stylesheet">
     <style>
@@ -58,7 +61,7 @@
             display:flex; align-items:center; gap:4px; padding:4px 10px 4px 6px;
             background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12);
             border-radius:30px; color:rgba(255,255,255,.65); cursor:pointer; text-decoration:none;
-            font-family:'Rajdhani',sans-serif; font-size:11.5px; font-weight:600; letter-spacing:.05em;
+            font-family:'Inter',system-ui,sans-serif; font-size:12.5px; font-weight:600; letter-spacing:.05em;
             flex-shrink:0; transition:all .2s cubic-bezier(0.23,1,0.32,1);
         }
         .btn-back:hover { background:rgba(255,255,255,.13); color:#fff; }
@@ -67,7 +70,7 @@
         .pill {
             padding:3px 9px; border-radius:20px; background:transparent;
             border:1px solid transparent; color:rgba(255,255,255,.32); cursor:pointer;
-            font-family:'Rajdhani',sans-serif; font-size:11px; font-weight:700;
+            font-family:'Inter',system-ui,sans-serif; font-size:12px; font-weight:700;
             letter-spacing:.07em; text-transform:uppercase;
             transition:all .18s cubic-bezier(0.23,1,0.32,1);
         }
@@ -80,7 +83,7 @@
             color:rgba(255,255,255,.45); cursor:pointer; transition:all .2s cubic-bezier(0.23,1,0.32,1);
         }
         .icon-btn:hover { background:rgba(255,255,255,.13); color:#fff; }
-        .icon-btn .material-symbols-outlined { font-size:13px; }
+        .icon-btn .material-symbols-outlined { font-size:14px; }
 
         /* Separator */
         .psep { height:1px; background:rgba(255,255,255,.055); }
@@ -90,7 +93,7 @@
         .param-col { padding:10px 14px; }
         .param-col + .param-col { border-left:1px solid rgba(255,255,255,.055); }
         .col-label {
-            font-family:'Rajdhani',sans-serif; font-size:9px; font-weight:700;
+            font-family:'Inter',system-ui,sans-serif; font-size:10px; font-weight:700;
             letter-spacing:.14em; text-transform:uppercase;
             color:rgba(20,245,255,.5); margin-bottom:8px;
         }
@@ -98,7 +101,7 @@
             display:flex; align-items:center; gap:6px; margin-bottom:6px;
         }
         .param-row label {
-            font-family:'Rajdhani',sans-serif; font-size:11px; font-weight:600;
+            font-family:'Inter',system-ui,sans-serif; font-size:12px; font-weight:600;
             color:rgba(255,255,255,.38); letter-spacing:.02em;
             width:66px; flex-shrink:0;
         }
@@ -119,7 +122,7 @@
             background:rgba(20,245,255,.88); box-shadow:0 0 6px rgba(20,245,255,.45); cursor:pointer;
         }
         .pval {
-            font-family:monospace; font-size:10px; color:rgba(255,255,255,.28);
+            font-family:monospace; font-size:11px; color:rgba(255,255,255,.28);
             min-width:22px; text-align:right; flex-shrink:0;
         }
 
@@ -135,7 +138,7 @@
             border: 1px solid rgba(20,245,255,.28);
             border-radius: 5px;
             color: rgba(20,245,255,.85);
-            font-family: 'Rajdhani', sans-serif; font-size: 11px;
+            font-family: 'Inter',system-ui,sans-serif; font-size: 12px;
             font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
             padding: 4px 22px 4px 8px;
             cursor: pointer; outline: none;
@@ -165,24 +168,24 @@
             display:flex; align-items:center; gap:5px; padding:4px 10px;
             background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12);
             border-radius:8px; color:rgba(255,255,255,.6); cursor:pointer;
-            font-family:'Rajdhani',sans-serif; font-size:11px; font-weight:600;
+            font-family:'Inter',system-ui,sans-serif; font-size:12px; font-weight:600;
             letter-spacing:.04em; white-space:nowrap; transition:all .2s;
         }
         .btn-load:hover { background:rgba(255,255,255,.13); color:#fff; }
-        .btn-load .material-symbols-outlined { font-size:13px; }
-        #music-status { font-size:9px; color:rgba(255,255,255,.22); margin-top:4px; font-family:monospace; }
+        .btn-load .material-symbols-outlined { font-size:14px; }
+        #music-status { font-size:10px; color:rgba(255,255,255,.22); margin-top:4px; font-family:monospace; }
         /* Small inline VU bars in panel header */
         #music-vis { display:flex; gap:3px; align-items:flex-end; height:20px; margin-top:5px; }
         .vu-bar { width:12px; border-radius:2px 2px 0 0; transition:height .06s linear; min-height:2px; }
         #vu-bass { background:rgba(255,80,80,.8);  height:2px; }
         #vu-mid  { background:rgba(80,255,120,.8); height:2px; }
         #vu-high { background:rgba(80,160,255,.8); height:2px; }
-        .vu-lbl { font-size:8px; color:rgba(255,255,255,.22); font-family:monospace; text-transform:uppercase; align-self:flex-end; line-height:1.8; }
+        .vu-lbl { font-size:10px; color:rgba(255,255,255,.22); font-family:monospace; text-transform:uppercase; align-self:flex-end; line-height:1.8; }
         /* Bindings */
         .music-binds { flex:1; display:grid; grid-template-columns:1fr 1fr; gap:5px; }
         .bind-row { display:flex; flex-direction:column; gap:2px; }
-        .bind-lbl { font-family:'Rajdhani',sans-serif; font-size:9px; color:rgba(255,255,255,.3); letter-spacing:.08em; text-transform:uppercase; }
-        .bind-row select { width:100%; font-size:10px; padding:2px 4px; }
+        .bind-lbl { font-family:'Inter',system-ui,sans-serif; font-size:10px; color:rgba(255,255,255,.3); letter-spacing:.08em; text-transform:uppercase; }
+        .bind-row select { width:100%; font-size:11px; padding:2px 4px; }
 
         /* ── Visualizer section ───────────────────────────────────────── */
         #viz-row { padding:8px 14px 10px; border-top:1px solid rgba(255,255,255,.055); }
@@ -193,7 +196,7 @@
         .viz-pill {
             padding:3px 9px; border-radius:20px; background:transparent;
             border:1px solid rgba(255,255,255,.14); color:rgba(255,255,255,.28); cursor:pointer;
-            font-family:'Rajdhani',sans-serif; font-size:10px; font-weight:700;
+            font-family:'Inter',system-ui,sans-serif; font-size:11px; font-weight:700;
             letter-spacing:.07em; text-transform:uppercase;
             transition:all .18s cubic-bezier(0.23,1,0.32,1);
         }
@@ -208,36 +211,117 @@
         }
         .viz-params .param-row { margin-bottom:2px; min-width:110px; flex:1; }
         .viz-params .param-row label { width:60px; }
-        .viz-params select { flex:1; font-size:10px; padding:3px 20px 3px 6px; }
+        .viz-params select { flex:1; font-size:11px; padding:3px 20px 3px 6px; }
         .viz-op-row { display:flex; align-items:center; gap:6px; flex:1; min-width:120px; margin-bottom:0; }
-        .viz-op-row label { font-family:'Rajdhani',sans-serif; font-size:11px; font-weight:600; color:rgba(255,255,255,.38); width:52px; flex-shrink:0; }
+        .viz-op-row label { font-family:'Inter',system-ui,sans-serif; font-size:12px; font-weight:600; color:rgba(255,255,255,.38); width:52px; flex-shrink:0; }
 
         /* ── Post FX section ──────────────────────────────────────────── */
         #post-row { padding:8px 14px 10px; border-top:1px solid rgba(255,255,255,.055); }
         .post-inner { display:grid; grid-template-columns:1fr 1fr; gap:2px 14px; margin-top:6px; }
         .post-inner .param-row { margin-bottom:2px; }
-        .post-inner select { flex:1; font-size:10px; padding:3px 20px 3px 6px; }
+        .post-inner select { flex:1; font-size:11px; padding:3px 20px 3px 6px; }
 
         /* ── Audio player ─────────────────────────────────────────────── */
         .player-row { display:flex; align-items:center; gap:7px; margin-top:8px; }
         .ptime { font-family:monospace; font-size:9.5px; color:rgba(255,255,255,.35); min-width:30px; text-align:center; flex-shrink:0; }
-        .vol-ico { font-size:13px !important; color:rgba(255,255,255,.30); flex-shrink:0; }
+        .vol-ico { font-size:14px !important; color:rgba(255,255,255,.30); flex-shrink:0; }
         #p-vol { max-width:64px; }
         #btn-play[disabled] { opacity:.35; pointer-events:none; }
 
         /* ── Footer: presets + shortcuts ──────────────────────────────── */
         #panel-footer { display:flex; align-items:center; gap:6px; padding:8px 12px; border-top:1px solid rgba(255,255,255,.06); }
-        #preset-sel { min-width:104px; font-size:10px; }
+        #preset-sel { min-width:104px; font-size:11px; }
         .hints { margin-left:auto; font-family:monospace; font-size:8.5px; color:rgba(255,255,255,.22); white-space:nowrap; }
 
         /* ── FPS readout ──────────────────────────────────────────────── */
-        #fps { font-family:monospace; font-size:9px; color:rgba(255,255,255,.30); min-width:44px; text-align:right; flex-shrink:0; }
+        #fps { font-family:monospace; font-size:10px; color:rgba(255,255,255,.30); min-width:44px; text-align:right; flex-shrink:0; }
 
         /* ── WebGL fallback ───────────────────────────────────────────── */
         #webgl-err { display:none; position:fixed; inset:0; z-index:50; align-items:center; justify-content:center; background:#04080f; }
-        #webgl-err .err-box { text-align:center; font-family:'Rajdhani',sans-serif; color:rgba(255,255,255,.75); max-width:420px; padding:20px; }
+        #webgl-err .err-box { text-align:center; font-family:'Inter',system-ui,sans-serif; color:rgba(255,255,255,.75); max-width:420px; padding:20px; }
         #webgl-err h2 { font-family:'Orbitron',sans-serif; font-size:16px; letter-spacing:.08em; margin:10px 0 6px; color:#fff; }
-        #webgl-err p { font-size:13px; color:rgba(255,255,255,.5); line-height:1.5; }
+        #webgl-err p { font-size:14px; color:rgba(255,255,255,.5); line-height:1.5; }
+
+        /* ══ LIGHT "GLASS" THEME (js/theme.js sets data-theme="light") ═══════
+           The WebGL scene stays as it is; only the control panel turns into
+           frosted white glass with ink text and the ocean accent. */
+        :root[data-theme="light"] {
+            --pv-ink:#0E1A2B; --pv-ink2:#44506A; --pv-ink3:#5B677C; --pv-acc:#0E7490;
+            --pv-hair:rgba(14,26,43,.10);
+        }
+        :root[data-theme="light"] #panel {
+            background:rgba(255,255,255,.80);
+            -webkit-backdrop-filter:blur(28px) saturate(1.6); backdrop-filter:blur(28px) saturate(1.6);
+            border:1px solid rgba(255,255,255,.92); border-radius:24px;
+            box-shadow:inset 0 1px 0 rgba(255,255,255,.95), 0 24px 56px -20px rgba(34,56,104,.40), 0 2px 8px rgba(34,56,104,.08);
+            scrollbar-color:rgba(14,26,43,.22) transparent;
+        }
+        :root[data-theme="light"] #panel::-webkit-scrollbar-thumb { background:rgba(14,26,43,.22); }
+        :root[data-theme="light"] #panel :not(.material-symbols-outlined):not(.pval):not(.hints):not(#fps):not(#music-status):not(.ptime):not(.vu-lbl) {
+            font-family:'Inter',system-ui,sans-serif;
+        }
+        :root[data-theme="light"] #panel-header { background:rgba(255,255,255,.88); border-bottom:1px solid var(--pv-hair); border-radius:24px 24px 0 0; }
+        :root[data-theme="light"] .btn-back,
+        :root[data-theme="light"] .icon-btn,
+        :root[data-theme="light"] .btn-load {
+            background:rgba(255,255,255,.75); border:1px solid rgba(14,26,43,.16); color:var(--pv-ink2);
+        }
+        :root[data-theme="light"] .btn-back:hover,
+        :root[data-theme="light"] .icon-btn:hover,
+        :root[data-theme="light"] .btn-load:hover { background:#fff; color:var(--pv-ink); }
+        :root[data-theme="light"] #panel { width:580px; max-width:calc(100vw - 24px); }
+        :root[data-theme="light"] .effects { min-width:0; }
+        :root[data-theme="light"] .pill { color:var(--pv-ink3); padding:3px 8px; letter-spacing:.04em; font-size:10.5px; }
+        :root[data-theme="light"] #fps { min-width:0; }
+        :root[data-theme="light"] .pill:hover { color:var(--pv-ink); background:rgba(14,26,43,.06); }
+        :root[data-theme="light"] .pill.active,
+        :root[data-theme="light"] .viz-pill.active {
+            background:rgba(14,116,144,.12); border-color:rgba(14,116,144,.45); color:var(--pv-acc); box-shadow:none;
+        }
+        :root[data-theme="light"] .viz-pill { border-color:rgba(14,26,43,.18); color:var(--pv-ink3); }
+        :root[data-theme="light"] .viz-pill:hover { color:var(--pv-ink); border-color:rgba(14,26,43,.34); }
+        :root[data-theme="light"] .param-col + .param-col,
+        :root[data-theme="light"] #color-row, :root[data-theme="light"] #music-row,
+        :root[data-theme="light"] #viz-row,   :root[data-theme="light"] #post-row,
+        :root[data-theme="light"] #panel-footer, :root[data-theme="light"] .viz-params { border-color:var(--pv-hair); }
+        :root[data-theme="light"] .psep { background:var(--pv-hair); }
+        :root[data-theme="light"] .col-label { color:var(--pv-acc); }
+        :root[data-theme="light"] .param-row label,
+        :root[data-theme="light"] .viz-op-row label { color:var(--pv-ink2); }
+        :root[data-theme="light"] .bind-lbl { color:var(--pv-ink3); }
+        :root[data-theme="light"] .pval, :root[data-theme="light"] #fps,
+        :root[data-theme="light"] .ptime, :root[data-theme="light"] .hints,
+        :root[data-theme="light"] #music-status, :root[data-theme="light"] .vu-lbl,
+        :root[data-theme="light"] .vol-ico { color:var(--pv-ink3); }
+        :root[data-theme="light"] input[type=range] {
+            height:4px;
+            background:linear-gradient(to right,
+                #0E7490 0%, #0E7490 var(--fill,0%),
+                rgba(14,26,43,.14) var(--fill,0%), rgba(14,26,43,.14) 100%);
+        }
+        :root[data-theme="light"] input[type=range]::-webkit-slider-thumb {
+            width:14px; height:14px; background:#fff; border:2px solid #0E7490; box-shadow:0 2px 6px rgba(34,56,104,.30);
+        }
+        :root[data-theme="light"] input[type=range]::-moz-range-thumb {
+            width:10px; height:10px; background:#fff; border:2px solid #0E7490; box-shadow:0 2px 6px rgba(34,56,104,.30);
+        }
+        :root[data-theme="light"] select {
+            background-color:rgba(255,255,255,.85);
+            background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpolygon points='0,0 8,0 4,5' fill='%230E7490'/%3E%3C/svg%3E");
+            border:1px solid rgba(14,26,43,.18); color:var(--pv-ink); text-transform:none; letter-spacing:0; font-weight:600;
+        }
+        :root[data-theme="light"] select:hover { border-color:rgba(14,116,144,.55); box-shadow:none; }
+        :root[data-theme="light"] select:focus { border-color:#0E7490; box-shadow:0 0 0 3px rgba(14,116,144,.18); }
+        :root[data-theme="light"] option { background:#fff; color:var(--pv-ink); }
+        :root[data-theme="light"] :focus-visible { outline:2px solid #0E7490; outline-offset:2px; }
+        :root[data-theme="light"] #vu-bass { background:#B42318; }
+        :root[data-theme="light"] #vu-mid  { background:#0B7A5B; }
+        :root[data-theme="light"] #vu-high { background:#0E7490; }
+        :root[data-theme="light"] #webgl-err { background:#EDF1F7; }
+        :root[data-theme="light"] #webgl-err .err-box { color:var(--pv-ink2); }
+        :root[data-theme="light"] #webgl-err h2 { color:var(--pv-ink); font-family:'Inter',sans-serif; }
+        :root[data-theme="light"] #webgl-err p { color:var(--pv-ink3); }
+        :root[data-theme="light"] #webgl-err .material-symbols-outlined { color:#9A5B00 !important; }
     </style>
 </head>
 <body>
@@ -272,6 +356,9 @@
                 <button class="pill"        data-effect="flame"  onclick="setEffect(this)">Flame</button>
             </div>
             <span id="fps"></span>
+            <button class="icon-btn" id="theme-toggle" type="button" title="Switch to light theme" aria-label="Switch to light theme">
+                <span class="material-symbols-outlined" aria-hidden="true">light_mode</span>
+            </button>
             <button class="icon-btn" onclick="toggleFullscreen()" title="Fullscreen (F)">
                 <span class="material-symbols-outlined" id="fs-icon">fullscreen</span>
             </button>
@@ -1631,6 +1718,21 @@ void main(){
         switchEffect(btn.dataset.effect);
         scheduleSave();
     }
+
+    // Theme switch (this page has no sidebar, so the button lives in the panel header)
+    (function () {
+        const btn = document.getElementById('theme-toggle');
+        if (!btn || !window.EDTheme) { if (btn) btn.remove(); return; }
+        const sync = () => {
+            const light = EDTheme.current() === 'light';
+            const label = light ? 'Switch to dark theme' : 'Switch to light theme';
+            btn.title = label; btn.setAttribute('aria-label', label);
+            btn.firstElementChild.textContent = light ? 'dark_mode' : 'light_mode';
+        };
+        btn.addEventListener('click', () => EDTheme.toggle());
+        document.addEventListener('themechange', sync);
+        sync();
+    })();
 
     function goBack() {
         const nav = () => location.href = 'index.html';

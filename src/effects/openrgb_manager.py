@@ -148,11 +148,15 @@ class OpenRGBManager:
 
     # ── Reconnect support ──────────────────────────────────────────────────────
 
-    def reconnect(self, host: str, port: int) -> bool:
-        """Attempt to reconnect to OpenRGB with new or same host/port."""
+    def reconnect(self, host: str, port: int, settle: bool = False) -> bool:
+        """Attempt to reconnect to OpenRGB with new or same host/port.
+        settle=True waits for a freshly started OpenRGB to finish detection."""
         try:
             from core.openrgb_sdk import OpenRGBClient
             new_client = OpenRGBClient(host, port)
+            if settle:
+                from utils.openrgb_bootstrap import wait_devices_settled
+                wait_devices_settled(new_client)
             old_client, self._client = self._client, new_client
             if hasattr(old_client, "close"):
                 old_client.close()

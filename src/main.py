@@ -168,7 +168,7 @@ def _retry_openrgb_worker():
 
     if boot.get("state") in ("connected", "launched"):
         from api.settings_api import reconnect_openrgb
-        res = reconnect_openrgb()
+        res = reconnect_openrgb(settle=boot.get("state") == "launched")
         if res.get("ok"):
             boot["devices"] = res.get("devices", 0)
         else:
@@ -213,7 +213,13 @@ def _do_init(settings):
             try:
                 from core.openrgb_sdk import OpenRGBClient
                 from effects.openrgb_manager import OpenRGBManager
+                from utils.openrgb_bootstrap import wait_devices_settled
                 client          = OpenRGBClient(settings.get_openrgb_host(), settings.get_openrgb_port())
+                if boot.get("state") == "launched":
+                    # OpenRGB opens its SDK server before hardware detection
+                    # finishes: wait for the device list to settle.
+                    _set_step(1, "OpenRGB detecting devices...")
+                    wait_devices_settled(client)
                 openrgb_manager = OpenRGBManager(client)
                 boot["devices"] = len(openrgb_manager.devices)
                 print(f"       OpenRGB connected — {len(openrgb_manager.devices)} device(s)")

@@ -165,7 +165,8 @@ class _ReconnectingManager(_Manager):
         super().__init__(*devices)
         self._after = after_reconnect
 
-    def reconnect(self, host, port):
+    def reconnect(self, host, port, settle=False):
+        self.settle = settle
         self.devices = _Manager(*self._after).devices
         return True
 
@@ -193,6 +194,25 @@ def test_sync_runs_after_reconnect_with_existing_manager(tmp_path, monkeypatch):
     zones = json.loads(api.TOPOLOGY_CONFIG_FILE.read_text())["topologies"]["Strip::linear"]["zones"]
     assert zones[0]["led_count"] == 30
     assert service.refreshed == ["Strip::linear"]
+
+
+def test_settle_is_forwarded_only_when_openrgb_was_just_launched(tmp_path, monkeypatch):
+    """A freshly started OpenRGB opens its SDK port before detection ends: only then wait."""
+    from api import settings_api
+
+    manager = _ReconnectingManager([], (_device("Strip", [("Top", 60)]), TopologyType.LINEAR))
+    service = _Service()
+    _run(tmp_path, monkeypatch, {}, (_device("Strip", [("Top", 60)]), TopologyType.LINEAR))
+    api.init_topology_api(manager, service)
+    monkeypatch.setattr(settings_api, "_settings",
+                        N(get_openrgb_host=lambda: "localhost", get_openrgb_port=lambda: 6742))
+    monkeypatch.setattr(settings_api, "_openrgb_manager", manager)
+    monkeypatch.setattr(settings_api, "_ambilight_service", service)
+
+    settings_api.reconnect_openrgb()
+    assert manager.settle is False
+    settings_api.reconnect_openrgb(settle=True)
+    assert manager.settle is True
 
 
 # -- legacy data / compatibility -----------------------------------------------

@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-themeable>
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<script src="js/theme.js"></script>
 <title>EDAmbilight — Settings</title>
 <link href="css/tailwind.min.css" rel="stylesheet">
 <link href="css/fonts.css" rel="stylesheet">
@@ -28,13 +29,13 @@
     /* Connection status row */
     #conn-status {
         display:inline-flex; align-items:center; gap:8px;
-        font-size:13px; font-family:var(--f-body);
+        font-size:14px; font-family:var(--f-body);
         color:var(--c-text-mid);
     }
 
     /* Restart notice */
     .restart-notice {
-        font-size:12px; color:var(--c-text-ghost);
+        font-size:13px; color:var(--c-text-ghost);
         letter-spacing:.03em; margin-top:6px;
         font-family:var(--f-body);
     }
@@ -46,7 +47,7 @@
     }
     .about-ver {
         font-family:var(--f-display); font-size:.72rem; font-weight:700;
-        color:rgba(255,255,255,.20); letter-spacing:.08em;
+        color:var(--lbl-off); letter-spacing:.08em;
     }
 </style>
 <script src="/eel.js"></script>
@@ -72,12 +73,12 @@
     <header style="
         padding:14px 28px 10px; flex-shrink:0;
         display:flex; align-items:center; gap:10px;
-        border-bottom:1px solid rgba(255,255,255,.04);
+        border-bottom:1px solid var(--line-soft);
     ">
         <div class="ds-title-line" style="width:28px;"></div>
-        <span class="orbitron" style="font-size:.9rem;font-weight:700;letter-spacing:.34em;color:#fff;">SETTINGS</span>
+        <span class="hdr-title">Settings</span>
         <div class="ds-title-line rev" style="width:28px;"></div>
-        <span style="font-size:11px;text-transform:uppercase;letter-spacing:.2em;color:rgba(255,255,255,.45);padding-left:6px;">Configuration</span>
+        <span class="hdr-sub">Configuration</span>
     </header>
 
     <div class="flex-1 overflow-y-auto" style="padding:14px 20px 20px;">
@@ -89,11 +90,11 @@
 
                     <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
                         <div class="section-icon">
-                            <span class="material-symbols-outlined" style="font-size:18px;color:rgba(20,245,255,.65);">hub</span>
+                            <span class="material-symbols-outlined" style="font-size:18px;color:var(--icon-accent);">hub</span>
                         </div>
                         <div>
                             <div class="ds-label">OpenRGB Connection</div>
-                            <div style="font-size:12px;color:var(--c-text-ghost);margin-top:2px;">LED device server</div>
+                            <div style="font-size:13px;color:var(--c-text-ghost);margin-top:2px;">LED device server</div>
                         </div>
                     </div>
 
@@ -146,11 +147,11 @@
 
                     <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
                         <div class="section-icon">
-                            <span class="material-symbols-outlined" style="font-size:18px;color:rgba(20,245,255,.65);">http</span>
+                            <span class="material-symbols-outlined" style="font-size:18px;color:var(--icon-accent);">http</span>
                         </div>
                         <div>
                             <div class="ds-label">Web Server</div>
-                            <div style="font-size:12px;color:var(--c-text-ghost);margin-top:2px;">Local Eel server port</div>
+                            <div style="font-size:13px;color:var(--c-text-ghost);margin-top:2px;">Local Eel server port</div>
                         </div>
                     </div>
 
@@ -179,11 +180,11 @@
 
                     <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
                         <div class="section-icon">
-                            <span class="material-symbols-outlined" style="font-size:18px;color:rgba(20,245,255,.65);">power_settings_new</span>
+                            <span class="material-symbols-outlined" style="font-size:18px;color:var(--icon-accent);">power_settings_new</span>
                         </div>
                         <div>
                             <div class="ds-label">Application</div>
-                            <div style="font-size:12px;color:var(--c-text-ghost);margin-top:2px;">Closing the window keeps EDAmbilight running in the system tray</div>
+                            <div style="font-size:13px;color:var(--c-text-ghost);margin-top:2px;">Closing the window keeps EDAmbilight running in the system tray</div>
                         </div>
                     </div>
 
@@ -211,11 +212,11 @@
 
                     <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
                         <div class="section-icon">
-                            <span class="material-symbols-outlined" style="font-size:18px;color:rgba(20,245,255,.65);">info</span>
+                            <span class="material-symbols-outlined" style="font-size:18px;color:var(--icon-accent);">info</span>
                         </div>
                         <div>
                             <div class="ds-label">About</div>
-                            <div style="font-size:12px;color:var(--c-text-ghost);margin-top:2px;">Application info</div>
+                            <div style="font-size:13px;color:var(--c-text-ghost);margin-top:2px;">Application info</div>
                         </div>
                     </div>
 
@@ -224,7 +225,7 @@
                         <span id="about-ver" class="about-ver">v—</span>
                     </div>
                     <div class="settings-divider" style="margin-bottom:14px;"></div>
-                    <p style="font-size:12px;line-height:1.7;color:var(--c-text-dim);">
+                    <p style="font-size:13px;line-height:1.7;color:var(--c-text-dim);">
                         Standalone ambilight controller based on OpenRGB.<br>
                         Samples screen edges and maps colors to LED strips in real-time.<br>
                         Supports WGC, DXGI, and mss capture backends.

@@ -25,7 +25,7 @@ function apiOk(res) {
 // ── Notifications ────────────────────────────────────────────────────────────
 
 function showNotification(message, type = 'info', duration = 4000) {
-    const colors = { success: '#10b981', error: '#ef4444', warning: '#f59e0b', info: '#14F5FF' };
+    const colors = { success: 'var(--toast-success)', error: 'var(--toast-error)', warning: 'var(--toast-warning)', info: 'var(--toast-info)' };
     const icons  = { success: 'check_circle', error: 'error', warning: 'warning', info: 'info' };
 
     let container = document.getElementById('toast-container');
@@ -43,16 +43,16 @@ function showNotification(message, type = 'info', duration = 4000) {
     const toast = document.createElement('div');
     toast.innerHTML = `
         <div style="display:flex;align-items:center;gap:12px;
-            background:rgba(0,0,0,0.95);border:1px solid ${colors[type] || colors.info};
+            background:var(--pop-bg);border:1px solid ${colors[type] || colors.info};
             border-radius:8px;padding:12px 16px;min-width:280px;max-width:400px;
-            box-shadow:0 10px 40px rgba(0,0,0,0.5);pointer-events:auto;
+            box-shadow:var(--pop-shadow);pointer-events:auto;
             animation:slideInRight 0.3s ease-out;">
             <span class="material-symbols-outlined" style="color:${colors[type]||colors.info};font-size:24px;">
                 ${icons[type] || 'info'}
             </span>
-            <span style="color:white;flex:1;font-size:14px;">${escapeHtml(message)}</span>
+            <span style="color:var(--c-strong);flex:1;font-size:14px;">${escapeHtml(message)}</span>
             <button onclick="this.parentElement.parentElement.remove()"
-                style="background:none;border:none;color:rgba(255,255,255,0.5);cursor:pointer;font-size:20px;">×</button>
+                style="background:none;border:none;color:var(--c-faint);cursor:pointer;font-size:20px;">×</button>
         </div>`;
     container.appendChild(toast);
 
@@ -74,19 +74,19 @@ function confirmDialog(message, okLabel = 'Confirm', { danger = false } = {}) {
         overlay.setAttribute('aria-modal', 'true');
         Object.assign(overlay.style, {
             position: 'fixed', inset: '0', zIndex: '10001', display: 'flex',
-            alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.6)',
+            alignItems: 'center', justifyContent: 'center', background: 'var(--scrim)',
             backdropFilter: 'blur(4px)',
         });
-        const accent = danger ? '255,90,90' : '20,245,255';
+        const border = danger ? 'var(--dlg-bd-danger)' : 'var(--dlg-bd)';
         overlay.innerHTML = `
             <div style="width:min(420px,calc(100vw - 40px));padding:22px 24px;border-radius:14px;
-                        background:linear-gradient(160deg,rgba(10,24,36,.98),rgba(4,12,20,.99));
-                        border:1px solid rgba(${accent},.35);box-shadow:0 20px 60px rgba(0,0,0,.6);">
-                <div style="font-size:14px;line-height:1.55;color:#fff;margin-bottom:18px;">${escapeHtml(message)}</div>
+                        background:var(--dlg-bg);
+                        border:1px solid ${border};box-shadow:var(--dlg-shadow);">
+                <div style="font-size:14px;line-height:1.55;color:var(--c-strong);margin-bottom:18px;">${escapeHtml(message)}</div>
                 <div style="display:flex;gap:8px;justify-content:flex-end;">
                     <button type="button" data-act="cancel" class="btn-secondary">Cancel</button>
                     <button type="button" data-act="ok" class="btn"
-                            style="${danger ? 'border-color:rgba(255,90,90,.6);color:#ff8a8a;' : ''}">${escapeHtml(okLabel)}</button>
+                            style="${danger ? 'border-color:var(--danger-bd);color:var(--danger-fg);' : ''}">${escapeHtml(okLabel)}</button>
                 </div>
             </div>`;
         const done = result => {
