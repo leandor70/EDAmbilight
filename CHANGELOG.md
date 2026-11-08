@@ -10,6 +10,42 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.5.0] — 2026-11-09
+
+### Added
+
+- Light "glass" theme as an alternative to the dark one, on every page, the splash screen and the
+  topology canvas. The switch is at the bottom of the sidebar (in the panel header on Preview) and
+  the choice is remembered. Accent #0E7490. The sampling screen on the dashboard stays dark: it is a
+  drawing of a screen.
+- Dropdown lists are now a translucent panel that blurs what is behind it, in both themes (Control,
+  Live Preview, Topology Editor). Keyboard: Space / Alt+Down opens, arrows, Home/End, Enter, Esc.
+- Tests for the wait on OpenRGB's hardware detection and for the reconnect path that uses it.
+
+### Changed
+
+- Body font is now Inter (was Rajdhani, a narrow font that was hard to read at 11–13 px), and the
+  smallest texts are one step larger, on every page including the splash screen and the Topology
+  Editor. Orbitron is kept for headings and numbers in the dark theme. Inter is bundled locally
+  (SIL OFL 1.1).
+- The Topology Editor follows the theme, canvas included: light ground, grid and labels in light
+  mode, the accent switches to ocean.
+- README, README-dev, Help, the design-system notes and THIRD-PARTY describe the themes, the
+  fonts and the dropdowns; all screenshots are new, in dark and light.
+
+### Fixed
+
+- A false "Hardware changed since the last start" notice when EDAmbilight started OpenRGB itself.
+  OpenRGB opens its SDK server before it has finished detecting hardware (about 9 s here), so
+  EDAmbilight connected, saw 1 of 6 devices, listed the other 5 as "no longer detected" and sent
+  them no colors until the next restart. It now waits until the device count has stopped changing
+  (at least 5 s, at most 45 s), also after **Retry**. The first start can take about 15 s longer
+  when EDAmbilight launches OpenRGB; if OpenRGB is already running nothing changes.
+- Topology Editor: the filled part of the Grid Size and calibration speed sliders did not follow
+  the thumb.
+
+---
+
 ## [1.4.1] — 2026-11-07
 
 ### Added
