@@ -40,6 +40,16 @@ opens, arrows / Home / End move, Enter selects, Esc closes.
 - **Topology Editor sliders:** the filled part of the Grid Size and calibration speed sliders did
   not follow the thumb.
 
+### Also in this release (from 1.4.1, which was never published)
+
+- **OpenRGB window.** EDAmbilight now starts OpenRGB with its window and tray icon
+  (`--gui --server --startminimized`). Before, OpenRGB 1.x ran with no window at all, so there was
+  nothing to open afterwards.
+- **Old OpenRGB notice.** If the OpenRGB in use is older than 1.0, a notice (shown once per version)
+  recommends updating.
+- **PawnIO.** The "OpenRGB not installed", "no devices" and Help texts mention the PawnIO driver
+  that OpenRGB 1.x needs for memory modules and motherboards.
+
 ## Good to know
 
 - When EDAmbilight launches OpenRGB itself, the first start takes about **15 seconds longer**
