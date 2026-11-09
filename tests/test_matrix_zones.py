@@ -59,12 +59,12 @@ def test_a_zone_with_segments_counts_each_segment_in_the_index():
 
 
 def test_sample_grid_averages_each_cell():
-    frame = np.zeros((40, 60, 3), dtype=np.uint8)
-    frame[:, :30] = (200, 0, 0)       # left half red
-    frame[:, 30:] = (0, 0, 100)       # right half blue
+    frame = np.zeros((40, 60, 3), dtype=np.uint8)      # captured frames are BGR
+    frame[:, :30] = (0, 0, 200)       # left half: red
+    frame[:, 30:] = (100, 0, 0)       # right half: blue
     grid = svc._sample_grid(frame, 2, 3)
     assert grid.shape == (2, 3, 3)
-    assert tuple(grid[0, 0].round()) == (200, 0, 0)
+    assert tuple(grid[0, 0].round()) == (200, 0, 0)    # result is RGB
     assert tuple(grid[1, 2].round()) == (0, 0, 100)
 
 
@@ -85,3 +85,11 @@ def test_build_device_zones_turns_a_key_grid_into_a_matrix_zone(tmp_path, monkey
     (z,) = zones
     assert z["edge"] == "matrix" and (z["rows"], z["cols"]) == (2, 2)
     assert z["cells"] == [(0, 0, 0), (0, 1, 1), (1, 0, 2), (1, 1, 3)]
+
+
+def test_grid_and_area_sampling_agree_on_colour_order():
+    frame = np.zeros((40, 60, 3), dtype=np.uint8)
+    frame[:, :] = (180, 60, 20)       # BGR: a blue-ish colour
+    area = svc._sample_area_point(frame, 0.5, 0.5, "mean")
+    cell = tuple(int(round(v)) for v in svc._sample_grid(frame, 2, 3)[0, 0])
+    assert area == cell == (20, 60, 180)

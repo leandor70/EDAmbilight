@@ -353,7 +353,9 @@ def is_zone_enabled(zones_enabled: dict, zone: dict) -> bool:
 
 
 def _sample_grid(frame: np.ndarray, rows: int, cols: int) -> np.ndarray:
-    """Mean colour of each cell of a rows x cols grid laid over the frame -> (rows, cols, 3)."""
+    """Mean colour of each cell of a rows x cols grid laid over the frame -> (rows, cols, 3).
+
+    The captured frame is BGR (like everywhere else in this file); the result is RGB."""
     h, w = frame.shape[:2]
     small = frame[::4, ::4, :3].astype(np.float32)
     sh, sw = small.shape[:2]
@@ -362,7 +364,7 @@ def _sample_grid(frame: np.ndarray, rows: int, cols: int) -> np.ndarray:
     r_cnt = np.diff(np.append(r_idx, sh)).clip(1)
     c_cnt = np.diff(np.append(c_idx, sw)).clip(1)
     sums = np.add.reduceat(np.add.reduceat(small, r_idx, axis=0), c_idx, axis=1)
-    return sums / (r_cnt[:, None, None] * c_cnt[None, :, None])
+    return (sums / (r_cnt[:, None, None] * c_cnt[None, :, None]))[..., ::-1]
 
 
 def build_device_zones(device_key: str, layouts: Optional[dict] = None) -> Tuple[List[dict], int]:
