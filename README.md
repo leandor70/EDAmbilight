@@ -151,7 +151,7 @@ from the strips; drag a corner to resize, the border to move). Where a LED sits 
 whatever the zone is called: on a side of the rectangle it follows that side of the screen, inside it
 reads the point of the screen under it (the centre of the rectangle reads the centre of the screen),
 outside it stays off. Faded LEDs on the canvas are outside; a dot on a LED means it reads one point.
-Setups made before 1.6 that name their zones MonitorTop / MonitorRight / MonitorBottom / MonitorLeft keep
+Older setups that name their zones MonitorTop / MonitorRight / MonitorBottom / MonitorLeft keep
 the old name-based mapping until the rectangle is placed. Changes take effect without restarting.
 
 ![Topology Editor](docs/ss-topology.png)
