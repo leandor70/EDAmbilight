@@ -6,6 +6,7 @@
 (function () {
     const KEY  = 'edambi.theme';
     const root = document.documentElement;
+    let chosen = false;      // the user picked a theme on this page: a late reply from the file must not undo it
 
     function stored() {
         try { return localStorage.getItem(KEY) === 'light' ? 'light' : 'dark'; } catch (_) { return 'dark'; }
@@ -25,7 +26,7 @@
             root.classList.add('theme-fade');
             apply(theme);
             try { localStorage.setItem(KEY, theme); } catch (_) {}
-            if (!fromSync) save(theme);
+            if (!fromSync) { chosen = true; save(theme); }
             setTimeout(() => root.classList.remove('theme-fade'), 320);
             document.dispatchEvent(new CustomEvent('themechange', { detail: { theme } }));
         },
@@ -48,6 +49,7 @@
         if (!b) return;
         try {
             b.get_settings()(s => {
+                if (chosen) return;
                 const saved = s && s.ui_theme;
                 if (saved === 'light' || saved === 'dark') {
                     if (saved !== window.EDTheme.current() && root.hasAttribute('data-themeable')) window.EDTheme.set(saved, true);
