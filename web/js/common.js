@@ -171,4 +171,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// Safe localStorage access (private windows / blocked site data can throw)
+function _lsGet(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
+function _lsSet(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
+
 console.log('[Common] EDAmbilight utilities loaded');

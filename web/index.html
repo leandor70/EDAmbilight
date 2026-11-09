@@ -8,6 +8,7 @@
 <link href="css/tailwind.min.css" rel="stylesheet">
 <link href="css/fonts.css" rel="stylesheet">
 <link href="css/design-system.css" rel="stylesheet">
+<link href="css/sampling-view.css" rel="stylesheet">
 <link href="css/glass-select.css" rel="stylesheet">
 <script src="js/glass-select.js"></script>
 <style>
@@ -36,48 +37,8 @@
     .ctrl-row > .panel { flex: 1; min-width: 0; }
     .param-row { display: flex; gap: 10px; flex-shrink: 0; }
     .param-row > .panel { flex: 1; min-width: 0; }
-    .devices-row { flex: 1; min-height: 340px; }
+    .devices-row { flex: 1; min-height: 130px; }
 
-    /* ── Sampling preview (mini screen) ── */
-    .sampling-panel { flex-shrink:0; }
-    .sampling-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
-    .sampling-hint { font-size:12px; color:var(--c-text-ghost); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .sampling-stage { display:flex; justify-content:center; width:100%; }
-    .sampling-tip {
-        position:absolute; z-index:5; pointer-events:none; max-width:240px;
-        padding:7px 10px; border-radius:8px; font-size:12.5px; line-height:1.45;
-        background:rgba(4,12,20,.96); color:var(--c-text);
-        border:1px solid rgba(20,245,255,.35); box-shadow:0 6px 18px rgba(0,0,0,.45);
-    }
-    .sampling-tip b { color:var(--c-cyan); font-weight:600; }
-    .sampling-tip span { color:var(--c-text-ghost); }
-    .seg {
-        display:inline-flex; border:1px solid rgba(255,255,255,.10); border-radius:7px;
-        overflow:hidden; background:rgba(255,255,255,.03);
-    }
-    .seg-btn {
-        font-family:inherit; font-weight:600; font-size:11px; line-height:1;
-        letter-spacing:.08em; text-transform:uppercase;
-        padding:5px 8px; color:var(--c-text-ghost); background:transparent; border:0; cursor:pointer;
-        transition:color .2s, background .2s;
-    }
-    .seg-btn:hover { color:var(--c-text-mid); }
-    .seg-btn[aria-pressed="true"] { color:var(--c-cyan); background:rgba(20,245,255,.10); }
-    .seg-btn:focus-visible { outline:2px solid var(--c-cyan); outline-offset:-2px; }
-    .sampling-screen {
-        position:relative; width:100%; border-radius:6px;
-        border:1px solid rgba(255,255,255,.10); background:var(--c-deep, #020a10);
-        transition:border-color .5s, box-shadow .5s;
-    }
-    .sampling-screen canvas { display:block; width:100%; height:100%; border-radius:5px; }
-    #status-visual.visual--active .sampling-screen {
-        border-color:rgba(20,245,255,.45);
-        box-shadow:0 0 14px rgba(20,245,255,.18);
-    }
-    .sampling-caption { font-size:12px; line-height:1.45; color:var(--c-text-ghost); min-height:2.9em; margin-top:10px; text-align:center; }
-    @media (prefers-reduced-motion: reduce) {
-        .sampling-screen, .seg-btn { transition:none; }
-    }
     /* ── Beat accent ── */
     .accent-panel { flex-shrink:0; }
     .accent-head { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
@@ -640,14 +601,16 @@
             <!-- Devices: takes remaining space -->
             <div class="panel devices-row ds-appear" style="animation-delay:.26s;">
                 <div class="panel-body" style="padding:18px 20px;">
-                    <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:14px; flex-shrink:0;">
-                        <div class="ds-label">Devices <button type="button" class="info-btn" aria-label="Info: Devices" data-info-title="Devices" data-info="The lighting devices that receive the Ambilight colors.&#10;On/off|Use each device&#x27;s power button to include or exclude it from the effect.&#10;Each device needs its zones mapped to a screen side in the Topology Editor, otherwise it gets no colors.">i</button></div>
-                        <span style="font-size:12px; color:var(--c-text-ghost);">keyboards excluded</span>
+                    <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:12px; flex-shrink:0;">
+                        <div class="ds-label">Devices <button type="button" class="info-btn" aria-label="Info: Devices" data-info-title="Devices" data-info="Which lighting devices receive the Ambilight colors.&#10;On/off|Click a device to include or exclude it from the effect.&#10;Zones and details|Which zones of each device are used, the topology and the identify (Flash) button are in the Devices page.">i</button></div>
+                        <span id="devices-summary" style="font-size:12px; color:var(--c-text-ghost);"></span>
+                        <a href="devices.html" class="devs-manage">Manage devices &rarr;</a>
                     </div>
-                    <div id="devices-container" style="flex:1; overflow-y:auto; min-height:0;">
-                        <div style="color:var(--c-text-dim); font-size:.9rem; text-align:center; padding:2rem 0;">
-                            Loading...
-                        </div>
+                    <div id="devices-container" class="devs-chips"></div>
+                    <div id="devices-warn" class="devs-warn" role="status" hidden>
+                        <span class="material-symbols-outlined" style="font-size:18px;" aria-hidden="true">warning</span>
+                        <span></span>
+                        <a href="devices.html">Open Devices</a>
                     </div>
                     <div id="checklist" class="checklist" hidden>
                         <div class="checklist-head">
@@ -703,6 +666,7 @@
 })();
 </script>
 <script src="js/navigation.js"></script>
+<script src="js/sampling-view.js"></script>
 <script src="js/ambilight.js"></script>
 <script>
     function updateFill(el) {

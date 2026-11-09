@@ -143,7 +143,7 @@ def get_sampling_preview() -> dict:
 
 
 def _mapped_device_keys() -> list:
-    """Device keys (non-matrix) that have at least one mapped zone."""
+    """Device keys that have at least one mapped zone."""
     if _openrgb_manager is None or _ambilight_service is None:
         return []
     keys = []
@@ -163,25 +163,28 @@ def _mapped_device_keys() -> list:
 
 @eel.expose
 def get_ambilight_devices() -> list:
-    """Ritorna la lista dei device disponibili (no MATRIX/keyboard)."""
+    """Ritorna i device disponibili (tastiere comprese) con le loro zone."""
     if _openrgb_manager is None:
         return []
 
-    from effects.ambilight_service import build_device_zones
-    from effects.openrgb_manager import TopologyType
+    from effects.ambilight_service import build_device_zones, is_zone_enabled
 
     ambi_cfg     = _ambilight_service.get_config() if _ambilight_service else {}
     ambi_devices = ambi_cfg.get("devices", {})
     result       = []
 
     for ctrl in _openrgb_manager.devices:
-        if ctrl.topology.topology_type == TopologyType.MATRIX:
-            continue
-
         device_key   = _openrgb_manager._make_device_key(ctrl)
         zones, _     = build_device_zones(device_key)
         ambi_entry   = ambi_devices.get(device_key, {})
         enabled      = ambi_entry.get("enabled", False)  # same default as the engine
+        zones_ena    = ambi_entry.get("zones_enabled", {})
+        zone_list    = [{
+            "zone_index": z["zone_index"],
+            "name":       z["name"],
+            "edge":       z["edge"],
+            "enabled":    is_zone_enabled(zones_ena, z),
+        } for z in zones]
 
         result.append({
             "device_key":    device_key,
@@ -190,6 +193,9 @@ def get_ambilight_devices() -> list:
             "topology_type": ctrl.topology.topology_type.value,
             "has_topology":  bool(zones),
             "zone_count":    len(zones),
+            "zones":         zone_list,
+            "zones_active":  sum(1 for z in zone_list if z["enabled"]),
+            "device_type":   str(getattr(getattr(ctrl.topology.device, "type", None), "name", "")).lower(),
             "enabled":       enabled,
         })
 

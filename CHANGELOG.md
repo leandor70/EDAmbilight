@@ -10,6 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Devices is now the one place for hardware.** Each device is a row with its on/off switch and an
+  expandable list of its zones (the zone switches used to be on the Control page, where they were easy
+  to miss: a zone left off is forced to black). A small live Sampling preview at the top shows what
+  turning a device or zone on or off does. The Control page keeps only compact on/off chips, a summary
+  and a warning when nothing would light up (no device mapped, none on, or no active zone).
+- Keyboards are no longer hidden: they are listed like any device, off until you switch them on. They
+  are read as plain zones (one color per zone, taken from one point of the screen), not key by key.
+  After updating, a keyboard that was hidden before appears once in the "hardware changed" notice.
 - The chosen theme is now also saved in `config/settings.json` (`ui_theme`), not only in the
   browser. It is no longer lost when the web port changes, when another browser is used or when
   the browser clears site data. The saved value wins at load; an existing browser choice is

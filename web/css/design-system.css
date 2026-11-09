@@ -738,6 +738,34 @@ input[type=text]:focus, input[type=number]:focus {
 .dev-zone-name   { font-size:13px; font-family:var(--f-body); font-weight:600; color:rgba(255,255,255,.60); letter-spacing:.03em; }
 .dev-zone-edge   { font-size:12px;  font-family:var(--f-body); color:var(--c-text-ghost); letter-spacing:.04em; }
 
+/* Control > Devices: compact on/off chips (zones and details live in the Devices page) */
+.devs-chips { display:flex; flex-wrap:wrap; gap:8px; align-content:flex-start; }
+.dev-chip {
+  display:inline-flex; align-items:center; gap:8px;
+  padding:7px 14px 7px 11px; border-radius:22px; cursor:pointer;
+  font-family:var(--f-body); font-size:13px; font-weight:600; letter-spacing:.02em;
+  color:var(--c-text-dim); background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.10);
+  transition: border-color .18s var(--ease), background .18s var(--ease), color .18s var(--ease), transform .12s var(--ease);
+}
+.dev-chip:not([disabled]):hover { border-color:rgba(20,245,255,.32); color:var(--c-text); }
+.dev-chip:not([disabled]):active { transform:scale(.97); }
+.dev-chip.on { color:var(--c-cyan); background:rgba(20,245,255,.10); border-color:rgba(20,245,255,.50); }
+.dev-chip[disabled] { opacity:.38; cursor:not-allowed; }
+.devs-manage { margin-left:auto; font-family:var(--f-body); font-size:13px; font-weight:600; color:var(--c-cyan); text-decoration:none; white-space:nowrap; }
+.devs-manage:hover { opacity:.72; }
+.devs-empty { color:var(--c-text-dim); font-size:.9rem; text-align:center; padding:1.6rem 0; }
+.devs-empty span { font-size:.8rem; color:var(--c-text-ghost); }
+.devs-empty a { color:var(--c-cyan); }
+.devs-warn {
+  display:flex; align-items:center; gap:9px; margin-top:12px; padding:9px 12px; border-radius:10px;
+  font-family:var(--f-body); font-size:13px; line-height:1.4; color:var(--c-warning);
+  background:rgba(255,159,28,.07); border:1px solid rgba(255,159,28,.28);
+}
+.devs-warn[hidden] { display:none; }
+.devs-warn span:nth-of-type(2) { flex:1; color:var(--c-text); }
+.devs-warn a { color:var(--c-warning); font-weight:700; text-decoration:none; white-space:nowrap; }
+
 /* ── Settings divider ───────────────────────────────────────────────────── */
 
 .settings-divider {
@@ -1108,6 +1136,13 @@ input[type=text]:focus, input[type=number]:focus {
 :root[data-theme="light"] .dev-zone-item { border-color: rgba(14,116,144,.20); background: rgba(14,116,144,.05); }
 :root[data-theme="light"] .dev-zone-item:hover { border-color: rgba(14,116,144,.40); background: rgba(14,116,144,.11); }
 :root[data-theme="light"] .dev-zone-name { color: var(--c-text); }
+
+:root[data-theme="light"] .dev-chip { background: rgba(255,255,255,.55); border-color: rgba(14,26,43,.16); color:#5B677C; }
+:root[data-theme="light"] .dev-chip:not([disabled]):hover { border-color: rgba(14,116,144,.45); color: var(--c-text); }
+:root[data-theme="light"] .dev-chip.on { color:#0E7490; background: rgba(14,116,144,.11); border-color: rgba(14,116,144,.55); }
+:root[data-theme="light"] .devs-manage, :root[data-theme="light"] .devs-empty a { color:#0E7490; }
+:root[data-theme="light"] .devs-warn { background: rgba(154,91,0,.08); border-color: rgba(154,91,0,.32); color:#9A5B00; }
+:root[data-theme="light"] .devs-warn a { color:#9A5B00; }
 :root[data-theme="light"] .settings-divider { background: rgba(14,26,43,.09); }
 :root[data-theme="light"] .device-card:hover { border-color: #fff; }
 

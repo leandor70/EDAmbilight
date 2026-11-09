@@ -54,11 +54,10 @@ class OpenRGBManager:
     # ── Device enumeration ─────────────────────────────────────────────────────
 
     def _init_devices(self) -> None:
-        """Enumerate all non-MATRIX devices from OpenRGB."""
+        """Enumerate every device OpenRGB reports (keyboards included: the user
+        decides in the Devices page whether one takes part in the ambilight)."""
         for device in self._client.devices:
-            topo = self._detect_topology(device)
-            if topo != TopologyType.MATRIX:
-                self.devices.append(DeviceController(device, topo))
+            self.devices.append(DeviceController(device, self._detect_topology(device)))
         self._assign_device_keys()
         print(f"[OpenRGBManager] {len(self.devices)} devices enrolled "
               f"({len(self._client.devices)} total from OpenRGB)")
@@ -81,10 +80,8 @@ class OpenRGBManager:
 
     @staticmethod
     def _detect_topology(device) -> TopologyType:
-        """Keyboards (by the device type OpenRGB reports) are excluded as MATRIX."""
-        if getattr(device.type, "name", "") == "KEYBOARD":
-            print(f"[OpenRGBManager] '{device.name}' → MATRIX (device type: keyboard)")
-            return TopologyType.MATRIX
+        """Several LEDs -> LINEAR (a keyboard too: it is read as plain zones, one
+        colour per zone), otherwise SINGLE. MATRIX is kept only for old configs."""
         if len(device.leds) > 1:
             return TopologyType.LINEAR
         return TopologyType.SINGLE

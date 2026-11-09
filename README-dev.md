@@ -33,7 +33,7 @@ EDAmbilight/
 ├── web/                         # Frontend (HTML + vanilla JS + Tailwind)
 │   ├── index.html               # Dashboard
 │   ├── loading.html             # Splash screen
-│   ├── devices.html             # Device manager
+│   ├── devices.html             # Devices: on/off, zones, flash, live preview
 │   ├── settings.html            # OpenRGB / web-port settings
 │   ├── preview.html             # WebGL live effect preview
 │   ├── topology-editor.html     # Drag-and-drop zone canvas
@@ -43,7 +43,8 @@ EDAmbilight/
 │   │   ├── glass-select.css     # Translucent dropdown panel (both themes)
 │   │   └── tailwind.min.css     # Tailwind CSS (local, no CDN)
 │   ├── js/
-│   │   ├── ambilight.js         # Dashboard logic (renderDevices, liveUpdate)
+│   │   ├── ambilight.js         # Dashboard logic (device chips, liveUpdate)
+│   │   ├── sampling-view.js     # Live sampling preview, shared by Dashboard and Devices
 │   │   ├── navigation.js        # Sidebar + sonar-ring animations
 │   │   ├── common.js            # api() wrapper, showNotification(), escapeHtml
 │   │   ├── theme.js             # Light / dark switch (localStorage `edambi.theme` + `ui_theme` in settings.json)

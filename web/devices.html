@@ -8,6 +8,7 @@
 <link href="css/tailwind.min.css" rel="stylesheet">
 <link href="css/fonts.css" rel="stylesheet">
 <link href="css/design-system.css" rel="stylesheet">
+<link href="css/sampling-view.css" rel="stylesheet">
 <style>
     @font-face {
         font-family:'Material Symbols Outlined'; font-style:normal; font-weight:100 700;
@@ -38,6 +39,25 @@
         100%{ box-shadow: 0 0 6px rgba(20,245,255,.4); }
     }
     .btn.flashing { animation: flashPulse .6s ease-in-out 3; }
+
+    /* Zones of a device (expandable row) */
+    .dev-more {
+        display:inline-flex; align-items:center; gap:4px; padding:5px 10px; border-radius:8px; cursor:pointer;
+        font-family:var(--f-body); font-size:13px; font-weight:600; color:var(--c-text-dim);
+        background:transparent; border:1px solid transparent;
+        transition:color .18s, background .18s, border-color .18s;
+    }
+    .dev-more:hover { color:var(--c-text); background:rgba(255,255,255,.04); }
+    .dev-more .material-symbols-outlined { font-size:18px; transition:transform .2s cubic-bezier(0.23,1,0.32,1); }
+    .dev-more[aria-expanded="true"] .material-symbols-outlined { transform:rotate(180deg); }
+    .zones-box { padding:2px 18px 14px 74px; }
+    .zones-box[hidden] { display:none; }
+    .zones-note { margin-top:8px; font-size:13px; line-height:1.45; color:var(--c-text-ghost); }
+    .zones-off  { color:var(--c-warning); font-weight:700; }
+    :root[data-theme="light"] .dev-more { color:#5B677C; }
+    :root[data-theme="light"] .dev-more:hover { color:var(--c-text); background:rgba(14,26,43,.05); }
+    :root[data-theme="light"] .zones-note { color:#5B677C; }
+    .preview-panel { margin-bottom:12px; }
 </style>
 <script src="/eel.js"></script>
 <script src="js/common.js"></script>
@@ -104,6 +124,29 @@
 
         </div>
 
+        <!-- Live preview: shows at once what turning a device or zone on / off does -->
+        <div id="status-visual" class="panel sampling-panel preview-panel ds-appear" style="animation-delay:.2s;">
+            <div class="panel-body" style="padding:14px 20px;">
+                <div class="sampling-head">
+                    <div style="display:flex; align-items:baseline; gap:10px; min-width:0;">
+                        <div class="ds-label">Sampling</div>
+                        <span class="sampling-hint">What the lights read now. Hover a band or a dot to see which device it feeds</span>
+                    </div>
+                    <div class="seg" role="group" aria-label="Sampling view">
+                        <button type="button" id="seg-live"  class="seg-btn" aria-pressed="true"  onclick="setSamplingMode('live')">Live</button>
+                        <button type="button" id="seg-zones" class="seg-btn" aria-pressed="false" onclick="setSamplingMode('zones')">Zones</button>
+                    </div>
+                </div>
+                <div id="sampling-stage" class="sampling-stage" data-max-h="150">
+                    <div id="sampling-screen" class="sampling-screen">
+                        <canvas id="sampling-canvas" aria-label="Screen sampling preview" role="img"></canvas>
+                        <div id="sampling-tip" class="sampling-tip" role="tooltip" hidden></div>
+                    </div>
+                </div>
+                <div id="sampling-caption" class="sampling-caption" aria-live="off"></div>
+            </div>
+        </div>
+
         <!-- Device list -->
         <div id="device-list" class="space-y-2">
             <div style="text-align:center;padding:56px 0;color:var(--c-text-dim);">
@@ -115,6 +158,7 @@
 </main>
 
 <script src="js/navigation.js"></script>
+<script src="js/sampling-view.js"></script>
 <script>
 'use strict';
 
@@ -123,7 +167,13 @@ let _devices = [];
 window.addEventListener('load', async () => {
     document.body.classList.add('loaded');
     await loadDevices();
+    _initSampling();
 });
+
+// Rows whose zones the user opened or closed (kept across a rescan). A device that is on starts open.
+const _open = new Set();
+const _closed = new Set();
+const isOpen = dev => _open.has(dev.device_key) || (dev.enabled && !_closed.has(dev.device_key));
 
 async function loadDevices() {
     const devs = await api('get_ambilight_devices');
@@ -162,20 +212,25 @@ function renderDevices(devs) {
         const tType = dev.topology_type || 'single';
         const badgeClass = tType === 'linear' ? 'badge-linear'
                          : tType === 'matrix'  ? 'badge-matrix' : 'badge-single';
-        const iconName = tType === 'matrix'  ? 'keyboard'
+        const isKb = dev.device_type === 'keyboard';
+        const iconName = isKb ? 'keyboard'
                        : tType === 'linear'  ? 'linear_scale'
                        : 'fiber_manual_record';
-        const iconColor = tType === 'matrix'  ? 'var(--ic-matrix)'
+        const iconColor = isKb ? 'var(--ic-matrix)'
                         : tType === 'linear'  ? 'var(--ic-linear)'
                         : 'var(--ic-single)';
         const topoEl = dev.has_topology
             ? `<span class="has-topology">${dev.zone_count} zone${dev.zone_count !== 1 ? 's' : ''}</span>`
             : `<span class="no-topology">No topology</span>`;
+        const hasZones = dev.has_topology && (dev.zones || []).length > 0;
+        const open = hasZones && isOpen(dev);
+        const dim = dev.enabled === false ? 'opacity:.55;' : '';
 
         return `
         <div class="panel device-card ds-appear" id="dev-card-${idx}"
-             style="animation-delay:${.06 + idx * .05}s;${dev.enabled === false ? 'opacity:.45;' : ''}">
-            <div class="panel-body" style="padding:14px 18px;flex-direction:row;align-items:center;gap:16px;">
+             style="animation-delay:${.06 + idx * .05}s;">
+            <div class="panel-body" id="dev-row-${idx}"
+                 style="padding:14px 18px;flex-direction:row;align-items:center;gap:16px;${dim}">
                 <div class="dev-icon-wrap">
                     <span class="material-symbols-outlined"
                           style="font-size:20px;color:${iconColor};">${iconName}</span>
@@ -186,12 +241,18 @@ function renderDevices(devs) {
                         ${escapeHtml(dev.name)}
                     </div>
                     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                        <span class="badge ${badgeClass}">${tType}</span>
+                        <span class="badge ${badgeClass}">${isKb ? 'keyboard' : tType}</span>
                         <span style="font-size:13px;color:var(--c-text-dim);">${dev.led_count} LED</span>
                         ${topoEl}
                     </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;">
+                    ${hasZones ? `
+                    <button type="button" class="dev-more" id="more-${idx}" aria-expanded="${open}"
+                            aria-controls="zones-${idx}" onclick="toggleZonesBox(${idx})">
+                        <span id="zcount-${idx}"></span>
+                        <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+                    </button>` : ''}
                     <label class="glass-toggle-container" onclick="event.stopPropagation()"
                            title="${dev.has_topology ? 'Include in ambilight lighting' : 'Map its zones in the Topology Editor first'}">
                         <input type="checkbox" class="glass-toggle-input"
@@ -213,21 +274,76 @@ function renderDevices(devs) {
                     </button>
                 </div>
             </div>
+            ${hasZones ? `<div class="zones-box" id="zones-${idx}" ${open ? '' : 'hidden'}>${zonesHtml(dev, idx)}</div>` : ''}
         </div>`;
     }).join('');
+    devs.forEach((dev, idx) => updateZoneCount(idx));
+}
+
+// "area" zones read one point of the screen; Monitor* zones follow a screen edge
+const _edgeText = e => e === 'area' ? 'one color' : `${e} edge`;
+const _zoneLabel = z => /^[?\s]*$/.test(z.name || '') ? `Zone ${z.zone_index}` : z.name;
+
+function zonesHtml(dev, idx) {
+    const note = dev.device_type === 'keyboard'
+        ? `<div class="zones-note">Keyboard: each zone shows a single color taken from one point of the screen (not key by key).</div>`
+        : '';
+    return `<div class="dev-zones-grid">
+        ${dev.zones.map(z => `
+        <label class="dev-zone-item">
+            <input type="checkbox" class="dev-zone-check" ${z.enabled ? 'checked' : ''}
+                   onchange="toggleZone(${idx}, ${Number(z.zone_index)}, this.checked)">
+            <span class="dev-zone-name">${escapeHtml(_zoneLabel(z))}</span>
+            <span class="dev-zone-edge">${escapeHtml(_edgeText(z.edge))}</span>
+        </label>`).join('')}
+    </div>${note}`;
+}
+
+function updateZoneCount(idx) {
+    const dev = _devices[idx], el = document.getElementById('zcount-' + idx);
+    if (!dev || !el || !dev.zones) return;
+    const on = dev.zones.filter(z => z.enabled).length, n = dev.zones.length;
+    el.innerHTML = on < n ? `Zones <span class="zones-off">${on}/${n}</span>` : `Zones ${n}/${n}`;
+}
+
+function toggleZonesBox(idx) {
+    const dev = _devices[idx], box = document.getElementById('zones-' + idx);
+    const btn = document.getElementById('more-' + idx);
+    if (!dev || !box) return;
+    const open = box.hidden;
+    box.hidden = !open;
+    btn.setAttribute('aria-expanded', String(open));
+    if (open) { _open.add(dev.device_key); _closed.delete(dev.device_key); }
+    else      { _open.delete(dev.device_key); _closed.add(dev.device_key); }
+}
+
+async function toggleZone(idx, zoneIndex, enabled) {
+    const dev = _devices[idx];
+    const z = dev && dev.zones.find(q => q.zone_index === zoneIndex);
+    if (!z) return;
+    z.enabled = enabled;
+    updateZoneCount(idx);
+    const res = await api('set_ambilight_zone_enabled', dev.device_key, zoneIndex, enabled);
+    if (!apiOk(res)) {
+        z.enabled = !enabled;
+        updateZoneCount(idx);
+        const box = document.getElementById('zones-' + idx);
+        if (box) box.innerHTML = zonesHtml(dev, idx);
+        showNotification('Could not update the zone: ' + (res.error || 'unknown error'), 'error');
+    }
 }
 
 async function toggleDevice(deviceKey, enabled, idx) {
     const dev = _devices.find(d => d.device_key === deviceKey);
     if (dev) dev.enabled = enabled;
-    const card = document.getElementById('dev-card-' + idx);
-    if (card) card.style.opacity = enabled ? '' : '.45';
+    const card = document.getElementById('dev-row-' + idx);
+    if (card) card.style.opacity = enabled ? '' : '.55';
     const res = await api('set_ambilight_device_enabled', deviceKey, enabled);
     if (apiOk(res)) {
         showNotification(enabled ? 'Device enabled' : 'Device disabled', 'info', 1800);
     } else {
         if (dev) dev.enabled = !enabled;
-        if (card) card.style.opacity = !enabled ? '' : '.45';
+        if (card) card.style.opacity = !enabled ? '' : '.55';
         const toggle = card && card.querySelector('.glass-toggle-input');
         if (toggle) toggle.checked = !enabled;
         showNotification('Could not update device: ' + (res.error || 'unknown error'), 'error');

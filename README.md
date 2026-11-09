@@ -67,8 +67,8 @@ No Python or extra dependencies needed.
 2. Extract the release zip and run **EDAmbilight.exe**
 3. The splash screen initialises and the dashboard opens automatically
 4. Open **Topology** and check that your strip's zones are mapped (MonitorTop / Right / Bottom / Left)
-5. On the **Dashboard**, switch on the devices you want to drive and toggle **Enable** —
-   LEDs follow your screen in real time. The *Getting started* checklist shows what is missing.
+5. In **Devices**, switch on the devices you want to drive and pick their zones, then toggle **Enable**
+   on the Dashboard — LEDs follow your screen in real time. The *Getting started* checklist shows what is missing.
 
 ---
 
@@ -127,7 +127,14 @@ The **Status** panel reports `ACTIVE`, `INACTIVE`, `STANDBY` (the screen gives n
 
 ### Devices
 
-Enable or disable individual LED devices and zones. Only enabled zones receive color data.
+The one place to manage your hardware. Each device is a row with its on/off switch; open it (**Zones**)
+to enable or disable its individual zones. Only enabled zones receive color data. A small live
+**Sampling** preview at the top shows at once what turning a device or zone on or off does.
+Keyboards are listed like any other device and are off until you switch them on; each of their zones
+shows a single color taken from one point of the screen (not key by key).
+
+The Dashboard keeps a compact row of on/off chips for the same devices, a summary
+("2 of 6 devices on · 11 zones receiving colors") and a warning when nothing would light up.
 
 ![Devices](docs/ss-devices.png)
 

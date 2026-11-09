@@ -18,15 +18,7 @@ window.addEventListener('load', async () => {
     applyConfig(_cfg);
     _labelControls();
     toggleAdvanced(_lsGet('edambi.advanced') !== '0');
-    renderDevices(_devs, _cfg);
-
-    // Carica zone per device già abilitati (dopo renderDevices, _devs è già popolato)
-    for (const dev of _devs) {
-        const devCfg = (_cfg.devices || {})[dev.device_key] || {};
-        if (devCfg.enabled && dev.has_topology) {
-            await loadDeviceZones(dev.device_key);
-        }
-    }
+    renderDevices(_devs);
 
     pollStatus();
     setInterval(pollStatus, 800);
@@ -165,179 +157,92 @@ function _setGroupActive(id, active) {
     g.querySelectorAll('input').forEach(i => { i.disabled = !active; });
 }
 
-// ── Devices ───────────────────────────────────────────────────────────────────
+// ── Devices (summary: which devices are on; zones and details live in Devices) ──
 
 function _devSafeId(deviceKey) {
     return deviceKey.replace(/[^a-z0-9]/gi, '_');
 }
 
-// Power button SVG (classic power symbol)
 const _powerSVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    stroke-width="2.2" stroke-linecap="round" width="15" height="15"
-    style="position:relative;z-index:1;pointer-events:none;">
+    stroke-width="2.4" stroke-linecap="round" width="13" height="13" aria-hidden="true">
   <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
   <line x1="12" y1="2" x2="12" y2="12"/>
 </svg>`;
 
-function renderDevices(devs, cfg) {
+const _isOn = key => !!(((_cfg.devices || {})[key] || {}).enabled);
+
+function renderDevices(devs) {
     const container = document.getElementById('devices-container');
     container.innerHTML = '';
 
     if (!devs.length) {
         container.innerHTML = `
-            <div style="color:var(--c-text-dim);font-size:.875rem;text-align:center;padding:2rem 0;">
+            <div class="devs-empty">
                 No devices available.<br>
-                <span style="font-size:.75rem;">Connect OpenRGB and configure topologies.</span>
+                <span>Connect OpenRGB first: <a href="settings.html">Settings</a>.</span>
             </div>`;
+        _renderDevicesSummary();
         return;
     }
 
-    const devicesCfg = cfg.devices || {};
-
     devs.forEach(dev => {
-        const devCfg  = devicesCfg[dev.device_key] || {};
-        const enabled = devCfg.enabled ?? false;
-        const safeId  = _devSafeId(dev.device_key);
-        const tType   = dev.topology_type || 'single';
-
-        const iconName = tType === 'matrix' ? 'keyboard'
-                       : tType === 'linear' ? 'linear_scale'
-                       : 'fiber_manual_record';
-
-        const zonesTxt = dev.has_topology
-            ? `${dev.zone_count} zone${dev.zone_count !== 1 ? 's' : ''}`
-            : `<span style="color:var(--c-notopo);">no topology</span>`;
-
-        const card = document.createElement('div');
-        card.id        = 'dev-card-' + safeId;
-        card.className = 'dev-card' + (enabled ? ' dev-card--on' : '');
-        card.innerHTML = `
-            <div class="dev-card-header">
-                <div class="dev-icon" id="dev-icon-${safeId}">
-                    <span class="material-symbols-outlined" style="font-size:19px;">${iconName}</span>
-                </div>
-                <div class="dev-info">
-                    <div class="dev-name">${escapeHtml(dev.name)}</div>
-                    <div class="dev-meta">
-                        ${dev.led_count} LED &middot; ${tType} &middot; ${zonesTxt}
-                    </div>
-                </div>
-                <button
-                    id="dev-btn-${safeId}"
-                    class="dev-power-btn${enabled ? ' enabled' : ''}"
-                    title="${enabled ? 'Turn off' : 'Turn on'} for ambilight"
-                    aria-label="${escapeAttr(dev.name)}: ${enabled ? 'turn off' : 'turn on'} for ambilight"
-                    aria-pressed="${enabled}"
-                    onclick="toggleDevice('${escapeAttr(dev.device_key)}', ${!enabled}, this)"
-                    ${!dev.has_topology ? 'disabled' : ''}>
-                    ${_powerSVG}
-                </button>
-            </div>
-            ${!dev.has_topology ? `
-            <div class="dev-no-topo">
-                Map its zones in the <a href="topology-editor.html" style="color:var(--c-cyan);">Topology Editor</a> to use this device.
-            </div>` : ''}
-            <div id="zones-${safeId}" class="dev-zones"></div>
-        `;
-        container.appendChild(card);
-
-        if (enabled && dev.has_topology) {
-            loadDeviceZones(dev.device_key);
-        }
+        const on = _isOn(dev.device_key);
+        const b  = document.createElement('button');
+        b.type = 'button';
+        b.id   = 'dev-chip-' + _devSafeId(dev.device_key);
+        b.className = 'dev-chip' + (on ? ' on' : '');
+        b.disabled  = !dev.has_topology;
+        b.title = dev.has_topology
+            ? (on ? 'On: receives the ambilight colors. Click to turn off.' : 'Off. Click to turn on.')
+            : 'No zones mapped yet: map them in the Topology Editor.';
+        b.setAttribute('aria-pressed', String(on));
+        b.innerHTML = `${_powerSVG}<span>${escapeHtml(dev.name)}</span>`;
+        b.onclick = () => toggleDevice(dev.device_key, !_isOn(dev.device_key));
+        container.appendChild(b);
     });
+    _renderDevicesSummary();
 }
 
-function toggleDevice(deviceKey, enable, btnEl) {
-    // Update config state
+function _renderDevicesSummary() {
+    const sum  = document.getElementById('devices-summary');
+    const warn = document.getElementById('devices-warn');
+    if (!sum || !warn) return;
+    const mapped = _devs.filter(d => d.has_topology);
+    const on     = mapped.filter(d => _isOn(d.device_key));
+    const zones  = on.reduce((n, d) => n + (d.zones_active || 0), 0);
+
+    sum.textContent = !_devs.length ? ''
+        : `${on.length} of ${_devs.length} device${_devs.length === 1 ? '' : 's'} on · ${zones} zone${zones === 1 ? '' : 's'} receiving colors`;
+
+    let msg = '';
+    if (!_devs.length)         msg = '';
+    else if (!mapped.length)   msg = 'No device has its zones mapped to the screen yet.';
+    else if (!on.length)       msg = 'No device is switched on, so nothing will light up.';
+    else if (!zones)           msg = 'The devices that are on have no active zones, so nothing will light up.';
+    warn.hidden = !msg;
+    if (msg) warn.querySelector('span').textContent = msg;
+}
+
+function toggleDevice(deviceKey, enable) {
     if (!_cfg.devices) _cfg.devices = {};
     if (!_cfg.devices[deviceKey]) _cfg.devices[deviceKey] = {};
     _cfg.devices[deviceKey].enabled = enable;
+    _applyChip(deviceKey, enable);
     api('set_ambilight_device_enabled', deviceKey, enable).then(res => {
         if (apiOk(res)) return;
-        // Roll back the optimistic UI change
-        _reportApiFailure('update the device', res);
-        const rb = document.getElementById('dev-btn-' + _devSafeId(deviceKey));
-        if (!rb) return;
+        _reportApiFailure('update the device', res);   // roll back the optimistic change
         _cfg.devices[deviceKey].enabled = !enable;
-        _applyDeviceUi(deviceKey, !enable, rb);
+        _applyChip(deviceKey, !enable);
     });
-    _applyDeviceUi(deviceKey, enable, btnEl);
 }
 
-function _applyDeviceUi(deviceKey, enable, btnEl) {
-    const safeId  = _devSafeId(deviceKey);
-    const card    = document.getElementById('dev-card-'  + safeId);
-    const btn     = btnEl || document.getElementById('dev-btn-'  + safeId);
-    const zonesEl = document.getElementById('zones-'     + safeId);
-
-    // Card state
-    if (card) card.classList.toggle('dev-card--on', enable);
-
-    // Button state + ripple animation
-    if (btn) {
-        btn.classList.toggle('enabled', enable);
-        btn.title = (enable ? 'Turn off' : 'Turn on') + ' for ambilight';
-        btn.onclick = () => toggleDevice(deviceKey, !enable, btn);
-        btn.setAttribute('aria-pressed', String(enable));
-
-        const ripple = document.createElement('span');
-        ripple.className = 'dev-power-ripple';
-        btn.appendChild(ripple);
-        setTimeout(() => ripple.remove(), 700);
+function _applyChip(deviceKey, on) {
+    const chip = document.getElementById('dev-chip-' + _devSafeId(deviceKey));
+    if (chip) {
+        chip.classList.toggle('on', on);
+        chip.setAttribute('aria-pressed', String(on));
     }
-
-    // Zones section
-    if (enable) {
-        const dev = _devs.find(d => d.device_key === deviceKey);
-        if (dev?.has_topology && zonesEl) {
-            zonesEl.innerHTML = '<div class="dev-zones-loading">Loading zones...</div>';
-            setTimeout(() => loadDeviceZones(deviceKey), 60);
-        }
-    } else {
-        if (zonesEl) zonesEl.innerHTML = '';
-    }
-}
-
-async function loadDeviceZones(deviceKey) {
-    const safeId    = _devSafeId(deviceKey);
-    const container = document.getElementById('zones-' + safeId);
-    if (!container) return;
-
-    const zones = await api('get_ambilight_device_zones', deviceKey);
-    if (!zones || !zones.length) {
-        container.innerHTML = `<div class="dev-zones-loading">No zones detected.</div>`;
-        return;
-    }
-
-    const cfg      = _cfg.devices?.[deviceKey] || {};
-    const zonesEna = cfg.zones_enabled || {};
-
-    // Zones are keyed by index; the name key is what older versions saved.
-    const isOn = z => (zonesEna[String(z.zone_index)] ?? zonesEna[z.name]) !== false;
-    // OpenRGB sometimes hands over unreadable names ("???")
-    const label = z => /^[?\s]*$/.test(z.name || '') ? `Zone ${z.zone_index}` : z.name;
-
-    container.innerHTML = `
-        <div class="dev-zones-grid">
-            ${zones.map(z => `
-            <label class="dev-zone-item">
-                <input type="checkbox" class="dev-zone-check"
-                    ${isOn(z) ? 'checked' : ''}
-                    onchange="toggleZone('${escapeAttr(deviceKey)}', ${Number(z.zone_index)}, this.checked)">
-                <span class="dev-zone-name">${escapeHtml(label(z))}</span>
-                <span class="dev-zone-edge">${escapeHtml(z.edge)}</span>
-            </label>`).join('')}
-        </div>`;
-}
-
-function toggleZone(deviceKey, zoneIndex, enabled) {
-    api('set_ambilight_zone_enabled', deviceKey, zoneIndex, enabled).then(res => {
-        if (!apiOk(res)) _reportApiFailure('update the zone', res);
-    });
-    if (!_cfg.devices) _cfg.devices = {};
-    if (!_cfg.devices[deviceKey]) _cfg.devices[deviceKey] = {};
-    if (!_cfg.devices[deviceKey].zones_enabled) _cfg.devices[deviceKey].zones_enabled = {};
-    _cfg.devices[deviceKey].zones_enabled[String(zoneIndex)] = enabled;
+    _renderDevicesSummary();
 }
 
 // ── Status polling ────────────────────────────────────────────────────────────
@@ -462,285 +367,7 @@ function _renderStatusInfo(s, kind) {
     if (hint.dataset.kind !== kind) { hint.innerHTML = html; hint.dataset.kind = kind; }
 }
 
-// ── Sampling preview (mini screen in the Status card) ────────────────────────
-
-let _sampMode = _lsGet('edambi.samplingMode') === 'zones' ? 'zones' : 'live';
-let _sampBusy = false;
-let _sampLast = null;
-
-function setSamplingMode(mode) {
-    _sampMode = mode === 'zones' ? 'zones' : 'live';
-    _lsSet('edambi.samplingMode', _sampMode);
-    _syncSamplingToggle();
-    _drawSampling(_sampLast);
-}
-
-function _syncSamplingToggle() {
-    const live = document.getElementById('seg-live');
-    const zones = document.getElementById('seg-zones');
-    if (live)  live.setAttribute('aria-pressed',  String(_sampMode === 'live'));
-    if (zones) zones.setAttribute('aria-pressed', String(_sampMode === 'zones'));
-}
-
-async function _samplingTick() {
-    if (!document.hidden && !_sampBusy) {
-        _sampBusy = true;
-        try {
-            const r = await api('get_sampling_preview');
-            if (apiOk(r)) { _sampLast = r; _drawSampling(r); }
-        } finally { _sampBusy = false; }
-    }
-    // Colors move fast: poll quicker in Live; geometry only changes with settings
-    setTimeout(_samplingTick, _sampMode === 'live' ? 250 : 1000);
-}
-
-function _initSampling() {
-    _syncSamplingToggle();
-    const stage = document.getElementById('sampling-stage');
-    if (stage && 'ResizeObserver' in window) {
-        new ResizeObserver(() => _drawSampling(_sampLast)).observe(stage);
-    }
-    const cv = document.getElementById('sampling-canvas');
-    if (cv) {
-        cv.addEventListener('mousemove', e => {
-            const b = cv.getBoundingClientRect();
-            _sampMouse = { x: e.clientX - b.left, y: e.clientY - b.top };
-            const hit = _hitAt(_sampMouse.x, _sampMouse.y);
-            const key = hit ? hit.key : null;
-            if (key !== _sampHoverKey) { _sampHoverKey = key; _drawSampling(_sampLast); }
-            else _showSamplingTip();
-        });
-        cv.addEventListener('mouseleave', () => {
-            _sampMouse = null; _sampHoverKey = null;
-            _drawSampling(_sampLast);
-        });
-    }
-    _drawSampling(null);
-    _samplingTick();
-}
-
-// Hover support: regions recorded by the last draw, in canvas CSS px
-let _sampHits = [];
-let _sampHoverKey = null;
-let _sampMouse = null;
-
-function _hitAt(x, y) {
-    // Dots first: they are small and may sit on top of nothing else, bands are larger
-    for (const h of _sampHits) {
-        if (h.type === 'dot' && Math.hypot(x - h.cx, y - h.cy) <= h.r) return h;
-    }
-    // Slack of 3px so thin bands are easy to hit
-    for (const h of _sampHits) {
-        if (h.type === 'band' && x >= h.x - 3 && x <= h.x + h.w + 3 && y >= h.y - 3 && y <= h.y + h.h + 3) return h;
-    }
-    return null;
-}
-
-const _EDGE_NAME = { top: 'Top edge', bottom: 'Bottom edge', left: 'Left edge', right: 'Right edge' };
-
-function _showSamplingTip() {
-    const tip = document.getElementById('sampling-tip');
-    const box = document.getElementById('sampling-screen');
-    if (!tip || !box) return;
-    const hit = _sampHoverKey && _sampMouse ? _sampHits.find(h => h.key === _sampHoverKey) : null;
-    if (!hit) { tip.hidden = true; return; }
-
-    const z = hit.z;
-    const dev = (_devs || []).find(d => d.device_key === z.dev);
-    const title = document.createElement('b');
-    title.textContent = dev ? dev.name : z.dev;
-    const zone = document.createElement('div');
-    zone.textContent = `Zone: ${z.zone}`;
-    const kind = document.createElement('span');
-    if (hit.type === 'dot') {
-        kind.textContent = `Reads one point of the screen (${Math.round(z.x * 100)}% across, ${Math.round(z.y * 100)}% down)`;
-    } else {
-        const n = z.colors ? z.colors.length / 6 : 0;
-        kind.textContent = `${_EDGE_NAME[z.edge] || z.edge} band · ${n} LED${n === 1 ? '' : 's'}`;
-    }
-    tip.replaceChildren(title, zone, kind);
-    if (hit.type === 'dot' && z.colors) {
-        const sw = document.createElement('div');
-        sw.style.cssText = `margin-top:5px; height:6px; border-radius:3px; background:#${z.colors.slice(0, 6)};`;
-        tip.appendChild(sw);
-    }
-
-    tip.hidden = false;
-    const bw = box.clientWidth, bh = box.clientHeight;
-    let left = _sampMouse.x + 14, top = _sampMouse.y + 14;
-    if (left + tip.offsetWidth > bw - 4) left = _sampMouse.x - tip.offsetWidth - 14;
-    if (top + tip.offsetHeight > bh - 4) top = _sampMouse.y - tip.offsetHeight - 14;
-    tip.style.left = Math.max(4, left) + 'px';
-    tip.style.top  = Math.max(4, top) + 'px';
-}
-
-function _fmtPct(v) {
-    return (Math.round(v * 10) / 10).toString() + '%';
-}
-
-function _drawSampling(r) {
-    const box = document.getElementById('sampling-screen');
-    const cv  = document.getElementById('sampling-canvas');
-    const cap = document.getElementById('sampling-caption');
-    if (!box || !cv) return;
-
-    const snap  = r && r.snapshot;
-    const fresh = !!(r && r.running && !r.standby && snap && snap.age < 2);
-    const live  = _sampMode === 'live' && fresh;
-
-    // Same proportions as the captured screen (browser screen as fallback)
-    const [fw, fh] = snap ? snap.frame : [window.screen.width || 16, window.screen.height || 9];
-    // Fill the panel width but cap the height, so very wide screens do not get huge
-    const stage = document.getElementById('sampling-stage');
-    const MAX_H = 230;
-    const cssW = Math.round(Math.max(120, Math.min((stage && stage.clientWidth) || 400, MAX_H * fw / fh)));
-    const cssH = Math.max(1, Math.round(cssW * fh / fw));
-    box.style.width  = cssW + 'px';
-    box.style.height = cssH + 'px';
-    _sampHits = [];
-    const dpr = window.devicePixelRatio || 1;
-    if (cv.width !== Math.round(cssW * dpr) || cv.height !== Math.round(cssH * dpr)) {
-        cv.width  = Math.round(cssW * dpr);
-        cv.height = Math.round(cssH * dpr);
-    }
-    const ctx = cv.getContext('2d');
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, cssW, cssH);
-
-    const s = cssW / fw;
-    const rect = snap ? snap.rect : [0, 0, fw, fh];
-    const cw = rect[2] - rect[0], ch = rect[3] - rect[1];
-    const cropped = cw < fw - 2 || ch < fh - 2;
-    const X0 = rect[0] * s, Y0 = rect[1] * s, W = cw * s, H = ch * s;
-
-    // Black bars (outside the content area) vs. picture area
-    ctx.fillStyle = '#03080d';
-    ctx.fillRect(0, 0, cssW, cssH);
-    ctx.fillStyle = '#0a1a26';
-    ctx.fillRect(X0, Y0, W, H);
-    if (cropped) {
-        ctx.save();
-        ctx.setLineDash([3, 3]);
-        ctx.strokeStyle = 'rgba(20,245,255,.40)';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(X0 + .5, Y0 + .5, W - 1, H - 1);
-        ctx.restore();
-    }
-
-    // Band thickness in frame px: real value from the service, else from settings
-    const cfgDepth = r ? (r.adaptive ? (r.adaptive_min + r.adaptive_max) / 2 : r.depth) : 10;
-    const depthPx = e => (snap && snap.depth && snap.depth[e] != null)
-        ? snap.depth[e]
-        : Math.round(Math.min(cw, ch) * cfgDepth / 100);
-
-    let zones = snap ? snap.zones : [];
-    const noZones = !zones.length;
-    if (noZones) {   // nothing is being sampled yet: show the configured bands
-        zones = ['top', 'bottom', 'left', 'right'].map(e => ({ edge: e, start: 0, end: 1, colors: '' }));
-    }
-    const ghost = !live || noZones;
-
-    const FILL_A = 'rgba(20,245,255,.16)', FILL_B = 'rgba(20,245,255,.26)', STROKE = 'rgba(20,245,255,.60)';
-    const hexAt = (str, i) => '#' + str.substr(i * 6, 6);
-
-    // 1) Area zones (circles) go under the bands
-    // Shown as small dots (many overlap); Zones view adds a faint halo with the real sampled radius
-    const radius = Math.max(3, 0.18 * Math.min(cw, ch) * s);
-    for (const z of zones) {
-        if (z.edge !== 'area') continue;
-        const cx = X0 + z.x * W, cy = Y0 + z.y * H;
-        if (!live) {
-            ctx.beginPath();
-            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(20,245,255,.05)';
-            ctx.fill();
-        }
-        // Solid dots, no outline (an outline on a dark dot reads as a ring). A pale disc
-        // underneath keeps the position visible when the LED is dark.
-        ctx.beginPath();
-        ctx.arc(cx, cy, 4, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,.16)';
-        ctx.fill();
-        ctx.fillStyle = (live && z.colors) ? hexAt(z.colors, 0) : STROKE;
-        ctx.fill();
-        if (z.dev) _sampHits.push({ type: 'dot', key: z.dev + '|' + z.zone, z, cx, cy, r: 8 });
-    }
-
-    // 2) Edge bands: left/right first, then top/bottom (corner overlap like the backend)
-    const order = { left: 0, right: 0, top: 1, bottom: 1 };
-    const edgeZones = zones.filter(z => z.edge !== 'area').sort((a, b) => order[a.edge] - order[b.edge]);
-    for (const z of edgeZones) {
-        const horiz = z.edge === 'top' || z.edge === 'bottom';
-        const d = Math.max(2, depthPx(z.edge) * s);          // never thinner than 2px on screen
-        const n = z.colors ? z.colors.length / 6 : 0;
-        const alongLen = (horiz ? W : H) * (z.end - z.start);
-        const alongOrg = (horiz ? X0 : Y0) + (horiz ? W : H) * z.start;
-        const crossOrg = z.edge === 'top' ? Y0 : z.edge === 'bottom' ? Y0 + H - d
-                       : z.edge === 'left' ? X0 : X0 + W - d;
-        const segs = Math.max(1, n);
-        const segLen = alongLen / segs;
-
-        for (let i = 0; i < segs; i++) {
-            const a = alongOrg + segLen * i;
-            if (live && n) {
-                ctx.fillStyle = hexAt(z.colors, i);
-                ctx.globalAlpha = .95;
-            } else {
-                ctx.fillStyle = i % 2 ? FILL_B : FILL_A;
-                ctx.globalAlpha = 1;
-            }
-            // +0.5 overlap hides sub-pixel seams between neighbouring segments
-            if (horiz) ctx.fillRect(a, crossOrg, segLen + .5, d);
-            else       ctx.fillRect(crossOrg, a, d, segLen + .5);
-        }
-        ctx.globalAlpha = 1;
-
-        if (ghost || !live) {
-            ctx.strokeStyle = STROKE; ctx.lineWidth = 1;
-            if (horiz) ctx.strokeRect(alongOrg + .5, crossOrg + .5, alongLen - 1, d - 1);
-            else       ctx.strokeRect(crossOrg + .5, alongOrg + .5, d - 1, alongLen - 1);
-        }
-        if (z.dev) {
-            _sampHits.push(horiz
-                ? { type: 'band', key: z.dev + '|' + z.zone, z, x: alongOrg, y: crossOrg, w: alongLen, h: d }
-                : { type: 'band', key: z.dev + '|' + z.zone, z, x: crossOrg, y: alongOrg, w: d, h: alongLen });
-        }
-    }
-
-    // Highlight whatever is under the mouse
-    const hov = _sampHoverKey && _sampHits.find(h => h.key === _sampHoverKey);
-    if (hov) {
-        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
-        if (hov.type === 'dot') { ctx.beginPath(); ctx.arc(hov.cx, hov.cy, 7, 0, Math.PI * 2); ctx.stroke(); }
-        else ctx.strokeRect(hov.x + .5, hov.y + .5, hov.w - 1, hov.h - 1);
-    }
-    _showSamplingTip();
-
-    // Caption: resolution, depth actually in use, state
-    if (cap) {
-        let depthTxt;
-        const depths = snap && snap.depth ? Object.values(snap.depth) : [];
-        if (r && r.adaptive) {
-            const eff = depths.length
-                ? depths.reduce((a, b) => a + b, 0) / depths.length / Math.min(cw, ch) * 100 : null;
-            depthTxt = `Depth ${r.adaptive_min}–${r.adaptive_max}% adaptive` + (eff != null && fresh ? ` · now ${_fmtPct(eff)}` : '');
-        } else {
-            depthTxt = `Depth ${_fmtPct(r ? r.depth : 10)}`;
-        }
-        let note = '';
-        if (!r || !r.running)       note = 'Service off — showing configured bands';
-        else if (r.standby)         note = 'Screen unavailable (standby)';
-        else if (noZones)           note = 'No device is receiving colors';
-        else if (cropped)           note = `Black bars cropped (${cw}×${ch})`;
-        cap.style.whiteSpace = 'pre-line';
-        cap.textContent = `${fw}×${fh} · ${depthTxt}` + (note ? '\n' + note : '');
-    }
-}
-
 // ── Getting-started checklist ─────────────────────────────────────────────────
-
-function _lsGet(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
-function _lsSet(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
 
 function dismissChecklist() {
     _lsSet('edambi.checklistDismissed', '1');
@@ -777,7 +404,7 @@ function _renderChecklist(s) {
         { done: s.mapped_devices > 0,
           text: 'At least one device has zones mapped to the screen', link: ['Open Topology Editor', 'topology-editor.html'] },
         { done: !!(s.enabled && s.active_zones > 0),
-          text: 'Enable switched on and a device selected below', link: null },
+          text: 'Enable switched on and a device with active zones', link: ['Open Devices', 'devices.html'] },
     ];
     const allDone = steps.every(x => x.done);
     box.hidden = allDone || _lsGet('edambi.checklistDismissed') === '1';
