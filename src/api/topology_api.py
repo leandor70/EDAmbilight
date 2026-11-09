@@ -418,11 +418,15 @@ def get_scene_topology() -> dict:
 
         all_zones   = []
         device_meta = []
+        key_grids   = []      # "device_id::zone_index" of key-grid zones (they read the whole screen)
+        get_layouts = getattr(_openrgb_manager, "matrix_layouts", None)
 
         for dev in devs_result["devices"]:
             device_id     = dev["device_id"]
             topo          = topologies.get(device_id, {})
             zones         = _visible_zones(topo.get("zones", []))
+            if get_layouts:
+                key_grids += [f"{device_id}::{i}" for i in get_layouts(device_id)]
             default_color = zones[0].get("color", "#14F5FF") if zones else "#14F5FF"
 
             for zone in zones:
@@ -443,6 +447,7 @@ def get_scene_topology() -> dict:
             "zones":                all_zones,
             "devices":              device_meta,
             "global_effect_center": global_center,
+            "key_grids":            key_grids,
         }
     except Exception as e:
         return {"success": False, "error": str(e), "zones": [], "devices": []}

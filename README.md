@@ -66,7 +66,7 @@ No Python or extra dependencies needed.
 1. Start **OpenRGB** → *Settings → SDK Server → Start Server*
 2. Extract the release zip and run **EDAmbilight.exe**
 3. The splash screen initialises and the dashboard opens automatically
-4. Open **Topology** and check that your strip's zones are mapped (MonitorTop / Right / Bottom / Left)
+4. Open **Topology**, press **Fit** on the *Screen* panel (or drag the SCREEN rectangle onto your monitor's strips) and save
 5. In **Devices**, switch on the devices you want to drive and pick their zones, then toggle **Enable**
    on the Dashboard — LEDs follow your screen in real time. The *Getting started* checklist shows what is missing.
 
@@ -146,7 +146,13 @@ Click **Edit topology** (or **Map zones** for a device without topology) to open
 
 ### Topology Editor
 
-Drag LED zones onto the screen canvas and assign them to a monitor edge (Right / Top / Left / Bottom). Changes take effect immediately without restarting.
+Drag LED zones on the canvas and place the **SCREEN** rectangle where your monitor is (**Fit** does it
+from the strips; drag a corner to resize, the border to move). Where a LED sits decides what it shows,
+whatever the zone is called: on a side of the rectangle it follows that side of the screen, inside it
+reads the point of the screen under it (the centre of the rectangle reads the centre of the screen),
+outside it stays off. Faded LEDs on the canvas are outside; a dot on a LED means it reads one point.
+Setups made before 1.6 that name their zones MonitorTop / MonitorRight / MonitorBottom / MonitorLeft keep
+the old name-based mapping until the rectangle is placed. Changes take effect without restarting.
 
 ![Topology Editor](docs/ss-topology.png)
 

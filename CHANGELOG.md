@@ -10,6 +10,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Where a zone is, not what it is called.** The Topology Editor has a SCREEN rectangle (your monitor):
+  **Fit** places it on the strips, corners resize it, the border moves it. LEDs on a side of the rectangle
+  follow that side of the screen, LEDs inside read the point of the screen under them, LEDs outside stay
+  off; it works LED by LED, so a zone longer than the screen lights only the part along it. Zone names
+  no longer matter. Without a rectangle, setups whose zones are named MonitorTop / Right / Bottom / Left
+  keep the old mapping (Fit reproduces it), others use the bounding box of the whole scene.
+  Note: once the rectangle is placed, zones read their point relative to the screen, not to the whole
+  scene as before, so devices placed away from the monitor may read a different part of the screen.
+
 - **Devices is now the one place for hardware.** Each device is a row with its on/off switch and an
   expandable list of its zones (the zone switches used to be on the Control page, where they were easy
   to miss: a zone left off is forced to black). A small live Sampling preview at the top shows what

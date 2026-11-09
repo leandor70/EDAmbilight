@@ -43,6 +43,12 @@ class TopologyCanvas {
         this.showCalibration = false;
         this.calibrationSpacing = 10;
 
+        // Screen rectangle: where the monitor sits in the scene (world coords, y up).
+        // rect = the one placed by hand (null = automatic); mode comes from the backend
+        // ('manual' | 'names' | 'auto'); keyGrids = zones that read the whole screen.
+        this.screen = { rect: null, mode: 'auto', keyGrids: new Set() };
+        this.screenDrag = null;
+
         this.setupEventListeners();
         this.render();
     }
@@ -83,7 +89,18 @@ class TopologyCanvas {
             return;
         }
 
-        // Priority 2: Check if clicking on a zone
+        // Priority 2: the screen rectangle (corner = resize, border = move)
+        const sh = this.hitScreenRect(screenPos);
+        if (sh) {
+            const r0 = { ...this.effectiveScreenRect() };
+            this.screen.rect = { ...r0 };              // touching it places the screen by hand
+            this.screenDrag = { ...sh, start: worldPos, r0 };
+            updateScreenPanel();
+            this.render();
+            return;
+        }
+
+        // Priority 3: Check if clicking on a zone
         const clickedZone = this.findZoneAt(worldPos);
 
         if (clickedZone) {
@@ -155,7 +172,28 @@ class TopologyCanvas {
             return;
         }
 
-        // Priority 2: Dragging zone
+        // Priority 2: Dragging the screen rectangle
+        if (this.screenDrag) {
+            const snap = v => this.snapEnabled ? Math.round(v / this.gridSize) * this.gridSize : v;
+            const d = this.screenDrag, r0 = d.r0;
+            const dx = worldPos.x - d.start.x, dy = worldPos.y - d.start.y;
+            const r = { ...r0 };
+            if (d.type === 'move') {
+                const mx = snap(r0.x_min + dx) - r0.x_min, my = snap(r0.y_min + dy) - r0.y_min;
+                r.x_min += mx; r.x_max += mx; r.y_min += my; r.y_max += my;
+            } else {
+                if (d.cx === 'min') r.x_min = Math.min(snap(r0.x_min + dx), r.x_max - 1);
+                else                r.x_max = Math.max(snap(r0.x_max + dx), r.x_min + 1);
+                if (d.cy === 'min') r.y_min = Math.min(snap(r0.y_min + dy), r.y_max - 1);
+                else                r.y_max = Math.max(snap(r0.y_max + dy), r.y_min + 1);
+            }
+            this.screen.rect = r;
+            updateScreenPanel();
+            this.render();
+            return;
+        }
+
+        // Priority 3: Dragging zone
         if (this.dragState) {
             let newX = worldPos.x - this.dragState.offset.x;
             let newY = worldPos.y - this.dragState.offset.y;
@@ -175,8 +213,13 @@ class TopologyCanvas {
             this.render();
         } else {
             // Hover detection (cursor style)
+            const sh = this.isPointOnEffectCenter(screenPos) ? null : this.hitScreenRect(screenPos);
             if (this.isPointOnEffectCenter(screenPos)) {
                 this.canvas.style.cursor = 'grab';
+            } else if (sh) {
+                this.canvas.style.cursor = sh.type === 'move' ? 'move'
+                    : ((sh.cx === 'min') === (sh.cy === 'max') ? 'nwse-resize' : 'nesw-resize');
+                if (this.hoveredZone) { this.hoveredZone = null; this.render(); }
             } else {
                 const hoveredZone = this.findZoneAt(worldPos);
                 if (hoveredZone !== this.hoveredZone) {
@@ -204,12 +247,17 @@ class TopologyCanvas {
             this.dragState = null;
             this.updateBoundingBox();
         }
+        if (this.screenDrag) {
+            this.screenDrag = null;
+            this.render();
+        }
     }
 
     onMouseLeave(e) {
         this.panState = null;
         this.dragCenterState = null;
         this.dragState = null;
+        this.screenDrag = null;
         this.hoveredZone = null;
         this.canvas.style.cursor = 'crosshair';
         this.render();
@@ -333,6 +381,9 @@ class TopologyCanvas {
         if (this.showGrid) {
             this.drawGrid();
         }
+
+        // Screen rectangle under the zones
+        this.drawScreenRect();
 
         // Draw zones (unselected first, selected last for z-order)
         const unselected = this.zones.filter(z => z !== this.selectedZone);
@@ -480,16 +531,26 @@ class TopologyCanvas {
         const eff = this.ledSize * this.camera.zoom; // effective LED size in screen pixels
         const ledWidth = eff - 3;
 
+        const kinds = this.showCalibration ? null : this.ledKinds(zone);
+
         this.ctx.save();
         this.ctx.translate(x, y);
         this.ctx.rotate(-zone.rotation * Math.PI / 180);
 
         for (let i = 0; i < zone.led_count; i++) {
             const ledX = i * eff * ledSpacing;
+            const off = kinds && kinds[i] === 'off';
 
             this.ctx.fillStyle = this.showCalibration ? this._calibrationColor(zone, i) : zone.color;
-            this.ctx.globalAlpha = this.showCalibration ? 0.9 : (isSelected ? 0.8 : (isHovered ? 0.6 : 0.5));
+            this.ctx.globalAlpha = this.showCalibration ? 0.9 : off ? 0.12 : (isSelected ? 0.8 : (isHovered ? 0.6 : 0.5));
             this.ctx.fillRect(ledX, 0, ledWidth, ledWidth);
+            if (kinds && kinds[i] === 'area') {              // reads the point of the screen under it
+                this.ctx.globalAlpha = 0.85;
+                this.ctx.fillStyle = this._pal().ink;
+                this.ctx.beginPath();
+                this.ctx.arc(ledX + ledWidth / 2, ledWidth / 2, Math.max(1.5, ledWidth * 0.12), 0, Math.PI * 2);
+                this.ctx.fill();
+            }
 
             this.ctx.globalAlpha = 1;
             this.ctx.strokeStyle = isSelected ? this._pal().acc : this._pal().ledStroke;
@@ -747,6 +808,121 @@ class TopologyCanvas {
         this.ctx.shadowBlur = 0;
 
         this.ctx.restore();
+    }
+
+    // ── Screen rectangle ────────────────────────────────────────────────────
+    // Same geometry as the backend (effects/ambilight_service.py): LED i of a zone
+    // sits at position + i * spacing along its rotation; a LED near a side of the
+    // rectangle reads that side, inside reads the point under it, outside is off.
+
+    _ledPoints(zone) {
+        const sp = zone.led_spacing ?? 1.0, rad = zone.rotation * Math.PI / 180;
+        const ux = Math.round(Math.cos(rad) * 1e6) / 1e6, uy = Math.round(Math.sin(rad) * 1e6) / 1e6;
+        const pts = [];
+        for (let i = 0; i < zone.led_count; i++) {
+            pts.push({ x: zone.position.x + i * sp * ux, y: zone.position.y + i * sp * uy });
+        }
+        return pts;
+    }
+
+    _isKeyGrid(zone) { return this.screen.keyGrids.has(`${zone.device_id}::${zone.zone_index}`); }
+
+    // Automatic rectangle: the frame of the Monitor* zones, else every zone
+    autoScreenRect() {
+        const named = this.zones.filter(z => (z.name || '').startsWith('Monitor'));
+        const pts = (named.length ? named : this.zones).flatMap(z => this._ledPoints(z));
+        if (!pts.length) return null;
+        const r = {
+            x_min: Math.min(...pts.map(p => p.x)), x_max: Math.max(...pts.map(p => p.x)),
+            y_min: Math.min(...pts.map(p => p.y)), y_max: Math.max(...pts.map(p => p.y)),
+        };
+        return (r.x_max - r.x_min > 0 && r.y_max - r.y_min > 0) ? r : null;
+    }
+
+    effectiveScreenRect() { return this.screen.rect || this.autoScreenRect(); }
+
+    // Does the rectangle decide? (not while the old zone names still do)
+    _screenDecides() { return !!this.screen.rect || this.screen.mode === 'auto'; }
+
+    _classifyLed(p, r, axis) {
+        const w = r.x_max - r.x_min, h = r.y_max - r.y_min;
+        const band = Math.max(1, 0.15 * Math.min(w, h));
+        const d = { left: p.x - r.x_min, right: r.x_max - p.x, top: r.y_max - p.y, bottom: p.y - r.y_min };
+        if (Math.min(...Object.values(d)) < -band) return 'off';
+        const near = Object.keys(d).filter(k => Math.abs(d[k]) <= band);
+        if (!near.length) return 'area';
+        const par = axis ? near.filter(k => (k === 'top' || k === 'bottom') === (axis === 'x')) : [];
+        return (par.length ? par : near).reduce((a, b) => Math.abs(d[a]) <= Math.abs(d[b]) ? a : b);
+    }
+
+    // Per LED: 'top' | 'right' | 'bottom' | 'left' | 'area' | 'off', or null when not shown
+    ledKinds(zone) {
+        if (!this._screenDecides() || this._isKeyGrid(zone)) return null;
+        const r = this.effectiveScreenRect();
+        if (!r) return null;
+        const pts = this._ledPoints(zone);
+        let axis = null;
+        if (pts.length > 1) {
+            const a = pts[0], b = pts[pts.length - 1];
+            axis = Math.abs(b.x - a.x) >= Math.abs(b.y - a.y) ? 'x' : 'y';
+        }
+        return pts.map(p => this._classifyLed(p, r, axis));
+    }
+
+    _screenCorners(r) {
+        return {
+            tl: this.worldToScreen({ x: r.x_min, y: r.y_max }),
+            br: this.worldToScreen({ x: r.x_max, y: r.y_min }),
+        };
+    }
+
+    drawScreenRect() {
+        const r = this.effectiveScreenRect();
+        if (!r) return;
+        const { tl, br } = this._screenCorners(r);
+        const pal = this._pal(), manual = !!this.screen.rect;
+        const w = br.x - tl.x, h = br.y - tl.y;
+        this.ctx.save();
+        this.ctx.fillStyle = `rgba(${pal.accRgb}, ${manual ? 0.07 : 0.04})`;
+        this.ctx.fillRect(tl.x, tl.y, w, h);
+        this.ctx.strokeStyle = `rgba(${pal.accRgb}, ${this.screenDrag ? 1 : 0.75})`;
+        this.ctx.lineWidth = 2;
+        if (!manual) this.ctx.setLineDash([6, 4]);
+        this.ctx.strokeRect(tl.x, tl.y, w, h);
+        this.ctx.setLineDash([]);
+        this.ctx.fillStyle = `rgba(${pal.accRgb}, 0.9)`;
+        this.ctx.font = '600 12px Inter, system-ui, sans-serif';
+        this.ctx.textAlign = 'left';
+        this.ctx.textBaseline = 'bottom';
+        this.ctx.fillText(manual ? 'SCREEN' : 'SCREEN (automatic)', tl.x + 2, tl.y - 4);
+        for (const [cx, cy] of [[tl.x, tl.y], [br.x, tl.y], [tl.x, br.y], [br.x, br.y]]) {
+            this.ctx.fillStyle = pal.bg;
+            this.ctx.fillRect(cx - 5, cy - 5, 10, 10);
+            this.ctx.strokeStyle = `rgba(${pal.accRgb}, 0.95)`;
+            this.ctx.lineWidth = 1.5;
+            this.ctx.strokeRect(cx - 5, cy - 5, 10, 10);
+        }
+        this.ctx.restore();
+    }
+
+    // {type:'corner', cx:'min'|'max', cy:'min'|'max'} | {type:'move'} | null
+    hitScreenRect(screenPos) {
+        const r = this.effectiveScreenRect();
+        if (!r) return null;
+        const { tl, br } = this._screenCorners(r);
+        const near = (a, b) => Math.abs(a - b) <= 7;
+        for (const [px, cx] of [[tl.x, 'min'], [br.x, 'max']]) {
+            for (const [py, cy] of [[tl.y, 'max'], [br.y, 'min']]) {
+                if (near(screenPos.x, px) && near(screenPos.y, py)) return { type: 'corner', cx, cy };
+            }
+        }
+        const inX = screenPos.x >= tl.x - 5 && screenPos.x <= br.x + 5;
+        const inY = screenPos.y >= tl.y - 5 && screenPos.y <= br.y + 5;
+        const onV = inY && (Math.abs(screenPos.x - tl.x) <= 5 || Math.abs(screenPos.x - br.x) <= 5);
+        const onH = inX && (Math.abs(screenPos.y - tl.y) <= 5 || Math.abs(screenPos.y - br.y) <= 5);
+        // a zone drawn on the border keeps its clicks: the border moves only where no LED is
+        if ((onV || onH) && !this.findZoneAt(this.screenToWorld(screenPos))) return { type: 'move' };
+        return null;
     }
 
     isPointOnEffectCenter(screenPos) {
@@ -1212,6 +1388,48 @@ async function reloadFromOpenRGB() {
     }
 }
 
+// ── Screen rectangle panel ───────────────────────────────────────────────────
+
+async function loadScreenRect() {
+    try {
+        const res = await eel.get_screen_rect()();
+        if (res && res.success) {
+            canvas.screen.mode = res.mode;
+            canvas.screen.rect = res.rect ? { ...res.rect } : null;
+        }
+    } catch (e) {
+        console.warn('[Topology] Screen rectangle not loaded:', e);
+    }
+    canvas.screen.savedJson = JSON.stringify(canvas.screen.rect);
+    updateScreenPanel();
+}
+
+function updateScreenPanel() {
+    const el = document.getElementById('screen-mode');
+    if (!el) return;
+    const sc = canvas.screen;
+    el.textContent = sc.rect
+        ? 'Placed by hand. LEDs on a side read that side of the screen, LEDs inside read the point under them, LEDs outside stay off.'
+        : sc.mode === 'names'
+        ? 'Automatic: the sides still come from the zone names (MonitorTop, MonitorRight…). Press Fit or drag the rectangle to place the screen yourself: then the names no longer matter.'
+        : 'Automatic: the screen covers every zone. Drag a corner, or press Fit, to place it where your monitor is.';
+    const auto = document.getElementById('btn-screen-auto');
+    if (auto) auto.disabled = !sc.rect;
+}
+
+async function saveScreenRectIfChanged() {
+    const json = JSON.stringify(canvas.screen.rect);
+    if (json === canvas.screen.savedJson) return true;
+    const res = await eel.set_screen_rect(canvas.screen.rect)();
+    if (!res || !res.success) {
+        showNotification((res && res.error) || 'Could not save the screen rectangle', 'error');
+        return false;
+    }
+    canvas.screen.savedJson = json;
+    await loadScreenRect();
+    return true;
+}
+
 async function loadSceneTopology() {
     try {
         console.log('[Topology] Loading unified scene topology...');
@@ -1242,6 +1460,8 @@ async function loadAndRenderScene() {
         y: scene.global_effect_center?.y ?? 50,
     };
     canvas.selectedZone = null;
+    canvas.screen.keyGrids = new Set(scene.key_grids || []);
+    await loadScreenRect();
 
     renderDeviceLegend(availableDevices);
     canvas.updateZonesList();
@@ -1531,10 +1751,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('btn-reload-openrgb').addEventListener('click', reloadFromOpenRGB);
 
+    document.getElementById('btn-screen-fit').addEventListener('click', () => {
+        const r = canvas.autoScreenRect();
+        if (!r) { showNotification('No zones to fit the screen on', 'warning'); return; }
+        canvas.screen.rect = r;
+        updateScreenPanel();
+        canvas.render();
+    });
+    document.getElementById('btn-screen-auto').addEventListener('click', () => {
+        canvas.screen.rect = null;
+        updateScreenPanel();
+        canvas.render();
+    });
+
     document.getElementById('btn-save').addEventListener('click', async () => {
         try {
             const result = await eel.save_scene_topology(canvas.zones, canvas.effectCenter)();
-            if (result.success) {
+            if (result.success && await saveScreenRectIfChanged()) {
                 markTopologySaved();
                 showNotification(result.message || 'Scene saved', 'success');
             } else {
@@ -1565,7 +1798,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 let _savedSnapshot = null;
 
 function _topologySnapshot() {
-    return JSON.stringify([canvas.zones, canvas.effectCenter],
+    return JSON.stringify([canvas.zones, canvas.effectCenter, canvas.screen.rect],
         (k, v) => (k === 'hasOverlap' ? undefined : v));
 }
 

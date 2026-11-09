@@ -103,11 +103,11 @@
                     <div class="step-head"><div class="step-num">2</div><div class="step-title">Map your strip to the screen</div></div>
                     <p>Open the <a href="topology-editor.html">Topology</a> page. On first run the zones of your devices are imported from OpenRGB automatically (the <b>Reload</b> button does it again at any time).</p>
                     <ul>
-                        <li>Zones named <b>MonitorTop</b>, <b>MonitorRight</b>, <b>MonitorBottom</b> and <b>MonitorLeft</b> are the ones that follow the screen edges.</li>
-                        <li>Any other zone name is ignored by the ambilight.</li>
-                        <li>Use <b>Flip</b> / direction if the colors run the wrong way along an edge, then press <b>Save Topology</b>.</li>
+                        <li>The <b>SCREEN</b> rectangle on the canvas is your monitor. Press <b>Fit</b>, or drag its corners and border, so that it sits where the strips around your monitor are.</li>
+                        <li>Where you put a zone decides what it shows, not its name: LEDs on a side of the rectangle follow that side of the screen, LEDs inside read the point of the screen under them, LEDs outside stay off (they are drawn faded).</li>
+                        <li>LED 0 is where a zone starts (the small 0). If the colors run the wrong way along a side, turn the zone by 180&deg; (<b>R</b>) and move it back onto the side. Then press <b>Save Topology</b>.</li>
                     </ul>
-                    <div class="help-note">Tip: zone names come from OpenRGB. Create segments called MonitorTop, MonitorRight&hellip; in OpenRGB (Resizable zones &amp; segments) or rename the zones in the editor.</div>
+                    <div class="help-note">Tip: a strip that goes around the monitor needs one zone per side. Split it into segments in OpenRGB (Resizable zones &amp; segments), then press <b>Reload</b>. Older setups that name their zones MonitorTop, MonitorRight&hellip; keep working until you place the rectangle.</div>
                 </div>
             </div>
 
