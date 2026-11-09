@@ -130,8 +130,9 @@ The **Status** panel reports `ACTIVE`, `INACTIVE`, `STANDBY` (the screen gives n
 The one place to manage your hardware. Each device is a row with its on/off switch; open it (**Zones**)
 to enable or disable its individual zones. Only enabled zones receive color data. A small live
 **Sampling** preview at the top shows at once what turning a device or zone on or off does.
-Keyboards are listed like any other device and are off until you switch them on; each of their zones
-shows a single color taken from one point of the screen (not key by key).
+Keyboards are listed like any other device and are off until you switch them on. A keyboard that
+OpenRGB describes as a key grid (e.g. 24 × 6) becomes a tiny copy of the screen: every key shows the
+mean color of the part of the screen it sits under. Other zones read one point of the screen.
 
 The Dashboard keeps a compact row of on/off chips for the same devices, a summary
 ("2 of 6 devices on · 11 zones receiving colors") and a warning when nothing would light up.

@@ -175,7 +175,8 @@ def get_ambilight_devices() -> list:
 
     for ctrl in _openrgb_manager.devices:
         device_key   = _openrgb_manager._make_device_key(ctrl)
-        zones, _     = build_device_zones(device_key)
+        getter       = getattr(_ambilight_service, "get_device_zones", None)
+        zones, _     = getter(device_key) if getter else build_device_zones(device_key)
         ambi_entry   = ambi_devices.get(device_key, {})
         enabled      = ambi_entry.get("enabled", False)  # same default as the engine
         zones_ena    = ambi_entry.get("zones_enabled", {})
@@ -183,6 +184,8 @@ def get_ambilight_devices() -> list:
             "zone_index": z["zone_index"],
             "name":       z["name"],
             "edge":       z["edge"],
+            "rows":       z.get("rows"),
+            "cols":       z.get("cols"),
             "enabled":    is_zone_enabled(zones_ena, z),
         } for z in zones]
 

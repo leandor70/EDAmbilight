@@ -352,8 +352,24 @@ def is_zone_enabled(zones_enabled: dict, zone: dict) -> bool:
     return bool(zones_enabled.get(zone.get("name", ""), True))
 
 
-def build_device_zones(device_key: str) -> Tuple[List[dict], int]:
-    """Load zone sampling parameters for a device from device_topologies.json."""
+def _sample_grid(frame: np.ndarray, rows: int, cols: int) -> np.ndarray:
+    """Mean colour of each cell of a rows x cols grid laid over the frame -> (rows, cols, 3)."""
+    h, w = frame.shape[:2]
+    small = frame[::4, ::4, :3].astype(np.float32)
+    sh, sw = small.shape[:2]
+    r_idx = np.minimum(np.linspace(0, sh, rows + 1).astype(int)[:-1], sh - 1)
+    c_idx = np.minimum(np.linspace(0, sw, cols + 1).astype(int)[:-1], sw - 1)
+    r_cnt = np.diff(np.append(r_idx, sh)).clip(1)
+    c_cnt = np.diff(np.append(c_idx, sw)).clip(1)
+    sums = np.add.reduceat(np.add.reduceat(small, r_idx, axis=0), c_idx, axis=1)
+    return sums / (r_cnt[:, None, None] * c_cnt[None, :, None])
+
+
+def build_device_zones(device_key: str, layouts: Optional[dict] = None) -> Tuple[List[dict], int]:
+    """Load zone sampling parameters for a device from device_topologies.json.
+
+    `layouts` (OpenRGBManager.matrix_layouts) turns a zone that has a key grid
+    into an "matrix" zone: every LED reads its own cell of the screen."""
     try:
         data = json.loads(Path("config/device_topologies.json").read_text(encoding="utf-8"))
     except Exception:
@@ -454,6 +470,25 @@ def build_device_zones(device_key: str) -> Tuple[List[dict], int]:
     for z_idx, zone in enumerate(all_zones):
         name = zone.get("name", "")
         if name in _ZONE_SCREEN_MAP or _is_unreadable_name(name):
+            continue
+
+        layout = (layouts or {}).get(zone["zone_index"])
+        if layout:
+            result.append({
+                "name":         name,
+                "zone_index":   zone["zone_index"],
+                "led_count":    zone["led_count"],
+                "led_offset":   zone_offsets[z_idx],
+                "led_start":    0,
+                "led_end":      zone["led_count"],
+                "screen_start": 0.0,
+                "screen_end":   1.0,
+                "edge":         "matrix",
+                "rows":         layout["rows"],
+                "cols":         layout["cols"],
+                "cells":        [tuple(c) for c in layout["cells"]],
+                "reversed":     False,
+            })
             continue
 
         led_pts = _led_world_positions(zone)
@@ -738,7 +773,9 @@ class AmbilightService:
 
     def get_device_zones(self, device_key: str) -> Tuple[List[dict], int]:
         if device_key not in self._zone_cache:
-            zones, total_leds = build_device_zones(device_key)
+            get_layouts = getattr(self._manager, "matrix_layouts", None)
+            layouts = get_layouts(device_key) if get_layouts else None
+            zones, total_leds = build_device_zones(device_key, layouts)
             self._validate_topology(device_key, total_leds)
             self._zone_cache[device_key] = (zones, total_leds)
         return self._zone_cache[device_key]
@@ -955,6 +992,32 @@ class AmbilightService:
                 active    = led_end - led_start
                 off       = zone["led_offset"] + led_start
                 zone_key  = f"{device_key}:{zone['zone_index']}"
+
+                if zone["edge"] == "matrix":
+                    grid = _sample_grid(frame, zone["rows"], zone["cols"])
+                    per_led = [(0, 0, 0)] * active
+                    for r, c, led in zone["cells"]:
+                        if led < active:
+                            px = grid[r, c]
+                            per_led[led] = (int(px[0]), int(px[1]), int(px[2]))
+                    zone_colors = _boost_saturation(per_led, sat_boost)
+                    if strategy in ("smooth", "adaptive_smooth"):
+                        zone_colors = _apply_temporal_smooth(
+                            self._prev_colors, zone_key, zone_colors,
+                            alpha=cfg.get("ema_alpha", 0.35),
+                            cut_threshold=cfg.get("scene_cut", 60.0),
+                        )
+                    zone_colors = _apply_min_luminance(zone_colors, min_lum)
+                    colors[off: off + active] = zone_colors
+                    lit[off: off + active] = True
+                    shown = self._accented(zone_colors, accent)
+                    snap_zones.append({
+                        "dev": device_key, "zone": zone["name"], "edge": "matrix",
+                        "rows": zone["rows"], "cols": zone["cols"],
+                        "cells": [[r, c] for r, c, led in zone["cells"] if led < active],
+                        "colors": _hex_colors([shown[led] for r, c, led in zone["cells"] if led < active]),
+                    })
+                    continue
 
                 if zone["edge"] == "area":
                     color = _sample_area_point(

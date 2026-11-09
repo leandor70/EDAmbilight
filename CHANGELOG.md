@@ -15,9 +15,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   to miss: a zone left off is forced to black). A small live Sampling preview at the top shows what
   turning a device or zone on or off does. The Control page keeps only compact on/off chips, a summary
   and a warning when nothing would light up (no device mapped, none on, or no active zone).
-- Keyboards are no longer hidden: they are listed like any device, off until you switch them on. They
-  are read as plain zones (one color per zone, taken from one point of the screen), not key by key.
+- Keyboards are no longer hidden: they are listed like any device, off until you switch them on.
   After updating, a keyboard that was hidden before appears once in the "hardware changed" notice.
+- **Key grids.** A zone that OpenRGB describes as a matrix (a keyboard: 24 x 6 cells on an ASUS TUF
+  Gaming K7) is no longer one row with one color. A grid of that size is laid over the whole screen
+  and every key shows the mean color of the cell it sits under, so the keyboard becomes a tiny copy
+  of the picture. The sampling preview draws the keys as tiles; the Devices page names the zone
+  "24x6 keys". The OpenRGB client now keeps the key map it used to discard.
 - The chosen theme is now also saved in `config/settings.json` (`ui_theme`), not only in the
   browser. It is no longer lost when the web port changes, when another browser is used or when
   the browser clears site data. The saved value wins at load; an existing browser choice is

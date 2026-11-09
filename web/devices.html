@@ -281,12 +281,16 @@ function renderDevices(devs) {
 }
 
 // "area" zones read one point of the screen; Monitor* zones follow a screen edge
-const _edgeText = e => e === 'area' ? 'one color' : `${e} edge`;
+const _edgeText = z => z.edge === 'area' ? 'one color'
+                     : z.edge === 'matrix' ? `${z.cols}×${z.rows} keys` : `${z.edge} edge`;
 const _zoneLabel = z => /^[?\s]*$/.test(z.name || '') ? `Zone ${z.zone_index}` : z.name;
 
 function zonesHtml(dev, idx) {
-    const note = dev.device_type === 'keyboard'
-        ? `<div class="zones-note">Keyboard: each zone shows a single color taken from one point of the screen (not key by key).</div>`
+    const grid = dev.zones.find(z => z.edge === 'matrix');
+    const note = grid
+        ? `<div class="zones-note">Each key shows the color of the part of the screen it sits under (a ${grid.cols}×${grid.rows} grid laid over the whole screen).</div>`
+        : dev.device_type === 'keyboard'
+        ? `<div class="zones-note">Keyboard: each zone shows a single color taken from one point of the screen.</div>`
         : '';
     return `<div class="dev-zones-grid">
         ${dev.zones.map(z => `
@@ -294,7 +298,7 @@ function zonesHtml(dev, idx) {
             <input type="checkbox" class="dev-zone-check" ${z.enabled ? 'checked' : ''}
                    onchange="toggleZone(${idx}, ${Number(z.zone_index)}, this.checked)">
             <span class="dev-zone-name">${escapeHtml(_zoneLabel(z))}</span>
-            <span class="dev-zone-edge">${escapeHtml(_edgeText(z.edge))}</span>
+            <span class="dev-zone-edge">${escapeHtml(_edgeText(z))}</span>
         </label>`).join('')}
     </div>${note}`;
 }

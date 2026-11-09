@@ -99,16 +99,22 @@ class Segment:
         self.leds_count = leds_count
 
 
+NO_LED = 0xFFFFFFFF      # an empty cell in a zone's matrix map
+
+
 class Zone:
     def __init__(self, name: str, type_: int, leds_min: int, leds_max: int,
                  leds_count: int, matrix: Optional[Tuple[int, int]],
-                 segments: List[Segment]) -> None:
+                 segments: List[Segment],
+                 matrix_map: Optional[List[List[int]]] = None) -> None:
         self.name = name
         self.type = type_
         self.leds_min = leds_min
         self.leds_max = leds_max
         self.leds_count = leds_count
         self.matrix = matrix              # (height, width) or None
+        # matrix_map[row][col] = LED index inside the zone, or NO_LED for an empty cell
+        self.matrix_map = matrix_map
         self.segments = segments
         self.leds: List[LED] = []         # filled in by Device, in hardware order
 
@@ -288,11 +294,12 @@ def _read_zone(r: _Reader, version: int) -> Zone:
     leds_max = r.u32()
     leds_count = r.u32()
     matrix = None
+    matrix_map = None
     matrix_len = r.u16()
     if matrix_len:
         height = r.u32()
         width = r.u32()
-        r.skip(4 * height * width)
+        matrix_map = [[r.u32() for _ in range(width)] for _ in range(height)]
         matrix = (height, width)
     segments: List[Segment] = []
     if version >= 4:
@@ -302,7 +309,7 @@ def _read_zone(r: _Reader, version: int) -> Zone:
             start = r.u32()
             count = r.u32()
             segments.append(Segment(seg_name, seg_type, start, count))
-    return Zone(name, type_, leds_min, leds_max, leds_count, matrix, segments)
+    return Zone(name, type_, leds_min, leds_max, leds_count, matrix, segments, matrix_map)
 
 
 def parse_controller(data: bytes, index: int, version: int, client: "OpenRGBClient") -> Device:

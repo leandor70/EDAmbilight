@@ -88,6 +88,31 @@ class OpenRGBManager:
 
     # ── Interface (compatible with AmbilightService) ───────────────────────────
 
+    def matrix_layouts(self, device_key: str) -> dict:
+        """Key grids of a device: {zone_index: {"rows", "cols", "cells": [(row, col, led)]}}.
+
+        zone_index counts zones the same way the topology does (a zone with
+        segments is replaced by its segments); `led` is the LED's index inside
+        its zone. Only zones that carry a real matrix map (more than one row
+        and column) are listed.
+        """
+        for ctrl in self.devices:
+            if self._make_device_key(ctrl) != device_key:
+                continue
+            layouts, idx = {}, 0
+            for zone in ctrl.topology.device.zones:
+                segments = getattr(zone, "segments", None) or []
+                grid = getattr(zone, "matrix_map", None)
+                if not segments and grid and len(grid) > 1 and len(grid[0]) > 1:
+                    n = len(zone.leds)
+                    cells = [(r, c, led) for r, row in enumerate(grid)
+                             for c, led in enumerate(row) if led < n]
+                    if cells:
+                        layouts[idx] = {"rows": len(grid), "cols": len(grid[0]), "cells": cells}
+                idx += len(segments) if segments else 1
+            return layouts
+        return {}
+
     def _make_device_key(self, ctrl: DeviceController) -> str:
         return ctrl.device_key or (
             f"{ctrl.topology.device.name}::{ctrl.topology.topology_type.value}"

@@ -83,6 +83,9 @@ function _hitAt(x, y) {
     for (const h of _sampHits) {
         if (h.type === 'band' && x >= h.x - 3 && x <= h.x + h.w + 3 && y >= h.y - 3 && y <= h.y + h.h + 3) return h;
     }
+    for (const h of _sampHits) {
+        if (h.type === 'grid' && x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h) return h;
+    }
     return null;
 }
 
@@ -102,7 +105,9 @@ function _showSamplingTip() {
     const zone = document.createElement('div');
     zone.textContent = `Zone: ${z.zone}`;
     const kind = document.createElement('span');
-    if (hit.type === 'dot') {
+    if (hit.type === 'grid') {
+        kind.textContent = `Key grid ${z.cols}×${z.rows}: each key reads the part of the screen it sits under`;
+    } else if (hit.type === 'dot') {
         kind.textContent = `Reads one point of the screen (${Math.round(z.x * 100)}% across, ${Math.round(z.y * 100)}% down)`;
     } else {
         const n = z.colors ? z.colors.length / 6 : 0;
@@ -193,6 +198,24 @@ function _drawSampling(r) {
     const FILL_A = 'rgba(20,245,255,.16)', FILL_B = 'rgba(20,245,255,.26)', STROKE = 'rgba(20,245,255,.60)';
     const hexAt = (str, i) => '#' + str.substr(i * 6, 6);
 
+    // 0) Key grids (keyboards): every key is a tile on the screen cell it reads
+    for (const z of zones) {
+        if (z.edge !== 'matrix') continue;
+        const tw = W / z.cols, th = H / z.rows;
+        (z.cells || []).forEach(([r, c], i) => {
+            const x = X0 + c * tw, y = Y0 + r * th;
+            if (live && z.colors) {
+                ctx.fillStyle = hexAt(z.colors, i);
+                ctx.globalAlpha = .9;
+            } else {
+                ctx.fillStyle = (r + c) % 2 ? FILL_B : FILL_A;
+            }
+            ctx.fillRect(x + .5, y + .5, Math.max(1, tw - 1), Math.max(1, th - 1));
+            ctx.globalAlpha = 1;
+        });
+        if (z.dev) _sampHits.push({ type: 'grid', key: z.dev + '|' + z.zone, z, x: X0, y: Y0, w: W, h: H });
+    }
+
     // 1) Area zones (circles) go under the bands
     // Shown as small dots (many overlap); Zones view adds a faint halo with the real sampled radius
     const radius = Math.max(3, 0.18 * Math.min(cw, ch) * s);
@@ -218,7 +241,7 @@ function _drawSampling(r) {
 
     // 2) Edge bands: left/right first, then top/bottom (corner overlap like the backend)
     const order = { left: 0, right: 0, top: 1, bottom: 1 };
-    const edgeZones = zones.filter(z => z.edge !== 'area').sort((a, b) => order[a.edge] - order[b.edge]);
+    const edgeZones = zones.filter(z => z.edge !== 'area' && z.edge !== 'matrix').sort((a, b) => order[a.edge] - order[b.edge]);
     for (const z of edgeZones) {
         const horiz = z.edge === 'top' || z.edge === 'bottom';
         const d = Math.max(2, depthPx(z.edge) * s);          // never thinner than 2px on screen
