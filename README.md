@@ -39,7 +39,7 @@ No Python or extra dependencies needed.
 - **Sampling preview** — a scaled copy of your screen showing exactly where each LED reads its color, live or as plain zones; hover a band or a dot to see which device it feeds
 - **Beat accent** — at every beat of the music playing on the PC the ambilight gets a short flash and/or hue shift: multiplicative, additive or mixed, with your own flash color, duration, intensity and a flash-rate safety limit (needs the optional `PyAudioWPatch` package)
 - **Screen standby effects** — when the display sleeps or locks, the LEDs can hold, fade out, pulse, rotate colors, show an aurora or an ember glow
-- **Light and dark theme** — a frosted-glass light theme next to the dark one, switched from the sidebar and remembered; dropdown lists are translucent panels that blur what is behind them
+- **Light and dark theme** — a frosted-glass light theme next to the dark one, switched from the sidebar and remembered (also in `config/settings.json`); dropdown lists are translucent panels that blur what is behind them
 - **WebGL live preview** — visualise the ambient effect in the browser before it hits the LEDs
 
 ![Live Preview](docs/ss-preview.png)

@@ -59,3 +59,14 @@ class Settings:
     def set_theme(self, theme: str):
         self.settings["theme"] = theme
         self._save()
+
+    def get_ui_theme(self) -> str:
+        """Interface theme: "dark" (default) or "light"."""
+        return "light" if self.settings.get("ui_theme") == "light" else "dark"
+
+    def has_ui_theme(self) -> bool:
+        return self.settings.get("ui_theme") in ("dark", "light")
+
+    def set_ui_theme(self, theme: str):
+        self.settings["ui_theme"] = "light" if theme == "light" else "dark"
+        self._save()

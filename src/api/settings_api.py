@@ -27,6 +27,7 @@ def get_settings() -> dict:
         "openrgb_autostart": _settings.get_openrgb_autostart(),
         "language":          _settings.get_language(),
         "theme":             _settings.get_theme(),
+        "ui_theme":          _settings.get_ui_theme() if _settings.has_ui_theme() else None,
         "help_seen":         bool(_settings.settings.get("help_seen", False)),
     }
 
@@ -44,6 +45,8 @@ def save_settings(updates: dict) -> dict:
             _settings.set_language(updates["language"])
         if "theme" in updates:
             _settings.set_theme(updates["theme"])
+        if "ui_theme" in updates:
+            _settings.set_ui_theme(updates["ui_theme"])
         if "web_port" in updates:
             _settings.settings["web_port"] = int(updates["web_port"])
             _settings._save()

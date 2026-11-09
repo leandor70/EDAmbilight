@@ -8,6 +8,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- The chosen theme is now also saved in `config/settings.json` (`ui_theme`), not only in the
+  browser. It is no longer lost when the web port changes, when another browser is used or when
+  the browser clears site data. The saved value wins at load; an existing browser choice is
+  copied into the file the first time.
+
 ---
 
 ## [1.5.0] — 2026-11-09

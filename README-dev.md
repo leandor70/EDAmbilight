@@ -46,7 +46,7 @@ EDAmbilight/
 │   │   ├── ambilight.js         # Dashboard logic (renderDevices, liveUpdate)
 │   │   ├── navigation.js        # Sidebar + sonar-ring animations
 │   │   ├── common.js            # api() wrapper, showNotification(), escapeHtml
-│   │   ├── theme.js             # Light / dark switch (localStorage `edambi.theme`)
+│   │   ├── theme.js             # Light / dark switch (localStorage `edambi.theme` + `ui_theme` in settings.json)
 │   │   ├── glass-select.js      # Replaces the native <select> popup
 │   │   └── topology-editor.js   # Topology canvas logic
 │   └── fonts/                   # Self-hosted woff2 (Inter, Orbitron, Rajdhani, Material Symbols)

@@ -163,7 +163,7 @@ Contiene backward-compat per: `.sci-fi-border`, `.carbon-pattern`, `.glass-toggl
 
 ## Tema chiaro "glass"
 
-- Si attiva con `<html data-theme="light">` (`js/theme.js`, chiave `localStorage` `edambi.theme`); partecipano solo le pagine con `data-themeable` su `<html>`. `theme.js` va in `<head>`, prima del primo paint.
+- Si attiva con `<html data-theme="light">` (`js/theme.js`, chiave `localStorage` `edambi.theme`, copia in `config/settings.json` come `ui_theme` che vince al caricamento: sopravvive a cambio porta/browser); partecipano solo le pagine con `data-themeable` su `<html>`. `theme.js` va in `<head>`, prima del primo paint.
 - Valori nel blocco `:root[data-theme="light"]` di `design-system.css`: fondo perla `#EDF1F7`, inchiostro `#0E1A2B`, un solo accento ocean `#0E7490` (`--c-cyan` mantiene il nome, cambia il valore). Font: Inter, pesi leggeri per i numeri grandi.
 - Pannelli bianchi smerigliati su orb colorati; niente grain, scan-line né glow. Il "sampling screen" della dashboard resta scuro: è il disegno di uno schermo.
 - Contrasti sul fondo perla: inchiostro 15:1, ink-2 7:1, ink-3 5:1, ocean 4.7:1.
