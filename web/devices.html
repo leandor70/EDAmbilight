@@ -225,6 +225,8 @@ function renderDevices(devs) {
         const hasZones = dev.has_topology && (dev.zones || []).length > 0;
         const open = hasZones && isOpen(dev);
         const dim = dev.enabled === false ? 'opacity:.55;' : '';
+        // a keyboard (only key grids) reads the whole screen: nothing to place in the editor
+        const onlyGrid = hasZones && dev.zones.every(z => z.edge === 'matrix');
 
         return `
         <div class="panel device-card ds-appear" id="dev-card-${idx}"
@@ -262,10 +264,10 @@ function renderDevices(devs) {
                                onchange="toggleDevice('${escapeAttr(dev.device_key)}', this.checked, ${idx})">
                         <div class="glass-toggle-track"><div class="glass-toggle-thumb"></div></div>
                     </label>
-                    <a href="topology-editor.html" class="btn" style="font-size:13px;padding:6px 12px;">
+                    ${onlyGrid ? '' : `<a href="topology-editor.html" class="btn" style="font-size:13px;padding:6px 12px;">
                         <span class="material-symbols-outlined" style="font-size:14px;">hub</span>
                         ${dev.has_topology ? 'Edit topology' : 'Map zones'}
-                    </a>
+                    </a>`}
                     <button class="btn" style="font-size:12px;padding:6px 12px;"
                             id="flash-btn-${idx}"
                             onclick="flashDevice('${escapeAttr(dev.device_key)}', ${idx})">
@@ -290,7 +292,7 @@ const _zoneLabel = z => /^[?\s]*$/.test(z.name || '') ? `Zone ${z.zone_index}` :
 function zonesHtml(dev, idx) {
     const grid = dev.zones.find(z => z.edge === 'matrix');
     const note = grid
-        ? `<div class="zones-note">Each key shows the color of the part of the screen it sits under (a ${grid.cols}×${grid.rows} grid laid over the whole screen).</div>`
+        ? `<div class="zones-note">Each key shows the color of the part of the screen it sits under (a ${grid.cols}×${grid.rows} grid laid over the whole screen). It has nothing to place in the Topology Editor.</div>`
         : dev.device_type === 'keyboard'
         ? `<div class="zones-note">Keyboard: each zone shows a single color taken from one point of the screen.</div>`
         : '';

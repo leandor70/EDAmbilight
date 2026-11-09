@@ -393,9 +393,11 @@ def _valid_rect(r) -> bool:
         return False
 
 
-def _scene_points(data: dict) -> List[Tuple[float, float]]:
-    return [pt for topo in data.get("topologies", {}).values()
-            for z in topo.get("zones", []) if not _is_unreadable_name(z.get("name", ""))
+def _scene_points(data: dict, skip=frozenset()) -> List[Tuple[float, float]]:
+    """LED points of the scene; `skip` = (device_key, zone_index) left out (key grids)."""
+    return [pt for key, topo in data.get("topologies", {}).items()
+            for z in topo.get("zones", [])
+            if not _is_unreadable_name(z.get("name", "")) and (key, z.get("zone_index")) not in skip
             for pt in _led_world_positions(z)]
 
 
@@ -404,7 +406,7 @@ def _bbox(pts) -> Tuple[float, float, float, float]:
             min(p[1] for p in pts), max(p[1] for p in pts))
 
 
-def screen_frame(data: dict) -> Tuple[str, Optional[Tuple[float, float, float, float]]]:
+def screen_frame(data: dict, skip=frozenset()) -> Tuple[str, Optional[Tuple[float, float, float, float]]]:
     """How the screen is located in the scene.
 
     Returns (mode, rect) with rect = (x_min, x_max, y_min, y_max) in sampling
@@ -419,11 +421,11 @@ def screen_frame(data: dict) -> Tuple[str, Optional[Tuple[float, float, float, f
     if any(z.get("name") in _ZONE_SCREEN_MAP
            for t in data.get("topologies", {}).values() for z in t.get("zones", [])):
         return "names", None
-    pts = _scene_points(data)
+    pts = _scene_points(data, skip)
     return "auto", (_bbox(pts) if pts else (0.0, 100.0, 0.0, 100.0))
 
 
-def suggest_screen_rect(data: dict) -> Optional[dict]:
+def suggest_screen_rect(data: dict, skip=frozenset()) -> Optional[dict]:
     """A starting rectangle (editor coordinates, y UP) for the Topology Editor.
 
     From named zones: the frame drawn by the Monitor* zones (the same rectangle
@@ -436,7 +438,7 @@ def suggest_screen_rect(data: dict) -> Optional[dict]:
     if frame:
         x0, x1, y0, y1 = _bbox(frame)
     else:
-        pts = _scene_points(data)
+        pts = _scene_points(data, skip)
         if not pts:
             return None
         x0, x1, y0, y1 = _bbox(pts)
@@ -551,7 +553,8 @@ def _matrix_entry(zone: dict, led_offset: int, layout: dict) -> dict:
     }
 
 
-def build_device_zones(device_key: str, layouts: Optional[dict] = None) -> Tuple[List[dict], int]:
+def build_device_zones(device_key: str, layouts: Optional[dict] = None,
+                       scene_skip=frozenset()) -> Tuple[List[dict], int]:
     """Load zone sampling parameters for a device from device_topologies.json.
 
     `layouts` (OpenRGBManager.matrix_layouts) turns a zone that has a key grid
@@ -578,7 +581,7 @@ def build_device_zones(device_key: str, layouts: Optional[dict] = None) -> Tuple
         off += zone["led_count"]
     total_leds = off
 
-    mode, rect = screen_frame(data)
+    mode, rect = screen_frame(data, scene_skip)
     if mode != "names":
         result: List[dict] = []
         for z_idx, zone in enumerate(all_zones):
@@ -963,7 +966,12 @@ class AmbilightService:
         if device_key not in self._zone_cache:
             get_layouts = getattr(self._manager, "matrix_layouts", None)
             layouts = get_layouts(device_key) if get_layouts else None
-            zones, total_leds = build_device_zones(device_key, layouts)
+            skip = set()
+            if get_layouts:
+                for ctrl in getattr(self._manager, "devices", []):
+                    key = self._manager._make_device_key(ctrl)
+                    skip |= {(key, i) for i in get_layouts(key)}
+            zones, total_leds = build_device_zones(device_key, layouts, skip)
             self._validate_topology(device_key, total_leds)
             self._zone_cache[device_key] = (zones, total_leds)
         return self._zone_cache[device_key]

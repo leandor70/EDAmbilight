@@ -228,12 +228,13 @@ def get_screen_rect() -> dict:
     rectangle for the editor ("Fit")."""
     from effects.ambilight_service import screen_frame, suggest_screen_rect
     data = _load_topologies()
-    mode, _ = screen_frame(data)
+    skip = key_grid_zone_ids()
+    mode, _ = screen_frame(data, skip)
     return {
         "success":   True,
         "mode":      mode,
         "rect":      data.get("screen_rect") if mode == "manual" else None,
-        "suggested": suggest_screen_rect(data),
+        "suggested": suggest_screen_rect(data, skip),
     }
 
 
@@ -257,6 +258,34 @@ def set_screen_rect(rect) -> dict:
         return {"success": True}
     except (KeyError, TypeError, ValueError) as e:
         return {"success": False, "error": f"Invalid rectangle: {e}"}
+
+
+# ── Key grids (keyboards) ─────────────────────────────────────────────────────
+# A zone that OpenRGB gives as a key grid reads the whole screen key by key: its
+# place in the scene means nothing, so the editor never shows it. It stays in
+# device_topologies.json (LED offsets of the device depend on it).
+
+
+def _key_grid_indexes(device_id: str) -> set:
+    get_layouts = getattr(_openrgb_manager, "matrix_layouts", None)
+    return set(get_layouts(device_id)) if get_layouts else set()
+
+
+def key_grid_zone_ids() -> set:
+    """(device_id, zone_index) of every key-grid zone, for the scene geometry."""
+    if _openrgb_manager is None:
+        return set()
+    ids = set()
+    for ctrl in getattr(_openrgb_manager, "devices", []):
+        key = _openrgb_manager._make_device_key(ctrl)
+        ids |= {(key, i) for i in _key_grid_indexes(key)}
+    return ids
+
+
+def _scene_zones(device_id: str, zones: list) -> list:
+    """Zones the editor shows: no hidden ('???') ones, no key grids."""
+    grids = _key_grid_indexes(device_id)
+    return [z for z in _visible_zones(zones) if z.get("zone_index") not in grids]
 
 
 # ── Hidden zones ──────────────────────────────────────────────────────────────
@@ -418,15 +447,14 @@ def get_scene_topology() -> dict:
 
         all_zones   = []
         device_meta = []
-        key_grids   = []      # "device_id::zone_index" of key-grid zones (they read the whole screen)
-        get_layouts = getattr(_openrgb_manager, "matrix_layouts", None)
 
         for dev in devs_result["devices"]:
             device_id     = dev["device_id"]
             topo          = topologies.get(device_id, {})
-            zones         = _visible_zones(topo.get("zones", []))
-            if get_layouts:
-                key_grids += [f"{device_id}::{i}" for i in get_layouts(device_id)]
+            stored        = _visible_zones(topo.get("zones", []))
+            zones         = _scene_zones(device_id, topo.get("zones", []))
+            if stored and not zones:
+                continue      # only key grids (a keyboard): nothing to place
             default_color = zones[0].get("color", "#14F5FF") if zones else "#14F5FF"
 
             for zone in zones:
@@ -447,7 +475,6 @@ def get_scene_topology() -> dict:
             "zones":                all_zones,
             "devices":              device_meta,
             "global_effect_center": global_center,
-            "key_grids":            key_grids,
         }
     except Exception as e:
         return {"success": False, "error": str(e), "zones": [], "devices": []}
@@ -471,7 +498,9 @@ def save_scene_topology(zones: list, global_effect_center: dict) -> dict:
                 topologies[device_id] = {"device_id": device_id}
             # The editor never sees hidden ('???') zones: keep the stored ones,
             # otherwise saving would drop their LEDs and shift every later zone.
-            hidden = [z for z in topologies[device_id].get("zones", []) if _is_hidden_zone(z)]
+            grids  = _key_grid_indexes(device_id)
+            hidden = [z for z in topologies[device_id].get("zones", [])
+                      if _is_hidden_zone(z) or z.get("zone_index") in grids]
             if hidden:
                 device_zones = sorted(device_zones + hidden,
                                       key=lambda z: z.get("zone_index", 0))
@@ -634,11 +663,13 @@ def reload_scene_from_openrgb() -> dict:
     for dev in devs_result["devices"]:
         result = reload_device_from_openrgb(dev["device_id"])
         if result["success"]:
-            for zone in _visible_zones(result.get("zones", [])):
+            scene = _scene_zones(dev["device_id"], result.get("zones", []))
+            for zone in scene:
                 z = zone.copy()
                 z["device_id"] = dev["device_id"]
                 all_zones.append(z)
-            all_changes[dev["name"]] = result.get("changes", {})
+            if scene:
+                all_changes[dev["name"]] = result.get("changes", {})
 
     return {
         "success": True,

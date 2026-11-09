@@ -45,8 +45,8 @@ class TopologyCanvas {
 
         // Screen rectangle: where the monitor sits in the scene (world coords, y up).
         // rect = the one placed by hand (null = automatic); mode comes from the backend
-        // ('manual' | 'names' | 'auto'); keyGrids = zones that read the whole screen.
-        this.screen = { rect: null, mode: 'auto', keyGrids: new Set() };
+        // ('manual' | 'names' | 'auto'). Key grids (keyboards) are never sent here.
+        this.screen = { rect: null, mode: 'auto' };
         this.screenDrag = null;
 
         this.setupEventListeners();
@@ -825,8 +825,6 @@ class TopologyCanvas {
         return pts;
     }
 
-    _isKeyGrid(zone) { return this.screen.keyGrids.has(`${zone.device_id}::${zone.zone_index}`); }
-
     // Automatic rectangle: the frame of the Monitor* zones, else every zone
     autoScreenRect() {
         const named = this.zones.filter(z => (z.name || '').startsWith('Monitor'));
@@ -857,7 +855,7 @@ class TopologyCanvas {
 
     // Per LED: 'top' | 'right' | 'bottom' | 'left' | 'area' | 'off', or null when not shown
     ledKinds(zone) {
-        if (!this._screenDecides() || this._isKeyGrid(zone)) return null;
+        if (!this._screenDecides()) return null;
         const r = this.effectiveScreenRect();
         if (!r) return null;
         const pts = this._ledPoints(zone);
@@ -1460,7 +1458,6 @@ async function loadAndRenderScene() {
         y: scene.global_effect_center?.y ?? 50,
     };
     canvas.selectedZone = null;
-    canvas.screen.keyGrids = new Set(scene.key_grids || []);
     await loadScreenRect();
 
     renderDeviceLegend(availableDevices);

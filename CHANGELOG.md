@@ -30,7 +30,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Gaming K7) is no longer one row with one color. A grid of that size is laid over the whole screen
   and every key shows the mean color of the cell it sits under, so the keyboard becomes a tiny copy
   of the picture. The sampling preview draws the keys as tiles; the Devices page names the zone
-  "24x6 keys". The OpenRGB client now keeps the key map it used to discard.
+  "24x6 keys". The OpenRGB client now keeps the key map it used to discard. A key grid has
+  nothing to place, so it is no longer shown in the Topology Editor (it stays in the config).
 - The chosen theme is now also saved in `config/settings.json` (`ui_theme`), not only in the
   browser. It is no longer lost when the web port changes, when another browser is used or when
   the browser clears site data. The saved value wins at load; an existing browser choice is
