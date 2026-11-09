@@ -213,6 +213,52 @@ def _save_topologies(config: dict) -> bool:
         return False
 
 
+# ── Screen rectangle ──────────────────────────────────────────────────────────
+
+_RECT_KEYS = ("x_min", "x_max", "y_min", "y_max")
+
+
+@eel.expose
+def get_screen_rect() -> dict:
+    """Where the screen sits in the scene (editor coordinates, y up).
+
+    mode: "manual" (a rectangle is saved and decides the sides), "names" (no
+    rectangle: the old Monitor* zone names decide) or "auto" (no rectangle, no
+    such names: the bounding box of the scene). `suggested` is a starting
+    rectangle for the editor ("Fit")."""
+    from effects.ambilight_service import screen_frame, suggest_screen_rect
+    data = _load_topologies()
+    mode, _ = screen_frame(data)
+    return {
+        "success":   True,
+        "mode":      mode,
+        "rect":      data.get("screen_rect") if mode == "manual" else None,
+        "suggested": suggest_screen_rect(data),
+    }
+
+
+@eel.expose
+def set_screen_rect(rect) -> dict:
+    """Save the screen rectangle (None removes it: back to automatic)."""
+    try:
+        data = _load_topologies()
+        if rect is None:
+            data.pop("screen_rect", None)
+        else:
+            clean = {k: float(rect[k]) for k in _RECT_KEYS}
+            if clean["x_max"] <= clean["x_min"] or clean["y_max"] <= clean["y_min"]:
+                return {"success": False, "error": "The rectangle has no area"}
+            data["screen_rect"] = clean
+        if not _save_topologies(data):
+            return {"success": False, "error": "Could not write device_topologies.json"}
+        if _ambilight_service:
+            for key in data.get("topologies", {}):
+                _ambilight_service.refresh_zones(key)
+        return {"success": True}
+    except (KeyError, TypeError, ValueError) as e:
+        return {"success": False, "error": f"Invalid rectangle: {e}"}
+
+
 # ── Hidden zones ──────────────────────────────────────────────────────────────
 
 

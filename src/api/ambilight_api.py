@@ -85,7 +85,7 @@ def get_ambilight_status() -> dict:
         return {"running": False, "fps": 0.0, "capturer": "—", "enabled": False,
                 "active_devices": 0, "active_zones": 0, "devices_total": 0,
                 "mapped_devices": 0}
-    from effects.ambilight_service import is_zone_enabled
+    from effects.ambilight_service import is_zone_enabled, summarize_zones
     cfg  = _ambilight_service.get_config()
     rect = _ambilight_service.content_rect
 
@@ -99,7 +99,8 @@ def get_ambilight_status() -> dict:
         except Exception:
             continue
         zones_enabled = dev_cfg.get("zones_enabled", {})
-        n = sum(1 for z in zones if is_zone_enabled(zones_enabled, z))
+        n = sum(1 for z in summarize_zones(zones)
+                if not z["outside"] and is_zone_enabled(zones_enabled, z))
         if n:
             active_devices += 1
             active_zones   += n
@@ -153,7 +154,7 @@ def _mapped_device_keys() -> list:
             zones, _ = _ambilight_service.get_device_zones(key)
         except Exception:
             continue
-        if zones:
+        if any(z["edge"] != "off" for z in zones):
             keys.append(key)
     return keys
 
@@ -167,7 +168,7 @@ def get_ambilight_devices() -> list:
     if _openrgb_manager is None:
         return []
 
-    from effects.ambilight_service import build_device_zones, is_zone_enabled
+    from effects.ambilight_service import build_device_zones, is_zone_enabled, summarize_zones
 
     ambi_cfg     = _ambilight_service.get_config() if _ambilight_service else {}
     ambi_devices = ambi_cfg.get("devices", {})
@@ -184,10 +185,11 @@ def get_ambilight_devices() -> list:
             "zone_index": z["zone_index"],
             "name":       z["name"],
             "edge":       z["edge"],
-            "rows":       z.get("rows"),
-            "cols":       z.get("cols"),
+            "rows":       z["rows"],
+            "cols":       z["cols"],
+            "outside":    z["outside"],
             "enabled":    is_zone_enabled(zones_ena, z),
-        } for z in zones]
+        } for z in summarize_zones(zones)]
 
         result.append({
             "device_key":    device_key,
@@ -195,9 +197,9 @@ def get_ambilight_devices() -> list:
             "led_count":     ctrl.topology.led_count,
             "topology_type": ctrl.topology.topology_type.value,
             "has_topology":  bool(zones),
-            "zone_count":    len(zones),
+            "zone_count":    len(zone_list),
             "zones":         zone_list,
-            "zones_active":  sum(1 for z in zone_list if z["enabled"]),
+            "zones_active":  sum(1 for z in zone_list if z["enabled"] and not z["outside"]),
             "device_type":   str(getattr(getattr(ctrl.topology.device, "type", None), "name", "")).lower(),
             "enabled":       enabled,
         })

@@ -32,8 +32,9 @@ def _setup(cfg, zones, keys):
 
 
 def test_status_counts_only_enabled_and_zone_enabled():
-    zones = {"A": [{"name": "MonitorTop"}, {"name": "MonitorLeft"}],
-             "B": [{"name": "MonitorTop"}]}
+    zones = {"A": [{"name": "MonitorTop", "zone_index": 0, "edge": "top"},
+                   {"name": "MonitorLeft", "zone_index": 1, "edge": "left"}],
+             "B": [{"name": "MonitorTop", "zone_index": 0, "edge": "top"}]}
     cfg = {"enabled": True, "devices": {
         "A": {"enabled": True, "zones_enabled": {"MonitorLeft": False}},
         "B": {"enabled": False}}}
@@ -46,7 +47,7 @@ def test_status_counts_only_enabled_and_zone_enabled():
 
 
 def test_status_no_enabled_device_means_zero_active_zones():
-    _setup({"enabled": True, "devices": {}}, {"A": [{"name": "MonitorTop"}]}, ["A"])
+    _setup({"enabled": True, "devices": {}}, {"A": [{"name": "MonitorTop", "zone_index": 0, "edge": "top"}]}, ["A"])
     s = ambilight_api.get_ambilight_status()
     assert s["active_zones"] == 0 and s["mapped_devices"] == 1
 

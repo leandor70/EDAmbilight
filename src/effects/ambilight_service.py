@@ -367,11 +367,197 @@ def _sample_grid(frame: np.ndarray, rows: int, cols: int) -> np.ndarray:
     return (sums / (r_cnt[:, None, None] * c_cnt[None, :, None]))[..., ::-1]
 
 
+# ── Screen rectangle (where the screen sits in the topology scene) ────────────
+#
+# With a screen rectangle the side of the screen a LED follows is decided by WHERE
+# the LED is drawn, never by the zone name:
+#   * LED on (or near) a side of the rectangle  -> reads that side of the screen
+#   * LED inside the rectangle                  -> reads the point of the screen
+#                                                   under it (centre -> centre)
+#   * LED outside the rectangle                 -> stays off
+# "Near" is SCREEN_EDGE_BAND of the smaller side of the rectangle, inside or out,
+# so a strip drawn a little off the frame still counts as that side.
+#
+# The rectangle is stored in device_topologies.json as "screen_rect" in editor
+# coordinates (y pointing UP, like zone positions). Without it, a topology that
+# names its zones MonitorTop/Right/Bottom/Left keeps the old name-based mapping,
+# and one that does not uses the bounding box of the whole scene.
+
+SCREEN_EDGE_BAND = 0.15
+
+
+def _valid_rect(r) -> bool:
+    try:
+        return (r["x_max"] - r["x_min"]) > 0 and (r["y_max"] - r["y_min"]) > 0
+    except (KeyError, TypeError):
+        return False
+
+
+def _scene_points(data: dict) -> List[Tuple[float, float]]:
+    return [pt for topo in data.get("topologies", {}).values()
+            for z in topo.get("zones", []) if not _is_unreadable_name(z.get("name", ""))
+            for pt in _led_world_positions(z)]
+
+
+def _bbox(pts) -> Tuple[float, float, float, float]:
+    return (min(p[0] for p in pts), max(p[0] for p in pts),
+            min(p[1] for p in pts), max(p[1] for p in pts))
+
+
+def screen_frame(data: dict) -> Tuple[str, Optional[Tuple[float, float, float, float]]]:
+    """How the screen is located in the scene.
+
+    Returns (mode, rect) with rect = (x_min, x_max, y_min, y_max) in sampling
+    coordinates (y DOWN, as _led_world_positions):
+      "manual" -> the stored screen_rect
+      "names"  -> no rectangle, zones named Monitor*: old name-based mapping (rect None)
+      "auto"   -> no rectangle, no such names: bounding box of the whole scene
+    """
+    r = data.get("screen_rect")
+    if _valid_rect(r):
+        return "manual", (float(r["x_min"]), float(r["x_max"]), -float(r["y_max"]), -float(r["y_min"]))
+    if any(z.get("name") in _ZONE_SCREEN_MAP
+           for t in data.get("topologies", {}).values() for z in t.get("zones", [])):
+        return "names", None
+    pts = _scene_points(data)
+    return "auto", (_bbox(pts) if pts else (0.0, 100.0, 0.0, 100.0))
+
+
+def suggest_screen_rect(data: dict) -> Optional[dict]:
+    """A starting rectangle (editor coordinates, y UP) for the Topology Editor.
+
+    From named zones: the frame drawn by the Monitor* zones (the same rectangle
+    the name-based mapping uses, so a setup working by name keeps its sides; a
+    Desktop strip just under it falls in the edge band). Otherwise the bounding
+    box of the whole scene."""
+    zones = [z for t in data.get("topologies", {}).values() for z in t.get("zones", [])]
+    frame = [p for z in zones if z.get("name", "").startswith("Monitor")
+             for p in _led_world_positions(z)]
+    if frame:
+        x0, x1, y0, y1 = _bbox(frame)
+    else:
+        pts = _scene_points(data)
+        if not pts:
+            return None
+        x0, x1, y0, y1 = _bbox(pts)
+    if x1 - x0 <= 0 or y1 - y0 <= 0:
+        return None
+    return {"x_min": x0, "x_max": x1, "y_min": -y1, "y_max": -y0}
+
+
+def _classify_led(x: float, y: float, rect, band: float, along_axis: Optional[str] = None):
+    """("off",) | ("edge", side, along 0..1) | ("area", x_pct, y_pct).
+
+    along_axis ("x" or "y") is the direction the strip runs: a LED near a corner
+    (close to two sides) goes to the side parallel to its strip."""
+    x0, x1, y0, y1 = rect
+    w, h = max(0.001, x1 - x0), max(0.001, y1 - y0)
+    d = {"left": x - x0, "right": x1 - x, "top": y - y0, "bottom": y1 - y}
+    if min(d.values()) < -band:
+        return ("off",)
+    near = [k for k in d if abs(d[k]) <= band]
+    parallel = [k for k in near if (k in ("top", "bottom")) == (along_axis == "x")] if along_axis else []
+    side = min(parallel or near or d, key=lambda k: abs(d[k]))
+    if abs(d[side]) <= band:
+        along = (x - x0) / w if side in ("top", "bottom") else (y - y0) / h
+        return ("edge", side, max(0.0, min(1.0, along)))
+    return ("area", max(0.0, min(1.0, (x - x0) / w)), max(0.0, min(1.0, (y - y0) / h)))
+
+
+def _geometric_entries(zone: dict, led_offset: int, rect) -> List[dict]:
+    """Sampling entries for one zone, LED by LED, from where its LEDs sit.
+
+    Consecutive LEDs on the same side become one edge entry (a zone that runs
+    past a corner gives its corner LEDs to the side it is parallel to); LEDs
+    inside become one point entry each; LEDs outside become "off" entries
+    (listed, never sampled)."""
+    pts = _led_world_positions(zone)
+    if not pts:
+        return []
+    x0, x1, y0, y1 = rect
+    w, h = max(0.001, x1 - x0), max(0.001, y1 - y0)
+    band = max(1.0, SCREEN_EDGE_BAND * min(w, h))
+    spacing = zone.get("led_spacing", 1.0)
+    base = {"name": zone.get("name", ""), "zone_index": zone["zone_index"],
+            "led_count": zone["led_count"], "led_offset": led_offset,
+            "screen_start": 0.0, "screen_end": 1.0, "reversed": False}
+
+    axis = None
+    if len(pts) > 1:
+        axis = "x" if abs(pts[-1][0] - pts[0][0]) >= abs(pts[-1][1] - pts[0][1]) else "y"
+    kinds = [_classify_led(x, y, rect, band, axis) for x, y in pts]
+    out: List[dict] = []
+    i = 0
+    while i < len(kinds):
+        k = kinds[i]
+        j = i + 1
+        if k[0] in ("edge", "off"):
+            while j < len(kinds) and kinds[j][0] == k[0] and kinds[j][1:2] == k[1:2]:
+                j += 1
+        if k[0] == "off":
+            out.append({**base, "edge": "off", "led_start": i, "led_end": j})
+        elif k[0] == "area":
+            out.append({**base, "edge": "area", "led_start": i, "led_end": i + 1,
+                        "x_pct": k[1], "y_pct": k[2]})
+        else:
+            side = k[1]
+            along = [kinds[n][2] for n in range(i, j)]
+            span = w if side in ("top", "bottom") else h
+            half = spacing / 2 / span
+            out.append({**base, "edge": side, "led_start": i, "led_end": j,
+                        "screen_start": max(0.0, min(along) - half),
+                        "screen_end":   min(1.0, max(along) + half),
+                        "reversed":     len(along) > 1 and along[0] > along[-1]})
+        i = j
+    return out
+
+
+def summarize_zones(entries: List[dict]) -> List[dict]:
+    """One item per zone (entries of a zone share zone_index), for lists and counts.
+
+    edge: "top", "area", "matrix", several joined with "+" ("top+right"), or "off"
+    when every LED of the zone is outside the screen (it is never driven)."""
+    by_idx: Dict[int, dict] = {}
+    for e in entries:
+        s = by_idx.setdefault(e["zone_index"], {
+            "zone_index": e["zone_index"], "name": e["name"],
+            "rows": e.get("rows"), "cols": e.get("cols"), "_kinds": []})
+        if e["edge"] != "off" and e["edge"] not in s["_kinds"]:
+            s["_kinds"].append(e["edge"])
+    out = []
+    for s in by_idx.values():
+        kinds = s.pop("_kinds")
+        s["edge"] = "+".join(kinds) if kinds else "off"
+        s["outside"] = not kinds
+        out.append(s)
+    return out
+
+
+def _matrix_entry(zone: dict, led_offset: int, layout: dict) -> dict:
+    return {
+        "name":         zone.get("name", ""),
+        "zone_index":   zone["zone_index"],
+        "led_count":    zone["led_count"],
+        "led_offset":   led_offset,
+        "led_start":    0,
+        "led_end":      zone["led_count"],
+        "screen_start": 0.0,
+        "screen_end":   1.0,
+        "edge":         "matrix",
+        "rows":         layout["rows"],
+        "cols":         layout["cols"],
+        "cells":        [tuple(c) for c in layout["cells"]],
+        "reversed":     False,
+    }
+
+
 def build_device_zones(device_key: str, layouts: Optional[dict] = None) -> Tuple[List[dict], int]:
     """Load zone sampling parameters for a device from device_topologies.json.
 
     `layouts` (OpenRGBManager.matrix_layouts) turns a zone that has a key grid
-    into an "matrix" zone: every LED reads its own cell of the screen."""
+    into an "matrix" zone: every LED reads its own cell of the screen.
+    Entries of one zone can be several (one per side / point / off run): they
+    share zone_index and differ by led_start..led_end."""
     try:
         data = json.loads(Path("config/device_topologies.json").read_text(encoding="utf-8"))
     except Exception:
@@ -392,6 +578,20 @@ def build_device_zones(device_key: str, layouts: Optional[dict] = None) -> Tuple
         off += zone["led_count"]
     total_leds = off
 
+    mode, rect = screen_frame(data)
+    if mode != "names":
+        result: List[dict] = []
+        for z_idx, zone in enumerate(all_zones):
+            if _is_unreadable_name(zone.get("name", "")):
+                continue                      # hidden '???' zones: never driven
+            layout = (layouts or {}).get(zone["zone_index"])
+            if layout:
+                result.append(_matrix_entry(zone, zone_offsets[z_idx], layout))
+            else:
+                result.extend(_geometric_entries(zone, zone_offsets[z_idx], rect))
+        return result, total_leds
+
+    # ── Old name-based mapping (no screen rectangle yet, zones named Monitor*) ──
     frame_zones = [z for z in all_zones if z.get("name", "").startswith("Monitor")]
     if frame_zones:
         all_pts   = [pt for z in frame_zones for pt in _led_world_positions(z)]
@@ -476,21 +676,7 @@ def build_device_zones(device_key: str, layouts: Optional[dict] = None) -> Tuple
 
         layout = (layouts or {}).get(zone["zone_index"])
         if layout:
-            result.append({
-                "name":         name,
-                "zone_index":   zone["zone_index"],
-                "led_count":    zone["led_count"],
-                "led_offset":   zone_offsets[z_idx],
-                "led_start":    0,
-                "led_end":      zone["led_count"],
-                "screen_start": 0.0,
-                "screen_end":   1.0,
-                "edge":         "matrix",
-                "rows":         layout["rows"],
-                "cols":         layout["cols"],
-                "cells":        [tuple(c) for c in layout["cells"]],
-                "reversed":     False,
-            })
+            result.append(_matrix_entry(zone, zone_offsets[z_idx], layout))
             continue
 
         led_pts = _led_world_positions(zone)
@@ -986,14 +1172,15 @@ class AmbilightService:
             zones_enabled = dev_cfg.get("zones_enabled", {})
 
             for zone in zones:
-                if not is_zone_enabled(zones_enabled, zone):
-                    continue
+                if zone["edge"] == "off" or not is_zone_enabled(zones_enabled, zone):
+                    continue                  # outside the screen: stays dark
 
                 led_start = zone["led_start"]
                 led_end   = zone["led_end"]
                 active    = led_end - led_start
                 off       = zone["led_offset"] + led_start
-                zone_key  = f"{device_key}:{zone['zone_index']}"
+                # one zone can give several entries (sides / points): keep their history apart
+                zone_key  = f"{device_key}:{zone['zone_index']}:{led_start}"
 
                 if zone["edge"] == "matrix":
                     grid = _sample_grid(frame, zone["rows"], zone["cols"])

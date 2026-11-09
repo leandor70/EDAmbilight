@@ -78,7 +78,7 @@ def test_build_device_zones_turns_a_key_grid_into_a_matrix_zone(tmp_path, monkey
     layouts = {0: {"rows": 2, "cols": 2, "cells": [(0, 0, 0), (0, 1, 1), (1, 0, 2), (1, 1, 3)]}}
 
     plain, _ = svc.build_device_zones("Keys::linear")
-    assert [z["edge"] for z in plain] == ["area"]
+    assert "matrix" not in [z["edge"] for z in plain]      # without the key map: a plain row
 
     zones, total = svc.build_device_zones("Keys::linear", layouts)
     assert total == 4

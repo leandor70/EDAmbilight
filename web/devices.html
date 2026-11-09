@@ -281,8 +281,10 @@ function renderDevices(devs) {
 }
 
 // "area" zones read one point of the screen; Monitor* zones follow a screen edge
-const _edgeText = z => z.edge === 'area' ? 'one color'
-                     : z.edge === 'matrix' ? `${z.cols}×${z.rows} keys` : `${z.edge} edge`;
+const _edgeText = z => z.outside ? 'outside the screen'
+                     : z.edge === 'area' ? 'screen point'
+                     : z.edge === 'matrix' ? `${z.cols}×${z.rows} keys`
+                     : z.edge.split('+').map(e => e === 'area' ? 'point' : e).join(' + ') + (z.edge.includes('area') ? '' : ' edge');
 const _zoneLabel = z => /^[?\s]*$/.test(z.name || '') ? `Zone ${z.zone_index}` : z.name;
 
 function zonesHtml(dev, idx) {
