@@ -20,6 +20,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Windows): Fit and the automatic rectangle grow to them, corners resize keeping them. A rectangle
   saved with other proportions is adapted when the editor opens and left unsaved, with a warning,
   because growing it can move strips from a side to the inside.
+- Topology Editor: the grey "VBBox" is gone (a leftover from ED:Event2Led, used by nothing here) and
+  the Effect Center panel is now **Calibration Center**: it only sets where the calibration rings start.
   Note: once the rectangle is placed, zones read their point relative to the screen, not to the whole
   scene as before, so devices placed away from the monitor may read a different part of the screen.
 

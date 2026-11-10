@@ -18,7 +18,8 @@ class TopologyCanvas {
         this.ctx = canvasElement.getContext('2d');
         this.zones = []; // Populated dynamically after device selection
 
-        // Global effect center (topology-level, not per-zone)
+        // Calibration center (saved as global_effect_center): the calibration lights the
+        // LEDs in rings of colour around it. The ambilight itself does not use it.
         this.effectCenter = { x: 50, y: 50 }; // Percentuale 0-100
 
         // Rendering config
@@ -404,13 +405,10 @@ class TopologyCanvas {
         // Calibration overlay (above zones, below bboxes and crosshair)
         this.drawCalibrationOverlay();
 
-        // Draw Virtual BBox first (background layer)
-        this.drawVirtualBBox();
-
-        // Draw standard BBox (foreground layer)
+        // Bounding box of the whole scene
         this.drawBoundingBox();
 
-        // Draw effect center (always visible on global bbox)
+        // Calibration center (the calibration lights the LEDs in rings around it)
         this.drawEffectCenter();
     }
 
@@ -637,37 +635,6 @@ class TopologyCanvas {
         this.ctx.strokeStyle = '#000000';
         this.ctx.lineWidth = 1;
         this.ctx.stroke();
-    }
-
-    drawVirtualBBox() {
-        const vbbox = this.calculateVirtualBBox();
-        if (!vbbox) return;
-
-        const topLeft = this.worldToScreen({ x: vbbox.min_x, y: vbbox.max_y });
-        const bottomRight = this.worldToScreen({ x: vbbox.max_x, y: vbbox.min_y });
-
-        const width = bottomRight.x - topLeft.x;
-        const height = bottomRight.y - topLeft.y;
-
-        // Fill with semi-transparent gray
-        this.ctx.fillStyle = 'rgba(128, 128, 128, 0.15)';
-        this.ctx.fillRect(topLeft.x, topLeft.y, width, height);
-
-        // Dashed gray border
-        this.ctx.strokeStyle = 'rgba(128, 128, 128, 0.4)';
-        this.ctx.lineWidth = 1;
-        this.ctx.setLineDash([8, 4]);
-        this.ctx.strokeRect(topLeft.x, topLeft.y, width, height);
-        this.ctx.setLineDash([]);
-
-        // VBBox label
-        this.ctx.fillStyle = 'rgba(128, 128, 128, 0.7)';
-        this.ctx.font = '11px Inter, system-ui, sans-serif';
-        this.ctx.fillText(
-            `VBBox: ${(vbbox.max_x - vbbox.min_x).toFixed(1)} × ${(vbbox.max_y - vbbox.min_y).toFixed(1)}`,
-            topLeft.x,
-            topLeft.y - 5
-        );
     }
 
     drawBoundingBox() {
@@ -1050,42 +1017,6 @@ class TopologyCanvas {
         return { min_x, min_y, max_x, max_y };
     }
 
-    calculateVirtualBBox() {
-        const standardBbox = this.calculateBoundingBox();
-        if (!standardBbox) return null;
-
-        // Convert effect center percentage to normalized [0,1]
-        const cx_norm = Math.max(0.0, Math.min(1.0, this.effectCenter.x / 100.0));
-        const cy_norm = Math.max(0.0, Math.min(1.0, this.effectCenter.y / 100.0));
-
-        // Convert to world coords
-        const width = standardBbox.max_x - standardBbox.min_x;
-        const height = standardBbox.max_y - standardBbox.min_y;
-        const cx_world = standardBbox.min_x + cx_norm * width;
-        const cy_world = standardBbox.min_y + cy_norm * height;
-
-        // Calculate symmetric expansion
-        const dist_left = cx_world - standardBbox.min_x;
-        const dist_right = standardBbox.max_x - cx_world;
-        const dist_bottom = cy_world - standardBbox.min_y;
-        const dist_top = standardBbox.max_y - cy_world;
-
-        const half_width = Math.max(dist_left, dist_right);
-        const half_height = Math.max(dist_bottom, dist_top);
-
-        // Apply 10% padding (5% per side to total 10%)
-        const padding_x = half_width * 0.05;
-        const padding_y = half_height * 0.05;
-
-        return {
-            min_x: cx_world - half_width - padding_x,
-            min_y: cy_world - half_height - padding_y,
-            max_x: cx_world + half_width + padding_x,
-            max_y: cy_world + half_height + padding_y,
-            center_world: { x: cx_world, y: cy_world }
-        };
-    }
-
     getZoneCorners(zone) {
         const w = zone.led_count * (zone.led_spacing ?? 1.0);
         const corners = [
@@ -1160,14 +1091,6 @@ class TopologyCanvas {
             const width = (bbox.max_x - bbox.min_x).toFixed(1);
             const height = (bbox.max_y - bbox.min_y).toFixed(1);
             document.getElementById('bbox-info').textContent = `BBox: ${width}×${height}`;
-        }
-
-        // Update Virtual BBox (expanded based on effect center)
-        const vbbox = this.calculateVirtualBBox();
-        if (vbbox) {
-            const vwidth = (vbbox.max_x - vbbox.min_x).toFixed(1);
-            const vheight = (vbbox.max_y - vbbox.min_y).toFixed(1);
-            document.getElementById('vbbox-info').textContent = `VBBox: ${vwidth}×${vheight}`;
         }
     }
 
@@ -1860,7 +1783,7 @@ function initUnsavedTracking() {
     });
 }
 
-// ── Advanced block (grid, effect center, calibration, measurements) ──────────
+// ── Advanced block (grid, calibration center, calibration, measurements) ─────
 
 function setAdvanced(on, { persist = true } = {}) {
     document.body.classList.toggle('adv-open', on);

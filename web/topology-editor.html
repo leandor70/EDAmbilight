@@ -226,7 +226,7 @@
                                 <span class="material-symbols-outlined" style="font-size:14px; font-variation-settings:'FILL' 0,'wght' 200,'opsz' 20;">fit_screen</span>
                                 Fit View
                             </button>
-                            <button id="btn-advanced" class="btn" aria-pressed="false" title="Show grid, effect center, calibration and measurements">
+                            <button id="btn-advanced" class="btn" aria-pressed="false" title="Show grid, calibration center, calibration and measurements">
                                 <span class="material-symbols-outlined" style="font-size:14px; font-variation-settings:'FILL' 0,'wght' 200,'opsz' 20;">tune</span>
                                 Advanced
                             </button>
@@ -257,14 +257,13 @@
                         <div id="mouse-pos"  style="font-size:10px; color:rgba(255,255,255,.28); font-family:monospace;">X: 0, Y: 0</div>
                         <div id="zoom-level" style="font-size:10px; color:rgba(255,255,255,.28); font-family:monospace;">100%</div>
                         <div id="bbox-info" class="adv-only" style="font-size:10px; color:rgba(255,255,255,.28); font-family:monospace;">BBox: 0×0</div>
-                        <div id="vbbox-info" class="adv-only" style="font-size:10px; color:var(--c-cyan); font-family:monospace;">VBBox: 0×0</div>
                     </div>
                 </div>
             </div>
 
         </div>
 
-        <!-- ── RIGHT: Inspector + Effect center + Calibration + Overlap ── -->
+        <!-- ── RIGHT: Inspector + Screen + Calibration center + Calibration + Overlap ── -->
         <aside class="side-col" style="width:252px; flex-shrink:0; display:flex; flex-direction:column; gap:8px; overflow-y:auto; padding-left:2px;">
 
             <!-- Zone Inspector -->
@@ -360,12 +359,12 @@
                 </div>
             </div>
 
-            <!-- Effect Center -->
+            <!-- Calibration center (global_effect_center) -->
             <div class="panel ds-appear adv-only" style="flex-shrink:0; animation-delay:.11s;">
                 <div class="panel-body" style="padding:14px 16px;">
                     <div class="ds-label" style="margin-bottom:12px; display:flex; align-items:center; gap:6px;">
                         <span class="material-symbols-outlined" style="font-size:14px; color:var(--c-cyan); font-variation-settings:'FILL' 0,'wght' 200,'opsz' 20;">center_focus_strong</span>
-                        Effect Center
+                        Calibration Center
                     </div>
                     <div style="display:flex; flex-direction:column; gap:10px;">
                         <div style="display:flex; gap:8px;">
@@ -390,7 +389,7 @@
                         </div>
                         <div style="padding-top:8px; border-top:1px solid rgba(255,255,255,.05); display:flex; gap:6px; align-items:flex-start;">
                             <span class="material-symbols-outlined" style="font-size:13px; color:var(--c-text-ghost); flex-shrink:0; margin-top:1px; font-variation-settings:'FILL' 0,'wght' 200,'opsz' 16;">info</span>
-                            <span style="font-size:11px; color:var(--c-text-ghost); line-height:1.55;">Drag the cyan crosshair on the canvas. Radial effects expand from this point.</span>
+                            <span style="font-size:11px; color:var(--c-text-ghost); line-height:1.55;">Drag the cyan crosshair on the canvas. The Calibration button lights your LEDs in rings of colour around this point, to check that the zones on the canvas are where the LEDs really are. The ambilight does not use it.</span>
                         </div>
                     </div>
                 </div>
