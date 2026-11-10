@@ -1367,7 +1367,7 @@ function updateScreenPanel() {
     if (!el) return;
     const sc = canvas.screen;
     el.textContent = sc.rect
-        ? 'Placed by hand. LEDs on a side read that side of the screen, LEDs inside read the point under them, LEDs outside stay off.'
+        ? 'Placed by hand. LEDs on a side read that side of the screen, LEDs inside read the point under them, LEDs outside are left alone.'
         : sc.mode === 'names'
         ? 'Automatic: the sides still come from the zone names (MonitorTop, MonitorRight…). Press Fit or drag the rectangle to place the screen yourself: then the names no longer matter.'
         : 'Automatic: the screen covers every zone. Drag a corner, or press Fit, to place it where your monitor is.';

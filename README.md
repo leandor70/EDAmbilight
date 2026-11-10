@@ -151,7 +151,10 @@ from the strips; drag a corner to resize, the border to move). The rectangle alw
 proportions of your real screen, so draw the strips to scale around it. Where a LED sits decides what it shows,
 whatever the zone is called: on a side of the rectangle it follows that side of the screen, inside it
 reads the point of the screen under it (the centre of the rectangle reads the centre of the screen),
-outside it stays off. Faded LEDs on the canvas are outside; a dot on a LED means it reads one point.
+outside it is left alone. Faded LEDs on the canvas are outside; a dot on a LED means it reads one point.
+LEDs outside the screen, and zones you switch off in Devices, are never written: they keep whatever
+color OpenRGB (in Direct mode, the mode EDAmbilight puts the device in) or another program gives them.
+A LED that stops being used gets black once, then it is left alone.
 Older setups that name their zones MonitorTop / MonitorRight / MonitorBottom / MonitorLeft keep
 the old name-based mapping until the rectangle is placed. Changes take effect without restarting.
 

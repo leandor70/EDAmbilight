@@ -134,8 +134,12 @@ class OpenRGBManager:
         self,
         device_key: str,
         colors: List[Tuple[int, int, int]],
+        mask=None,
     ) -> bool:
-        """Apply RGB colors directly to a device. Thread-safe."""
+        """Apply RGB colors directly to a device. Thread-safe.
+
+        mask (one bool per LED) = the LEDs to write; the others are left alone, so
+        they keep whatever OpenRGB or another program gives them. None = all."""
         with self._lock:
             for ctrl in self.devices:
                 if self._make_device_key(ctrl) == device_key:
@@ -161,12 +165,43 @@ class OpenRGBManager:
                             else:
                                 colors = colors[:hw_led_count]
 
-                        device.set_colors(colors)
+                        if mask is None:
+                            device.set_colors(colors)
+                            return True
+                        mask = [bool(m) for m in list(mask)[:hw_led_count]]
+                        mask += [False] * (hw_led_count - len(mask))
+                        if all(mask):
+                            device.set_colors(colors)
+                        elif any(mask):
+                            self._write_masked(device, colors, mask)
                         return True
                     except Exception as exc:
                         print(f"[OpenRGBManager] apply_direct_colors error ({device_key}): {exc}")
                         return False
         return False
+
+    @staticmethod
+    def _write_masked(device, colors, mask) -> None:
+        """Write only the LEDs in mask: a whole zone with one packet, a zone used
+        only in part LED by LED, a zone not used at all not at all."""
+        start = 0
+        zones = getattr(device, "zones", None) or []
+        if sum(len(z.leds) for z in zones) != len(colors):
+            zones = []                                  # unknown layout: LED by LED
+        for zi, zone in enumerate(zones):
+            end = start + len(zone.leds)
+            part = mask[start:end]
+            if part and all(part):
+                device.set_zone_colors(zi, colors[start:end])
+            elif any(part):
+                for i in range(start, end):
+                    if mask[i]:
+                        device.set_led_color(i, colors[i])
+            start = end
+        if not zones:
+            for i, m in enumerate(mask):
+                if m:
+                    device.set_led_color(i, colors[i])
 
     # ── Reconnect support ──────────────────────────────────────────────────────
 

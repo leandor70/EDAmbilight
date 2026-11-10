@@ -40,6 +40,8 @@ CMD_REQUEST_PROTOCOL_VERSION = 40
 CMD_SET_CLIENT_NAME = 50
 CMD_DEVICE_LIST_UPDATED = 51
 CMD_RGBCONTROLLER_UPDATELEDS = 1050
+CMD_RGBCONTROLLER_UPDATEZONELEDS = 1051
+CMD_RGBCONTROLLER_UPDATESINGLELED = 1052
 CMD_RGBCONTROLLER_SETCUSTOMMODE = 1100
 CMD_RGBCONTROLLER_UPDATEMODE = 1101
 
@@ -189,6 +191,29 @@ class Device:
             )
         self._client._send_colors(self.id, colors)
         self.colors = [RGBColor(int(c[0]), int(c[1]), int(c[2])) for c in colors]
+
+    def set_zone_colors(self, zone_index: int, colors: Sequence[Sequence[int]]) -> None:
+        """Set the LEDs of one zone only (the other LEDs are not touched)."""
+        zone = self.zones[zone_index]
+        if len(colors) != zone.leds_count:
+            raise ValueError(
+                f"Number of colors ({len(colors)}) doesn't match the LEDs of zone {zone.name!r} ({zone.leds_count})"
+            )
+        body = struct.pack("<iH", zone_index, len(colors)) + _pack_colors(colors)
+        self._client._send(self.id, CMD_RGBCONTROLLER_UPDATEZONELEDS, struct.pack("<I", 4 + len(body)) + body)
+        start = sum(z.leds_count for z in self.zones[:zone_index])
+        for i, c in enumerate(colors):
+            if start + i < len(self.colors):
+                self.colors[start + i] = RGBColor(int(c[0]), int(c[1]), int(c[2]))
+
+    def set_led_color(self, led_index: int, color: Sequence[int]) -> None:
+        """Set one LED only (the other LEDs are not touched)."""
+        if not 0 <= led_index < len(self.leds):
+            raise ValueError(f"LED {led_index} out of range ({len(self.leds)} LEDs)")
+        self._client._send(self.id, CMD_RGBCONTROLLER_UPDATESINGLELED,
+                           struct.pack("<i", led_index) + _pack_colors([color]))
+        if led_index < len(self.colors):
+            self.colors[led_index] = RGBColor(int(color[0]), int(color[1]), int(color[2]))
 
 
 # ── Wire format helpers ────────────────────────────────────────────────────────

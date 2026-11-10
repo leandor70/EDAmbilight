@@ -12,14 +12,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **Where a zone is, not what it is called.** The Topology Editor has a SCREEN rectangle (your monitor):
   **Fit** places it on the strips, corners resize it, the border moves it. LEDs on a side of the rectangle
-  follow that side of the screen, LEDs inside read the point of the screen under them, LEDs outside stay
-  off; it works LED by LED, so a zone longer than the screen lights only the part along it. Zone names
+  follow that side of the screen, LEDs inside read the point of the screen under them, LEDs outside are
+  left alone; it works LED by LED, so a zone longer than the screen lights only the part along it. Zone names
   no longer matter. Without a rectangle, setups whose zones are named MonitorTop / Right / Bottom / Left
   keep the old mapping (Fit reproduces it), others use the bounding box of the whole scene.
   The rectangle always has the proportions of the real screen (read from the capture, else from
   Windows): Fit and the automatic rectangle grow to them, corners resize keeping them. A rectangle
   saved with other proportions is adapted when the editor opens and left unsaved, with a warning,
   because growing it can move strips from a side to the inside.
+- **LEDs the ambilight does not use are left free.** LEDs outside the screen and zones switched off in
+  Devices used to be sent black at every frame, so nothing else could light them. Now only the LEDs in
+  use are written (one packet per device when all are used, per zone or per LED otherwise), and a LED
+  that stops being used gets black once. The others keep what OpenRGB or another program gives them.
+  The OpenRGB client gained zone and single-LED updates. Calibration still blacks out whole devices.
 - **Flip Direction now works.** It used to change only the arrow on the canvas: the LED order always
   followed the rotation. Now Flip (F) means the zone is wired the other way round, LED 0 at the far
   end, and the ambilight, the calibration and the screen rectangle all follow it. A zone that was
@@ -31,7 +36,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **Devices is now the one place for hardware.** Each device is a row with its on/off switch and an
   expandable list of its zones (the zone switches used to be on the Control page, where they were easy
-  to miss: a zone left off is forced to black). A small live Sampling preview at the top shows what
+  to miss). A small live Sampling preview at the top shows what
   turning a device or zone on or off does. The Control page keeps only compact on/off chips, a summary
   and a warning when nothing would light up (no device mapped, none on, or no active zone).
 - Keyboards are no longer hidden: they are listed like any device, off until you switch them on.

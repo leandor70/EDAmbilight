@@ -757,6 +757,9 @@ class AmbilightService:
         # Standby (schermo non disponibile): ultimi colori + maschera LED attivi
         # per device, e istanti di inizio dell'assenza di frame / dello standby.
         self._standby_ctx: Dict[str, Tuple[np.ndarray, np.ndarray]] = {}
+        # LEDs written by the last frame, per device: a LED that stops being used
+        # gets black once, then it is left free (never written again)
+        self._prev_lit: Dict[str, np.ndarray] = {}
         self._no_frame_since: Optional[float] = None
         self._standby_since:  Optional[float] = None
         self._standby_last_write: float = 0.0
@@ -1127,7 +1130,7 @@ class AmbilightService:
                 continue
             colors = standby_effects.render(mode, t, base, mask, level)
             if colors is not None and not self._paused:
-                self._manager.apply_direct_colors(device_key, colors)
+                self._manager.apply_direct_colors(device_key, colors, mask)
 
     # ── Accento sul battito ───────────────────────────────────────────────────
 
@@ -1161,7 +1164,7 @@ class AmbilightService:
             if not cfg.get("devices", {}).get(device_key, {}).get("enabled", False):
                 continue
             colors = accent_effects.to_colors(accent_effects.render(base, lit, k, hue, p))
-            self._manager.apply_direct_colors(device_key, colors)
+            self._manager.apply_direct_colors(device_key, colors, lit)
         return True
 
     def _wait_with_accent(self, wait: float, cfg: dict) -> None:
@@ -1320,7 +1323,12 @@ class AmbilightService:
             # Skip the write if a pause arrived mid-frame (e.g. calibration
             # just started) — avoids a stray ambilight frame fighting it.
             if self._manager and not self._paused:
-                self._manager.apply_direct_colors(device_key, out)
+                # write only the LEDs in use (+ the ones that just stopped being
+                # used, once, in black): the others stay free for OpenRGB
+                prev = self._prev_lit.get(device_key)
+                write = lit | prev if prev is not None and len(prev) == len(lit) else lit
+                self._manager.apply_direct_colors(device_key, out, write)
+                self._prev_lit[device_key] = lit.copy()
 
         # Snapshot per l'anteprima UI: profondità realmente usata per bordo
         # (la cache contiene le strisce già ritagliate, anche con profondità adattiva).

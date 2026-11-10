@@ -198,7 +198,7 @@ class _Manager:
     def get_device_led_count(self, key):
         return 4
 
-    def apply_direct_colors(self, key, colors):
+    def apply_direct_colors(self, key, colors, mask=None):
         self.writes.append(list(colors))
 
 

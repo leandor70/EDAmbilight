@@ -67,7 +67,7 @@ def test_service_runs_effect_only_after_grace_and_resets_on_frame(monkeypatch):
 
     class _Mgr:
         def __init__(self): self.calls = []
-        def apply_direct_colors(self, key, colors): self.calls.append((key, colors))
+        def apply_direct_colors(self, key, colors, mask=None): self.calls.append((key, colors))
 
     mgr = _Mgr()
     svc = amb.AmbilightService(mgr)
