@@ -61,7 +61,7 @@ def test_zone_switches_go_by_index_never_by_name():
     assert [is_zone_enabled(by_index, z) for z in zones] == [True, False, True]
 
 
-def test_unreadable_zone_names_are_zones_like_the_others(tmp_path, monkeypatch):
+def test_phantom_zones_are_never_driven(tmp_path, monkeypatch):
     import json
     from effects import ambilight_service as svc
     def z(i, name):
@@ -72,9 +72,9 @@ def test_unreadable_zone_names_are_zones_like_the_others(tmp_path, monkeypatch):
     (tmp_path / "config" / "device_topologies.json").write_text(json.dumps(topo))
     monkeypatch.chdir(tmp_path)
     zones, total = svc.build_device_zones("D")
-    assert [x["name"] for x in zones] == ["CPU", "???", "Case"]   # the name decides nothing
-    assert total == 3
-    assert [x["led_offset"] for x in zones] == [0, 1, 2]
+    assert [x["name"] for x in zones] == ["CPU", "Case"]   # '???' = LEDs that do not exist
+    assert total == 3                      # LED offsets still count them
+    assert [x["led_offset"] for x in zones] == [0, 2]
 
 
 def test_set_zone_enabled_stores_index_key():

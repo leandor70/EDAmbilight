@@ -313,6 +313,17 @@ def _sample_edge(
 # ── Zone discovery ────────────────────────────────────────────────────────────
 
 
+def is_phantom_zone(zone: dict) -> bool:
+    """A zone OpenRGB reports with a name made only of '?' ("???").
+
+    These are LEDs that do not exist on the hardware (OpenRGB detects them
+    anyway): they are excluded from everything - never shown, never driven, left
+    out of the scene. It is the ONE rule that looks at a zone name; nothing else
+    about a setup is inferred from names.
+    """
+    return not str(zone.get("name", "")).strip().strip("?")
+
+
 def is_zone_enabled(zones_enabled: dict, zone: dict) -> bool:
     """Zone switches are keyed by zone_index only: a zone name never decides
     anything (keys written by name by old versions are ignored). On by default."""
@@ -346,7 +357,7 @@ def _sample_grid(frame: np.ndarray, rows: int, cols: int) -> np.ndarray:
 # side, so a strip drawn a little off the frame still counts as that side.
 #
 # The topology is the ONLY description of a setup: zone names never decide
-# anything. The rectangle is stored in device_topologies.json as "screen_rect" in
+# anything (the one exception: '???' zones, LEDs that do not exist, are dropped). The rectangle is stored in device_topologies.json as "screen_rect" in
 # editor coordinates (y pointing UP, like zone positions); without it the screen
 # is the bounding box of the whole scene, grown to the real screen proportions.
 
@@ -364,7 +375,7 @@ def _scene_points(data: dict, skip=frozenset()) -> List[Tuple[float, float]]:
     """LED points of the scene; `skip` = (device_key, zone_index) left out (key grids)."""
     return [pt for key, topo in data.get("topologies", {}).items()
             for z in topo.get("zones", [])
-            if (key, z.get("zone_index")) not in skip
+            if (key, z.get("zone_index")) not in skip and not is_phantom_zone(z)
             for pt in _led_world_positions(z)]
 
 
@@ -567,6 +578,8 @@ def build_device_zones(device_key: str, layouts: Optional[dict] = None,
     _, rect = screen_frame(data, scene_skip, aspect)
     result: List[dict] = []
     for z_idx, zone in enumerate(all_zones):
+        if is_phantom_zone(zone):
+            continue                          # '???': LEDs that do not exist, never driven
         layout = (layouts or {}).get(zone["zone_index"])
         if layout:
             result.append(_matrix_entry(zone, zone_offsets[z_idx], layout))

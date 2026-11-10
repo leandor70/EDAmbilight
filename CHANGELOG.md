@@ -29,9 +29,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     because growing it can move strips from a side to the inside.
   - **Zone names never decide anything any more**: the Topology Editor is the only description of a
     setup. Gone are the MonitorTop / MonitorRight / MonitorBottom / MonitorLeft / Desktop names that
-    used to pick a side, the hiding of zones OpenRGB names "???" (now listed, placed and driven like
-    the others) and the zone on/off switches saved by name by old versions (by index only; a switch
-    saved by name is back on). Until the rectangle is placed, the screen covers the whole scene.
+    used to pick a side and the zone on/off switches saved by name by old versions (by index only; a
+    switch saved by name is back on). The one name rule left: zones OpenRGB names "???" are LEDs that
+    do not exist, so they stay out of everything. Until the rectangle is placed, the screen covers the
+    whole scene.
     **After updating, place the rectangle in the Topology Editor and save.**
   - Once the rectangle is placed, zones that read one point measure it on the screen, not on the
     whole scene as before: devices placed away from the monitor may read a different part of it.

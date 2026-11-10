@@ -299,10 +299,16 @@ def key_grid_zone_ids() -> set:
     return ids
 
 
+def _visible_zones(zones: list) -> list:
+    """All zones but the '???' ones (LEDs that do not exist, see is_phantom_zone)."""
+    from effects.ambilight_service import is_phantom_zone
+    return [z for z in zones if not is_phantom_zone(z)]
+
+
 def _scene_zones(device_id: str, zones: list) -> list:
-    """Zones the editor shows: all of them but key grids (whatever their name)."""
+    """Zones the editor shows: no '???' ones, no key grids."""
     grids = _key_grid_indexes(device_id)
-    return [z for z in zones if z.get("zone_index") not in grids]
+    return [z for z in _visible_zones(zones) if z.get("zone_index") not in grids]
 
 
 @eel.expose
@@ -334,7 +340,7 @@ def get_topology_devices() -> dict:
                 "device_id":    device_key,
                 "name":         ctrl.topology.device.name,
                 "led_count":    ctrl.topology.led_count,
-                "zone_count":   len(topo.get("zones", [])),
+                "zone_count":   len(_visible_zones(topo.get("zones", []))),
                 "has_topology": device_key in topologies,
             })
 
@@ -449,7 +455,7 @@ def get_scene_topology() -> dict:
         for dev in devs_result["devices"]:
             device_id     = dev["device_id"]
             topo          = topologies.get(device_id, {})
-            stored        = topo.get("zones", [])
+            stored        = _visible_zones(topo.get("zones", []))
             zones         = _scene_zones(device_id, topo.get("zones", []))
             if stored and not zones:
                 continue      # only key grids (a keyboard): nothing to place
@@ -494,11 +500,11 @@ def save_scene_topology(zones: list, global_effect_center: dict) -> dict:
         for device_id, device_zones in by_device.items():
             if device_id not in topologies:
                 topologies[device_id] = {"device_id": device_id}
-            # The editor never sees key grids: keep the stored ones,
+            # The editor never sees '???' zones nor key grids: keep the stored ones,
             # otherwise saving would drop their LEDs and shift every later zone.
             grids  = _key_grid_indexes(device_id)
             hidden = [z for z in topologies[device_id].get("zones", [])
-                      if z.get("zone_index") in grids]
+                      if z.get("zone_index") in grids or z not in _visible_zones([z])]
             if hidden:
                 device_zones = sorted(device_zones + hidden,
                                       key=lambda z: z.get("zone_index", 0))
