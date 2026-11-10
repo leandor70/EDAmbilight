@@ -20,8 +20,7 @@ window.addEventListener('load', async () => {
     toggleAdvanced(_lsGet('edambi.advanced') !== '0');
     renderDevices(_devs);
 
-    pollStatus();
-    setInterval(pollStatus, 800);
+    _statusLoop();
     _initSampling();
     _initAccent();
 });
@@ -248,6 +247,12 @@ function _applyChip(deviceKey, on) {
 // ── Status polling ────────────────────────────────────────────────────────────
 
 let _pollFailures = 0;
+
+// Status every 0.8 s; every 2 s when the window is in the background, 3 s when hidden
+async function _statusLoop() {
+    try { await pollStatus(); } catch (_) {}
+    setTimeout(_statusLoop, document.hidden ? 3000 : document.hasFocus() ? 800 : 2000);
+}
 
 function _setConnectionBanner(lost) {
     let b = document.getElementById('conn-banner');
@@ -616,7 +621,7 @@ async function _accentTick() {
         _accentBusy = true;
         try { _renderMeter(await api('get_audio_status')); } finally { _accentBusy = false; }
     }
-    setTimeout(_accentTick, _cfg.accent_enabled ? 200 : 1000);
+    setTimeout(_accentTick, _cfg.accent_enabled && document.hasFocus() ? 200 : 1000);
 }
 
 function _renderMeter(s) {

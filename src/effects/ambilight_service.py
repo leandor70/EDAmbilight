@@ -634,6 +634,13 @@ class AmbilightService:
         # Ultimo snapshot della campionatura (geometria + colori), per l'anteprima UI
         self._sampling: Optional[dict] = None
         self._sampling_ts: float = 0.0
+        # the preview (colours per zone for the dashboard map) is built only while a
+        # page asks for it: until this time.monotonic()
+        self._preview_until: float = 0.0
+        # where the time goes, ms (EMA): per frame, and per second for the accent
+        self._timings: Dict[str, float] = {"grab_ms": 0.0, "process_ms": 0.0, "write_ms": 0.0,
+                                           "accent_ms_per_s": 0.0, "accent_writes_per_s": 0.0}
+        self._acc_win = [time.monotonic(), 0.0, 0]          # window start, seconds spent, writes
         # Accento sul battito audio (luminosita' / tinta): stato dell'ultimo battito
         self._accent = accent_effects.AccentState()
         # Ascolto dell'audio di sistema: ogni battito rilevato fa partire un accento
@@ -745,10 +752,22 @@ class AmbilightService:
         Aggiunge `age` (secondi dall'ultimo frame elaborato) così la UI può
         capire se il dato è fresco. None se non è mai stato elaborato un frame.
         """
+        self._preview_until = time.monotonic() + 2.5        # a page is looking: keep it built
         snap = self._sampling
         if snap is None:
             return None
         return {**snap, "age": round(time.monotonic() - self._sampling_ts, 2)}
+
+    @property
+    def timings(self) -> Dict[str, float]:
+        """Where the time goes: grab / process / write ms per frame (process
+        includes write), and the beat accent's own work per second."""
+        return dict(self._timings)
+
+    def _ema(self, key: str, seconds: float) -> None:
+        ms = seconds * 1000
+        old = self._timings.get(key, 0.0)
+        self._timings[key] = round(0.85 * old + 0.15 * ms, 2) if old else round(ms, 2)
 
     # ── Black-border detection ────────────────────────────────────────────────
 
@@ -947,16 +966,21 @@ class AmbilightService:
                     self._standby_preview_until = 0.0
                     self._no_frame_since = self._standby_since = None
 
+                tg = time.perf_counter()
                 frame = svc.get_latest_frame()
                 if frame is None:
                     self._on_no_frame(cfg)
                     continue
                 self._no_frame_since = self._standby_since = None
 
+                tp = time.perf_counter()
                 self._process_frame(frame, cfg)
+                done = time.perf_counter()
+                self._ema("grab_ms", tp - tg)
+                self._ema("process_ms", done - tp)
 
-                elapsed = time.perf_counter() - t0
-                self._track_rate(t0, elapsed)
+                elapsed = done - t0
+                self._track_rate(t0, done - tp)
 
                 wait = 1.0 / max(1, int(cfg.get("fps", 15))) - elapsed
                 if wait > 0:
@@ -1041,12 +1065,28 @@ class AmbilightService:
         if not accent or self._paused or not self._manager:
             return bool(accent)
         p, k, hue = accent
+        t = time.perf_counter()
+        writes = 0
         for device_key, (base, lit) in list(self._standby_ctx.items()):
             if not cfg.get("devices", {}).get(device_key, {}).get("enabled", False):
                 continue
             colors = accent_effects.to_colors(accent_effects.render(base, lit, k, hue, p))
             self._manager.apply_direct_colors(device_key, colors, lit)
+            writes += 1
+        self._count_accent(time.perf_counter() - t, writes)
         return True
+
+    def _count_accent(self, seconds: float, writes: int) -> None:
+        """Accent work per second, over windows of at least one second."""
+        w = self._acc_win
+        w[1] += seconds
+        w[2] += writes
+        now = time.monotonic()
+        if now - w[0] >= 1.0:
+            span = now - w[0]
+            self._timings["accent_ms_per_s"] = round(w[1] * 1000 / span, 2)
+            self._timings["accent_writes_per_s"] = round(w[2] / span, 1)
+            self._acc_win = [now, 0.0, 0]
 
     def _wait_with_accent(self, wait: float, cfg: dict) -> None:
         """Attende `wait` secondi; con l'accento attivo aggiorna i LED a 60 passi/s.
@@ -1073,6 +1113,8 @@ class AmbilightService:
             self._frame_size = (full_w, full_h)
             self._zone_cache.clear()
         snap_zones: List[dict] = []
+        want = time.monotonic() < self._preview_until      # a page shows the map
+        write_s = 0.0
         if cfg.get("black_bar_detect", True):
             self._update_content_rect(frame, cfg)
             if self._bb_rect is not None:
@@ -1129,13 +1171,14 @@ class AmbilightService:
                     zone_colors = _apply_min_luminance(zone_colors, min_lum)
                     colors[off: off + active] = zone_colors
                     lit[off: off + active] = True
-                    shown = self._accented(zone_colors, accent)
-                    snap_zones.append({
-                        "dev": device_key, "zone": zone["name"], "edge": "matrix",
-                        "rows": zone["rows"], "cols": zone["cols"],
-                        "cells": [[r, c] for r, c, led in zone["cells"] if led < active],
-                        "colors": _hex_colors([shown[led] for r, c, led in zone["cells"] if led < active]),
-                    })
+                    if want:
+                        shown = self._accented(zone_colors, accent)
+                        snap_zones.append({
+                            "dev": device_key, "zone": zone["name"], "edge": "matrix",
+                            "rows": zone["rows"], "cols": zone["cols"],
+                            "cells": [[r, c] for r, c, led in zone["cells"] if led < active],
+                            "colors": _hex_colors([shown[led] for r, c, led in zone["cells"] if led < active]),
+                        })
                     continue
 
                 if zone["edge"] == "area":
@@ -1153,12 +1196,13 @@ class AmbilightService:
                     zone_colors = _apply_min_luminance(zone_colors, min_lum)
                     colors[off: off + active] = zone_colors
                     lit[off: off + active] = True
-                    snap_zones.append({
-                        "dev": device_key, "zone": zone["name"],
-                        "edge": "area", "x": round(zone["x_pct"], 4),
-                        "y": round(zone["y_pct"], 4),
-                        "colors": _hex_colors(self._accented(zone_colors[:1], accent)),
-                    })
+                    if want:
+                        snap_zones.append({
+                            "dev": device_key, "zone": zone["name"],
+                            "edge": "area", "x": round(zone["x_pct"], 4),
+                            "y": round(zone["y_pct"], 4),
+                            "colors": _hex_colors(self._accented(zone_colors[:1], accent)),
+                        })
                     continue
 
                 zone_colors = _sample_edge(
@@ -1181,15 +1225,16 @@ class AmbilightService:
                 zone_colors = _apply_min_luminance(zone_colors, min_lum)
                 colors[off: off + active] = zone_colors
                 lit[off: off + active] = True
-                # Ordine "di schermo" (sinistra->destra / alto->basso), non d'ordine LED
-                on_screen = zone_colors[::-1] if zone["reversed"] else zone_colors
-                snap_zones.append({
-                    "dev": device_key, "zone": zone["name"],
-                    "edge": zone["edge"],
-                    "start": round(zone["screen_start"], 4),
-                    "end": round(zone["screen_end"], 4),
-                    "colors": _hex_colors(self._accented(on_screen, accent)),
-                })
+                if want:
+                    # Ordine "di schermo" (sinistra->destra / alto->basso), non d'ordine LED
+                    on_screen = zone_colors[::-1] if zone["reversed"] else zone_colors
+                    snap_zones.append({
+                        "dev": device_key, "zone": zone["name"],
+                        "edge": zone["edge"],
+                        "start": round(zone["screen_start"], 4),
+                        "end": round(zone["screen_end"], 4),
+                        "colors": _hex_colors(self._accented(on_screen, accent)),
+                    })
 
             # Colori base (senza accento): servono anche allo standby e ai passi
             # di accento tra un frame catturato e il successivo
@@ -1208,8 +1253,14 @@ class AmbilightService:
                 # used, once, in black): the others stay free for OpenRGB
                 prev = self._prev_lit.get(device_key)
                 write = lit | prev if prev is not None and len(prev) == len(lit) else lit
+                tw = time.perf_counter()
                 self._manager.apply_direct_colors(device_key, out, write)
+                write_s += time.perf_counter() - tw
                 self._prev_lit[device_key] = lit.copy()
+
+        self._ema("write_ms", write_s)
+        if not want:
+            return                     # nobody is looking at the map: no preview to build
 
         # Snapshot per l'anteprima UI: profondità realmente usata per bordo
         # (la cache contiene le strisce già ritagliate, anche con profondità adattiva).

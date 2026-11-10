@@ -40,8 +40,9 @@ async function _samplingTick() {
             if (apiOk(r)) { _sampLast = r; _drawSampling(r); }
         } finally { _sampBusy = false; }
     }
-    // Colors move fast: poll quicker in Live; geometry only changes with settings
-    setTimeout(_samplingTick, _sampMode === 'live' ? 250 : 1000);
+    // Colors move fast: poll quicker in Live; geometry only changes with settings.
+    // A window in the background (visible but not focused) gets one update a second.
+    setTimeout(_samplingTick, _sampMode === 'live' && document.hasFocus() ? 250 : 1000);
 }
 
 function _initSampling() {

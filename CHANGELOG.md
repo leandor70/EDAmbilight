@@ -63,6 +63,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Faster sampling.** Zones that read one point of the screen sample one pixel in 2 x 2 of their
   area: a frame costs about 40% less (about 6 ms instead of 10 on a 3840 x 1600 screen captured at
   960 x 400), with a colour change of the same size as moving the point by one pixel.
+- **Less work when nobody is looking.** The colours for the dashboard map are prepared only while a
+  page shows it (before: at every frame, even with the window closed). With the window in the
+  background the pages ask for updates once a second (a quarter of the requests) and the decorative
+  animations (sonar rings, scan lines, pulses) stop; hidden or minimised, the map and the audio meter
+  stop entirely, as before.
+- The status now also reports where a frame's time goes (grab, processing, writing to OpenRGB) and
+  the beat accent's own work per second.
 - The chosen theme is also saved in `config/settings.json` (`ui_theme`), not only in the browser, so
   it is no longer lost when the web port changes, another browser is used or site data is cleared.
 - Topology Editor: the grey "VBBox" is gone (a leftover from ED:Event2Led, used by nothing here) and

@@ -16,6 +16,7 @@ W, H = 3440, 1440
 
 def _service(depth=3, strategy="mean", black_bar=False):
     svc = AmbilightService(None)
+    svc._preview_until = float("inf")       # a page shows the map: build the preview
     svc._config = {
         "enabled": True, "strategy": strategy, "depth": depth,
         "saturation_boost": 1.0, "min_luminance": 0,
@@ -97,3 +98,26 @@ if __name__ == "__main__":
     test_legacy_hsv_strategy_falls_back_to_mean()
     test_content_rect_in_snapshot()
     print("ALL OK")
+
+
+def test_preview_is_built_only_while_a_page_asks_for_it():
+    import time
+    svc = AmbilightService(None)
+    svc._config = {"enabled": True, "strategy": "mean", "depth": 10, "saturation_boost": 1.0,
+                   "min_luminance": 0, "black_bar_detect": False, "devices": {}}
+    frame = np.full((H, W, 3), 128, dtype=np.uint8)
+    svc._process_frame(frame, svc._config)
+    assert svc._sampling is None                 # nobody asked: nothing built
+    assert svc.get_sampling_snapshot() is None   # a page asks...
+    svc._process_frame(frame, svc._config)
+    assert svc.get_sampling_snapshot() is not None   # ...and gets it from the next frame
+    svc._preview_until = time.monotonic() - 1    # the page went away
+    old = svc._sampling_ts
+    svc._process_frame(frame, svc._config)
+    assert svc._sampling_ts == old               # not built any more
+
+
+def test_timings_are_reported():
+    svc = AmbilightService(None)
+    t = svc.timings
+    assert set(t) >= {"grab_ms", "process_ms", "write_ms", "accent_ms_per_s", "accent_writes_per_s"}

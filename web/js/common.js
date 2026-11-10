@@ -171,6 +171,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// Decorative CSS animations pause while the window is in the background or hidden
+(function () {
+    const sync = () => document.documentElement.classList.toggle(
+        'anim-paused', document.hidden || !document.hasFocus());
+    window.addEventListener('focus', sync);
+    window.addEventListener('blur', sync);
+    document.addEventListener('visibilitychange', sync);
+    sync();
+})();
+
 // Safe localStorage access (private windows / blocked site data can throw)
 function _lsGet(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
 function _lsSet(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }

@@ -738,6 +738,12 @@ input[type=text]:focus, input[type=number]:focus {
 .dev-zone-name   { font-size:13px; font-family:var(--f-body); font-weight:600; color:rgba(255,255,255,.60); letter-spacing:.03em; }
 .dev-zone-edge   { font-size:12px;  font-family:var(--f-body); color:var(--c-text-ghost); letter-spacing:.04em; }
 
+/* Decorative animations (sonar rings, scan lines, pulses) stop while the window is in
+   the background or hidden: js/common.js sets .anim-paused on <html>. */
+html.anim-paused *, html.anim-paused *::before, html.anim-paused *::after {
+  animation-play-state: paused !important;
+}
+
 /* Control > Devices: compact on/off chips (zones and details live in the Devices page) */
 .devs-chips { display:flex; flex-wrap:wrap; gap:8px; align-content:flex-start; }
 .dev-chip {

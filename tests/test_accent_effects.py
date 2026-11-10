@@ -211,6 +211,7 @@ def _service(tmp_path, monkeypatch, **accent_cfg):
         json.dumps({"topologies": {KEY: {"zones": zones}}}))
     mgr = _Manager()
     svc = AmbilightService(mgr)
+    svc._preview_until = float("inf")       # a page shows the map: build the preview
     svc._config = {
         "enabled": True, "strategy": "mean", "depth": 10, "saturation_boost": 1.0,
         "min_luminance": 0, "black_bar_detect": False,
