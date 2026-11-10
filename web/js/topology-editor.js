@@ -834,15 +834,18 @@ class TopologyCanvas {
     // Does the rectangle decide? (not while the old zone names still do)
     _screenDecides() { return !!this.screen.rect || this.screen.mode === 'auto'; }
 
-    _classifyLed(p, r, axis) {
+    // Within the band ACROSS a side, and within its length ALONG it (+- reach, half
+    // a LED): past a corner a LED is outside. Same rule as the backend.
+    _classifyLed(p, r, axis, reach = 0.5) {
         const w = r.x_max - r.x_min, h = r.y_max - r.y_min;
         const band = Math.max(1, 0.15 * Math.min(w, h));
         const d = { left: p.x - r.x_min, right: r.x_max - p.x, top: r.y_max - p.y, bottom: p.y - r.y_min };
-        if (Math.min(...Object.values(d)) < -band) return 'off';
-        const near = Object.keys(d).filter(k => Math.abs(d[k]) <= band);
-        if (!near.length) return 'area';
-        const par = axis ? near.filter(k => (k === 'top' || k === 'bottom') === (axis === 'x')) : [];
-        return (par.length ? par : near).reduce((a, b) => Math.abs(d[a]) <= Math.abs(d[b]) ? a : b);
+        const inX = p.x >= r.x_min - reach && p.x <= r.x_max + reach;
+        const inY = p.y >= r.y_min - reach && p.y <= r.y_max + reach;
+        let near = Object.keys(d).filter(k => Math.abs(d[k]) <= band && ((k === 'top' || k === 'bottom') ? inX : inY));
+        if (axis) near = near.filter(k => (k === 'top' || k === 'bottom') === (axis === 'x'));   // only sides parallel to the strip
+        if (near.length) return near.reduce((a, b) => Math.abs(d[a]) <= Math.abs(d[b]) ? a : b);
+        return (p.x >= r.x_min && p.x <= r.x_max && p.y >= r.y_min && p.y <= r.y_max) ? 'area' : 'off';
     }
 
     // Per LED: 'top' | 'right' | 'bottom' | 'left' | 'area' | 'off', or null when not shown
@@ -856,7 +859,8 @@ class TopologyCanvas {
             const a = pts[0], b = pts[pts.length - 1];
             axis = Math.abs(b.x - a.x) >= Math.abs(b.y - a.y) ? 'x' : 'y';
         }
-        return pts.map(p => this._classifyLed(p, r, axis));
+        const reach = Math.max(0.5, (zone.led_spacing ?? 1.0) / 2);
+        return pts.map(p => this._classifyLed(p, r, axis, reach));
     }
 
     _screenCorners(r) {

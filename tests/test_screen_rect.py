@@ -79,7 +79,7 @@ def test_inside_reads_its_point_and_outside_stays_off(topo):
 def test_a_zone_longer_than_the_screen_lights_only_the_part_on_the_side(topo):
     topo([zone("long", 0, -10, 0, 0, 31)], RECT)       # x -10..20 along the bottom
     runs = [(e["edge"], e["led_start"], e["led_end"]) for e in svc.build_device_zones("Strip::linear")[0]]
-    assert runs == [("off", 0, 9), ("bottom", 9, 22), ("off", 22, 31)]
+    assert runs == [("off", 0, 10), ("bottom", 10, 21), ("off", 21, 31)]
 
 
 def test_corner_leds_follow_the_direction_of_their_strip(topo):
@@ -186,7 +186,7 @@ def test_flip_moves_which_leds_are_off(topo):
     topo([{**long, "direction": "reverse"}], RECT)
     runs = [(e["edge"], e["led_start"], e["led_end"]) for e in svc.build_device_zones("Strip::linear")[0]]
     # LED 0 is now at x=20: the off run on the right comes first
-    assert runs == [("off", 0, 9), ("bottom", 9, 22), ("off", 22, 31)]
+    assert runs == [("off", 0, 10), ("bottom", 10, 21), ("off", 21, 31)]
     assert svc.build_device_zones("Strip::linear")[0][1]["reversed"] is True
 
 
@@ -208,3 +208,19 @@ def test_flip_mirrors_points_inside_the_screen(topo):
     topo([{**ram, "direction": "reverse"}], RECT)
     rev = [e["y_pct"] for e in svc.build_device_zones("Strip::linear")[0]]
     assert rev == fwd[::-1]
+
+
+def test_past_the_corner_is_outside_but_just_below_the_side_still_counts(topo):
+    # the real desk strip: under the screen (6 units below), longer than it on the left
+    rect = {"x_min": -31, "x_max": 67.4, "y_min": -7, "y_max": 34}
+    desk = {"name": "Desktop", "zone_index": 0, "led_count": 16, "led_spacing": 7.5,
+            "position": {"x": -52, "y": -13}, "rotation": 0}
+    topo([desk], rect)
+    runs = [(e["edge"], e["led_start"], e["led_end"]) for e in svc.build_device_zones("Strip::linear")[0]]
+    # LED 2 (x=-37) is 6 units past the left corner: outside; LED 3 (x=-29.5) is under the screen
+    assert runs == [("off", 0, 3), ("bottom", 3, 16)]
+
+
+def test_a_horizontal_strip_never_reads_a_vertical_side(topo):
+    topo([zone("low", 0, -3, 0, 0, 3)], RECT)        # x -3..-1 on the bottom line, left of the screen
+    assert [e["edge"] for e in svc.build_device_zones("Strip::linear")[0]] == ["off"]

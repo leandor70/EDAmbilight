@@ -474,23 +474,31 @@ def suggest_screen_rect(data: dict, skip=frozenset(), aspect: Optional[float] = 
     return {"x_min": x0, "x_max": x1, "y_min": -y1, "y_max": -y0}
 
 
-def _classify_led(x: float, y: float, rect, band: float, along_axis: Optional[str] = None):
+def _classify_led(x: float, y: float, rect, band: float, along_axis: Optional[str] = None,
+                  reach: float = 0.5):
     """("off",) | ("edge", side, along 0..1) | ("area", x_pct, y_pct).
 
-    along_axis ("x" or "y") is the direction the strip runs: a LED near a corner
-    (close to two sides) goes to the side parallel to its strip."""
+    A LED belongs to a side when it is within `band` of it ACROSS the side (a
+    strip drawn a little above / below the frame still counts) and within the
+    length of the side ALONG it, give or take `reach` (half a LED): past the
+    corner it is outside. along_axis ("x" or "y") is the direction the strip
+    runs: a strip only follows the sides parallel to it (a horizontal strip
+    never reads the left or right side, even near a corner)."""
     x0, x1, y0, y1 = rect
     w, h = max(0.001, x1 - x0), max(0.001, y1 - y0)
     d = {"left": x - x0, "right": x1 - x, "top": y - y0, "bottom": y1 - y}
-    if min(d.values()) < -band:
-        return ("off",)
-    near = [k for k in d if abs(d[k]) <= band]
-    parallel = [k for k in near if (k in ("top", "bottom")) == (along_axis == "x")] if along_axis else []
-    side = min(parallel or near or d, key=lambda k: abs(d[k]))
-    if abs(d[side]) <= band:
+    in_x = x0 - reach <= x <= x1 + reach
+    in_y = y0 - reach <= y <= y1 + reach
+    near = [k for k in d if abs(d[k]) <= band and (in_x if k in ("top", "bottom") else in_y)]
+    if along_axis:
+        near = [k for k in near if (k in ("top", "bottom")) == (along_axis == "x")]
+    if near:
+        side = min(near, key=lambda k: abs(d[k]))
         along = (x - x0) / w if side in ("top", "bottom") else (y - y0) / h
         return ("edge", side, max(0.0, min(1.0, along)))
-    return ("area", max(0.0, min(1.0, (x - x0) / w)), max(0.0, min(1.0, (y - y0) / h)))
+    if x0 <= x <= x1 and y0 <= y <= y1:
+        return ("area", (x - x0) / w, (y - y0) / h)
+    return ("off",)
 
 
 def _geometric_entries(zone: dict, led_offset: int, rect) -> List[dict]:
@@ -514,7 +522,8 @@ def _geometric_entries(zone: dict, led_offset: int, rect) -> List[dict]:
     axis = None
     if len(pts) > 1:
         axis = "x" if abs(pts[-1][0] - pts[0][0]) >= abs(pts[-1][1] - pts[0][1]) else "y"
-    kinds = [_classify_led(x, y, rect, band, axis) for x, y in pts]
+    reach = max(0.5, spacing / 2)
+    kinds = [_classify_led(x, y, rect, band, axis, reach) for x, y in pts]
     out: List[dict] = []
     i = 0
     while i < len(kinds):

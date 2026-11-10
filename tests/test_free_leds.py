@@ -105,7 +105,7 @@ def _service(tmp_path, monkeypatch, x):
 
 
 def test_outside_leds_are_not_written_and_freed_ones_get_black_once(tmp_path, monkeypatch):
-    _service(tmp_path, monkeypatch, -10)              # x -10..20: LEDs 9..21 on the bottom side
+    _service(tmp_path, monkeypatch, -10)              # x -10..20: LEDs 10..20 on the bottom side
     mgr = _Rec()
     svc = AmbilightService(mgr)
     svc._config = {"enabled": True, "strategy": "mean", "depth": 10, "saturation_boost": 1.0,
@@ -113,16 +113,16 @@ def test_outside_leds_are_not_written_and_freed_ones_get_black_once(tmp_path, mo
     frame = np.full((60, 100, 3), 200, dtype=np.uint8)
     svc._process_frame(frame, svc._config)
     _, mask = mgr.writes[-1]
-    assert [i for i, m in enumerate(mask) if m] == list(range(9, 22))
+    assert [i for i, m in enumerate(mask) if m] == list(range(10, 21))
 
-    # the zone moves right: LEDs 9..18 leave the screen -> written once (black), then free
-    _service(tmp_path, monkeypatch, 0)               # x 0..30: LEDs 0..11 on the side
+    # the zone moves right: LEDs 11..20 leave the screen -> written once (black), then free
+    _service(tmp_path, monkeypatch, 0)               # x 0..30: LEDs 0..10 on the side
     svc.refresh_zones(KEY)
     svc._process_frame(frame, svc._config)
     colors, mask = mgr.writes[-1]
-    used = set(range(0, 12))
-    assert [i for i, m in enumerate(mask) if m] == list(range(0, 22))
-    assert all(colors[i] == (0, 0, 0) for i in range(12, 22))
+    used = set(range(0, 11))
+    assert [i for i, m in enumerate(mask) if m] == list(range(0, 21))
+    assert all(colors[i] == (0, 0, 0) for i in range(11, 21))
     svc._process_frame(frame, svc._config)
     _, mask = mgr.writes[-1]
     assert {i for i, m in enumerate(mask) if m} == used
