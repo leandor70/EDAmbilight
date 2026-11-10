@@ -20,6 +20,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Windows): Fit and the automatic rectangle grow to them, corners resize keeping them. A rectangle
   saved with other proportions is adapted when the editor opens and left unsaved, with a warning,
   because growing it can move strips from a side to the inside.
+- **Flip Direction now works.** It used to change only the arrow on the canvas: the LED order always
+  followed the rotation. Now Flip (F) means the zone is wired the other way round, LED 0 at the far
+  end, and the ambilight, the calibration and the screen rectangle all follow it. A zone that was
+  saved as "reverse" in an older version will now really run the other way: flip it back if needed.
 - Topology Editor: the grey "VBBox" is gone (a leftover from ED:Event2Led, used by nothing here) and
   the Effect Center panel is now **Calibration Center**: it only sets where the calibration rings start.
   Note: once the rectangle is placed, zones read their point relative to the screen, not to the whole

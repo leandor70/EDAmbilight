@@ -460,10 +460,15 @@ class TopologyCanvas {
         }
     }
 
+    // Slot (0 = the zone's anchor end) where LED i sits. Flip ("reverse") means the
+    // zone is wired the other way round: LED 0 is at the far end. Same rule as the
+    // backend (_led_world_positions), so the ambilight follows what is drawn.
+    _slot(zone, i) { return zone.direction === 'reverse' ? zone.led_count - 1 - i : i; }
+
     // World-space center of a LED (single source of truth for calibration geometry).
     _ledWorldPos(zone, ledIndex) {
         const ledSpacing = zone.led_spacing ?? 1.0;
-        const lx_local = (ledIndex + 0.5) * ledSpacing;
+        const lx_local = (this._slot(zone, ledIndex) + 0.5) * ledSpacing;
         const ly_local = 0.5;
         const rad = zone.rotation * Math.PI / 180;
         return {
@@ -545,7 +550,7 @@ class TopologyCanvas {
         this.ctx.rotate(-zone.rotation * Math.PI / 180);
 
         for (let i = 0; i < zone.led_count; i++) {
-            const ledX = i * eff * ledSpacing;
+            const ledX = this._slot(zone, i) * eff * ledSpacing;
             const off = kinds && kinds[i] === 'off';
 
             this.ctx.fillStyle = this.showCalibration ? this._calibrationColor(zone, i) : zone.color;
@@ -796,7 +801,8 @@ class TopologyCanvas {
         const ux = Math.round(Math.cos(rad) * 1e6) / 1e6, uy = Math.round(Math.sin(rad) * 1e6) / 1e6;
         const pts = [];
         for (let i = 0; i < zone.led_count; i++) {
-            pts.push({ x: zone.position.x + i * sp * ux, y: zone.position.y + i * sp * uy });
+            const k = this._slot(zone, i);
+            pts.push({ x: zone.position.x + k * sp * ux, y: zone.position.y + k * sp * uy });
         }
         return pts;
     }

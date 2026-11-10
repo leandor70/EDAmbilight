@@ -49,6 +49,9 @@ def _led_world_positions(zone: dict) -> List[Tuple[float, float]]:
     so y is flipped here. Everything built on these points (monitor frame,
     screen fractions, LED order, area points) then reads top-to-bottom like
     the captured frame.
+
+    Item i is the position of LED i. With direction "reverse" (Flip in the
+    editor) the zone is wired the other way round: LED 0 sits at the far end.
     """
     x0      = zone["position"]["x"]
     y0      = zone["position"]["y"]
@@ -56,7 +59,10 @@ def _led_world_positions(zone: dict) -> List[Tuple[float, float]]:
     rot     = zone.get("rotation", 0)
     dx = {0: spacing, 90: 0, 180: -spacing, 270: 0      }.get(rot, spacing)
     dy = {0: 0,       90: spacing, 180: 0,  270: -spacing}.get(rot, 0)
-    return [(x0 + i * dx, -(y0 + i * dy)) for i in range(zone["led_count"])]
+    pts = [(x0 + i * dx, -(y0 + i * dy)) for i in range(zone["led_count"])]
+    if zone.get("direction") == "reverse":
+        pts.reverse()
+    return pts
 
 
 def _edge_reversed(edge: str, led_pts: List[Tuple[float, float]]) -> bool:

@@ -166,3 +166,45 @@ def test_screen_size_comes_from_the_capture_first(monkeypatch):
     from api import topology_api
     monkeypatch.setattr(topology_api, "_ambilight_service", N(frame_size=(3440, 1440)))
     assert topology_api.screen_size() == (3440, 1440)
+
+
+# ── Flip (direction "reverse"): LED 0 at the far end of the zone ─────────────
+
+def test_flip_reverses_the_led_order_along_a_side(topo):
+    top = zone("a", 0, 0, 6, 0, 11)
+    topo([top], RECT)
+    (fwd,) = svc.build_device_zones("Strip::linear")[0]
+    topo([{**top, "direction": "reverse"}], RECT)
+    (rev,) = svc.build_device_zones("Strip::linear")[0]
+    assert (fwd["edge"], fwd["reversed"]) == ("top", False)
+    assert (rev["edge"], rev["reversed"]) == ("top", True)
+    assert (rev["screen_start"], rev["screen_end"]) == (fwd["screen_start"], fwd["screen_end"])
+
+
+def test_flip_moves_which_leds_are_off(topo):
+    long = zone("long", 0, -10, 0, 0, 31)            # x -10..20 along the bottom
+    topo([{**long, "direction": "reverse"}], RECT)
+    runs = [(e["edge"], e["led_start"], e["led_end"]) for e in svc.build_device_zones("Strip::linear")[0]]
+    # LED 0 is now at x=20: the off run on the right comes first
+    assert runs == [("off", 0, 9), ("bottom", 9, 22), ("off", 22, 31)]
+    assert svc.build_device_zones("Strip::linear")[0][1]["reversed"] is True
+
+
+def test_flip_also_works_with_the_old_name_based_mapping(topo):
+    names = ("MonitorTop", "MonitorRight", "MonitorBottom", "MonitorLeft")
+    zs = frame_zones(names)
+    topo(zs)
+    old = {e["name"]: e["reversed"] for e in svc.build_device_zones("Strip::linear")[0]}
+    topo([{**z, "direction": "reverse"} for z in zs])
+    new = {e["name"]: e["reversed"] for e in svc.build_device_zones("Strip::linear")[0]}
+    assert new == {k: not v for k, v in old.items()}
+
+
+def test_flip_mirrors_points_inside_the_screen(topo):
+    ram = zone("ram", 0, 5, 2, 90, 3)               # vertical, well inside: one point per LED
+    topo([ram], RECT)
+    fwd = [e["y_pct"] for e in svc.build_device_zones("Strip::linear")[0]]
+    assert len(fwd) == 3 and fwd[0] != fwd[-1]
+    topo([{**ram, "direction": "reverse"}], RECT)
+    rev = [e["y_pct"] for e in svc.build_device_zones("Strip::linear")[0]]
+    assert rev == fwd[::-1]
