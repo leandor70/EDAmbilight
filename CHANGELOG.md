@@ -16,6 +16,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   off; it works LED by LED, so a zone longer than the screen lights only the part along it. Zone names
   no longer matter. Without a rectangle, setups whose zones are named MonitorTop / Right / Bottom / Left
   keep the old mapping (Fit reproduces it), others use the bounding box of the whole scene.
+  The rectangle always has the proportions of the real screen (read from the capture, else from
+  Windows): Fit and the automatic rectangle grow to them, corners resize keeping them. A rectangle
+  saved with other proportions is adapted when the editor opens and left unsaved, with a warning,
+  because growing it can move strips from a side to the inside.
   Note: once the rectangle is placed, zones read their point relative to the screen, not to the whole
   scene as before, so devices placed away from the monitor may read a different part of the screen.
 

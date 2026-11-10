@@ -401,19 +401,39 @@ def _scene_points(data: dict, skip=frozenset()) -> List[Tuple[float, float]]:
             for pt in _led_world_positions(z)]
 
 
+def fit_aspect(rect, aspect: Optional[float]):
+    """Grow (x_min, x_max, y_min, y_max) around its centre to width/height = aspect.
+
+    It only grows, never shrinks, so whatever the rectangle framed stays inside
+    (or in the edge band). aspect None / <= 0 leaves it as it is."""
+    if not aspect or aspect <= 0:
+        return rect
+    x0, x1, y0, y1 = rect
+    w, h = x1 - x0, y1 - y0
+    if w <= 0 or h <= 0:
+        return rect
+    if w / h < aspect:
+        grow = (h * aspect - w) / 2
+        return (x0 - grow, x1 + grow, y0, y1)
+    grow = (w / aspect - h) / 2
+    return (x0, x1, y0 - grow, y1 + grow)
+
+
 def _bbox(pts) -> Tuple[float, float, float, float]:
     return (min(p[0] for p in pts), max(p[0] for p in pts),
             min(p[1] for p in pts), max(p[1] for p in pts))
 
 
-def screen_frame(data: dict, skip=frozenset()) -> Tuple[str, Optional[Tuple[float, float, float, float]]]:
+def screen_frame(data: dict, skip=frozenset(), aspect: Optional[float] = None
+                 ) -> Tuple[str, Optional[Tuple[float, float, float, float]]]:
     """How the screen is located in the scene.
 
     Returns (mode, rect) with rect = (x_min, x_max, y_min, y_max) in sampling
     coordinates (y DOWN, as _led_world_positions):
       "manual" -> the stored screen_rect
       "names"  -> no rectangle, zones named Monitor*: old name-based mapping (rect None)
-      "auto"   -> no rectangle, no such names: bounding box of the whole scene
+      "auto"   -> no rectangle, no such names: bounding box of the whole scene,
+                  grown to the proportions of the real screen (aspect = width/height)
     """
     r = data.get("screen_rect")
     if _valid_rect(r):
@@ -422,10 +442,10 @@ def screen_frame(data: dict, skip=frozenset()) -> Tuple[str, Optional[Tuple[floa
            for t in data.get("topologies", {}).values() for z in t.get("zones", [])):
         return "names", None
     pts = _scene_points(data, skip)
-    return "auto", (_bbox(pts) if pts else (0.0, 100.0, 0.0, 100.0))
+    return "auto", fit_aspect(_bbox(pts) if pts else (0.0, 100.0, 0.0, 100.0), aspect)
 
 
-def suggest_screen_rect(data: dict, skip=frozenset()) -> Optional[dict]:
+def suggest_screen_rect(data: dict, skip=frozenset(), aspect: Optional[float] = None) -> Optional[dict]:
     """A starting rectangle (editor coordinates, y UP) for the Topology Editor.
 
     From named zones: the frame drawn by the Monitor* zones (the same rectangle
@@ -444,6 +464,7 @@ def suggest_screen_rect(data: dict, skip=frozenset()) -> Optional[dict]:
         x0, x1, y0, y1 = _bbox(pts)
     if x1 - x0 <= 0 or y1 - y0 <= 0:
         return None
+    x0, x1, y0, y1 = fit_aspect((x0, x1, y0, y1), aspect)
     return {"x_min": x0, "x_max": x1, "y_min": -y1, "y_max": -y0}
 
 
@@ -554,7 +575,7 @@ def _matrix_entry(zone: dict, led_offset: int, layout: dict) -> dict:
 
 
 def build_device_zones(device_key: str, layouts: Optional[dict] = None,
-                       scene_skip=frozenset()) -> Tuple[List[dict], int]:
+                       scene_skip=frozenset(), aspect: Optional[float] = None) -> Tuple[List[dict], int]:
     """Load zone sampling parameters for a device from device_topologies.json.
 
     `layouts` (OpenRGBManager.matrix_layouts) turns a zone that has a key grid
@@ -581,7 +602,7 @@ def build_device_zones(device_key: str, layouts: Optional[dict] = None,
         off += zone["led_count"]
     total_leds = off
 
-    mode, rect = screen_frame(data, scene_skip)
+    mode, rect = screen_frame(data, scene_skip, aspect)
     if mode != "names":
         result: List[dict] = []
         for z_idx, zone in enumerate(all_zones):
@@ -725,6 +746,7 @@ class AmbilightService:
         self._actual_fps: float = 0.0
         self._paused: bool = False
         self._zone_cache: Dict[str, Tuple[List[dict], int]] = {}
+        self._frame_size: Optional[Tuple[int, int]] = None   # (w, h) of the captured screen
         self._topology_warned: set = set()
         # Standby (schermo non disponibile): ultimi colori + maschera LED attivi
         # per device, e istanti di inizio dell'assenza di frame / dello standby.
@@ -958,6 +980,11 @@ class AmbilightService:
 
     # ── Zone cache ────────────────────────────────────────────────────────────
 
+    @property
+    def frame_size(self) -> Optional[Tuple[int, int]]:
+        """(width, height) of the last captured screen, None before the first frame."""
+        return self._frame_size
+
     def refresh_zones(self, device_key: str) -> None:
         self._zone_cache.pop(device_key, None)
         self._topology_warned.discard(device_key)
@@ -971,7 +998,8 @@ class AmbilightService:
                 for ctrl in getattr(self._manager, "devices", []):
                     key = self._manager._make_device_key(ctrl)
                     skip |= {(key, i) for i in get_layouts(key)}
-            zones, total_leds = build_device_zones(device_key, layouts, skip)
+            aspect = (self._frame_size[0] / self._frame_size[1]) if self._frame_size else None
+            zones, total_leds = build_device_zones(device_key, layouts, skip, aspect)
             self._validate_topology(device_key, total_leds)
             self._zone_cache[device_key] = (zones, total_leds)
         return self._zone_cache[device_key]
@@ -1150,6 +1178,10 @@ class AmbilightService:
 
     def _process_frame(self, frame: np.ndarray, cfg: dict) -> None:
         full_h, full_w = frame.shape[:2]
+        if self._frame_size != (full_w, full_h):
+            # the automatic screen rectangle follows the real proportions
+            self._frame_size = (full_w, full_h)
+            self._zone_cache.clear()
         snap_zones: List[dict] = []
         if cfg.get("black_bar_detect", True):
             self._update_content_rect(frame, cfg)

@@ -85,4 +85,5 @@ def test_key_grid_is_out_of_the_automatic_screen_box(tmp_path, monkeypatch):
     without = svc.screen_frame(data, api.key_grid_zone_ids())[1]
     assert with_kb[0] == -50                        # the keyboard row would stretch the screen
     assert without == (0.0, 10.0, -6.0, 0.0)        # only the strip and the logo count
+    monkeypatch.setattr(api, "screen_size", lambda: None)       # proportions not known here
     assert api.get_screen_rect()["suggested"] == {"x_min": 0.0, "x_max": 10.0, "y_min": 0.0, "y_max": 6.0}

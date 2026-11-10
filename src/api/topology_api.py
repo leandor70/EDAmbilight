@@ -229,13 +229,31 @@ def get_screen_rect() -> dict:
     from effects.ambilight_service import screen_frame, suggest_screen_rect
     data = _load_topologies()
     skip = key_grid_zone_ids()
-    mode, _ = screen_frame(data, skip)
+    size = screen_size()
+    aspect = size[0] / size[1] if size else None
+    mode, _ = screen_frame(data, skip, aspect)
     return {
         "success":   True,
         "mode":      mode,
         "rect":      data.get("screen_rect") if mode == "manual" else None,
-        "suggested": suggest_screen_rect(data, skip),
+        "suggested": suggest_screen_rect(data, skip, aspect),
+        "screen":    list(size) if size else None,     # [width, height] of the real screen
     }
+
+
+def screen_size():
+    """(width, height) of the screen the ambilight captures: the last captured
+    frame, else the primary display reported by Windows. None if unknown."""
+    size = getattr(_ambilight_service, "frame_size", None)
+    if size and size[0] > 0 and size[1] > 0:
+        return tuple(size)
+    try:
+        import ctypes
+        user32 = ctypes.windll.user32
+        w, h = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
+        return (w, h) if w > 0 and h > 0 else None
+    except Exception:
+        return None
 
 
 @eel.expose

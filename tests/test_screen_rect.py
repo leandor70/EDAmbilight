@@ -137,3 +137,32 @@ def test_api_saves_and_clears_the_rectangle(tmp_path, monkeypatch):
     assert not topology_api.set_screen_rect({"x_min": 2, "x_max": 1, "y_min": 0, "y_max": 1})["success"]
     assert topology_api.set_screen_rect(None) == {"success": True}
     assert "screen_rect" not in json.loads(f.read_text())
+
+
+# ── Proportions of the real screen ────────────────────────────────────────────
+
+def test_fit_aspect_only_grows_around_the_centre():
+    assert svc.fit_aspect((0, 10, 0, 10), 2.0) == (-5.0, 15.0, 0, 10)       # too narrow: wider
+    assert svc.fit_aspect((0, 40, 0, 10), 2.0) == (0, 40, -5.0, 15.0)       # too flat: taller
+    assert svc.fit_aspect((0, 20, 0, 10), 2.0) == (0, 20, -0.0, 10.0)
+    assert svc.fit_aspect((0, 10, 0, 10), None) == (0, 10, 0, 10)
+
+
+def test_automatic_rectangle_takes_the_screen_proportions(topo):
+    data = topo(frame_zones())                        # no names, no rectangle: auto
+    x0, x1, y0, y1 = svc.screen_frame(data, aspect=21 / 9)[1]
+    assert (x1 - x0) / (y1 - y0) == pytest.approx(21 / 9)
+    assert (x0, x1) == pytest.approx((0 - 2, 10 + 2))   # 6 high -> 14 wide, 2 more each side
+
+
+def test_suggested_rectangle_takes_the_screen_proportions(topo):
+    data = topo(frame_zones(("MonitorTop", "MonitorRight", "MonitorBottom", "MonitorLeft")))
+    r = svc.suggest_screen_rect(data, aspect=16 / 9)
+    assert (r["x_max"] - r["x_min"]) / (r["y_max"] - r["y_min"]) == pytest.approx(16 / 9)
+
+
+def test_screen_size_comes_from_the_capture_first(monkeypatch):
+    from types import SimpleNamespace as N
+    from api import topology_api
+    monkeypatch.setattr(topology_api, "_ambilight_service", N(frame_size=(3440, 1440)))
+    assert topology_api.screen_size() == (3440, 1440)

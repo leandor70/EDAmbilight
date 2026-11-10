@@ -46,7 +46,8 @@ class TopologyCanvas {
         // Screen rectangle: where the monitor sits in the scene (world coords, y up).
         // rect = the one placed by hand (null = automatic); mode comes from the backend
         // ('manual' | 'names' | 'auto'). Key grids (keyboards) are never sent here.
-        this.screen = { rect: null, mode: 'auto' };
+        // aspect = width / height of the real screen: the rectangle always keeps it.
+        this.screen = { rect: null, mode: 'auto', aspect: null, size: null };
         this.screenDrag = null;
 
         this.setupEventListeners();
@@ -182,10 +183,18 @@ class TopologyCanvas {
                 const mx = snap(r0.x_min + dx) - r0.x_min, my = snap(r0.y_min + dy) - r0.y_min;
                 r.x_min += mx; r.x_max += mx; r.y_min += my; r.y_max += my;
             } else {
-                if (d.cx === 'min') r.x_min = Math.min(snap(r0.x_min + dx), r.x_max - 1);
-                else                r.x_max = Math.max(snap(r0.x_max + dx), r.x_min + 1);
-                if (d.cy === 'min') r.y_min = Math.min(snap(r0.y_min + dy), r.y_max - 1);
-                else                r.y_max = Math.max(snap(r0.y_max + dy), r.y_min + 1);
+                // the opposite corner stays put; the size follows the larger movement
+                // and keeps the proportions of the real screen
+                const fx = d.cx === 'min' ? r0.x_max : r0.x_min;
+                const fy = d.cy === 'min' ? r0.y_max : r0.y_min;
+                const px = snap((d.cx === 'min' ? r0.x_min : r0.x_max) + dx);
+                const py = snap((d.cy === 'min' ? r0.y_min : r0.y_max) + dy);
+                let w = Math.max(1, d.cx === 'min' ? fx - px : px - fx);
+                let h = Math.max(1, d.cy === 'min' ? fy - py : py - fy);
+                const a = this.screen.aspect;
+                if (a) { if (w / h > a) h = w / a; else w = h * a; }
+                if (d.cx === 'min') { r.x_min = fx - w; r.x_max = fx; } else { r.x_min = fx; r.x_max = fx + w; }
+                if (d.cy === 'min') { r.y_min = fy - h; r.y_max = fy; } else { r.y_min = fy; r.y_max = fy + h; }
             }
             this.screen.rect = r;
             updateScreenPanel();
@@ -834,7 +843,17 @@ class TopologyCanvas {
             x_min: Math.min(...pts.map(p => p.x)), x_max: Math.max(...pts.map(p => p.x)),
             y_min: Math.min(...pts.map(p => p.y)), y_max: Math.max(...pts.map(p => p.y)),
         };
-        return (r.x_max - r.x_min > 0 && r.y_max - r.y_min > 0) ? r : null;
+        return (r.x_max - r.x_min > 0 && r.y_max - r.y_min > 0) ? this.fitAspect(r) : null;
+    }
+
+    // Grow the rectangle around its centre to the real screen proportions (never shrink)
+    fitAspect(r) {
+        const a = this.screen.aspect;
+        const w = r.x_max - r.x_min, h = r.y_max - r.y_min;
+        if (!a || w <= 0 || h <= 0) return r;
+        if (w / h < a) { const g = (h * a - w) / 2; return { ...r, x_min: r.x_min - g, x_max: r.x_max + g }; }
+        const g = (w / a - h) / 2;
+        return { ...r, y_min: r.y_min - g, y_max: r.y_max + g };
     }
 
     effectiveScreenRect() { return this.screen.rect || this.autoScreenRect(); }
@@ -1394,11 +1413,23 @@ async function loadScreenRect() {
         if (res && res.success) {
             canvas.screen.mode = res.mode;
             canvas.screen.rect = res.rect ? { ...res.rect } : null;
+            canvas.screen.size = res.screen || null;
+            canvas.screen.aspect = res.screen ? res.screen[0] / res.screen[1] : null;
         }
     } catch (e) {
         console.warn('[Topology] Screen rectangle not loaded:', e);
     }
     canvas.screen.savedJson = JSON.stringify(canvas.screen.rect);
+
+    // A rectangle saved with other proportions (drawn by hand, or another monitor):
+    // adapt it, but leave it UNSAVED: growing it can move strips from a side to
+    // the inside, so the user checks the canvas and saves (or not).
+    const sr = canvas.screen.rect, a = canvas.screen.aspect;
+    if (sr && a && Math.abs((sr.x_max - sr.x_min) / (sr.y_max - sr.y_min) - a) / a > 0.01) {
+        canvas.screen.rect = canvas.fitAspect(sr);
+        showNotification('The screen rectangle was adapted to the proportions of your screen. ' +
+                         'Check that the strips are still on its sides, then save.', 'warning', 9000);
+    }
     updateScreenPanel();
 }
 
@@ -1413,6 +1444,12 @@ function updateScreenPanel() {
         : 'Automatic: the screen covers every zone. Drag a corner, or press Fit, to place it where your monitor is.';
     const auto = document.getElementById('btn-screen-auto');
     if (auto) auto.disabled = !sc.rect;
+    const size = document.getElementById('screen-size');
+    if (size) {
+        size.textContent = sc.size
+            ? `Proportions of your screen: ${sc.size[0]}\u00d7${sc.size[1]} (${(sc.size[0] / sc.size[1]).toFixed(2)}:1), always kept.`
+            : 'Proportions of your screen: not known yet (start the ambilight once).';
+    }
 }
 
 async function saveScreenRectIfChanged() {
@@ -1805,6 +1842,7 @@ function markTopologySaved() {
 }
 
 function isTopologyDirty() {
+    if (JSON.stringify(canvas.screen.rect) !== canvas.screen.savedJson) return true;   // rectangle differs from the file
     return _savedSnapshot !== null && _topologySnapshot() !== _savedSnapshot;
 }
 

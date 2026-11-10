@@ -147,7 +147,8 @@ Click **Edit topology** (or **Map zones** for a device without topology) to open
 ### Topology Editor
 
 Drag LED zones on the canvas and place the **SCREEN** rectangle where your monitor is (**Fit** does it
-from the strips; drag a corner to resize, the border to move). Where a LED sits decides what it shows,
+from the strips; drag a corner to resize, the border to move). The rectangle always keeps the
+proportions of your real screen, so draw the strips to scale around it. Where a LED sits decides what it shows,
 whatever the zone is called: on a side of the rectangle it follows that side of the screen, inside it
 reads the point of the screen under it (the centre of the rectangle reads the centre of the screen),
 outside it stays off. Faded LEDs on the canvas are outside; a dot on a LED means it reads one point.
