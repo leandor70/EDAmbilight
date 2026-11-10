@@ -66,7 +66,7 @@ No Python or extra dependencies needed.
 1. Start **OpenRGB** → *Settings → SDK Server → Start Server*
 2. Extract the release zip and run **EDAmbilight.exe**
 3. The splash screen initialises and the dashboard opens automatically
-4. Open **Topology**, press **Fit** on the *Screen* panel (or drag the SCREEN rectangle onto your monitor's strips) and save
+4. Open **Topology**, drag the SCREEN rectangle onto the strips around your monitor (corners resize it) and save
 5. In **Devices**, switch on the devices you want to drive and pick their zones, then toggle **Enable**
    on the Dashboard — LEDs follow your screen in real time. The *Getting started* checklist shows what is missing.
 
@@ -146,8 +146,9 @@ Click **Edit topology** (or **Map zones** for a device without topology) to open
 
 ### Topology Editor
 
-Drag LED zones on the canvas and place the **SCREEN** rectangle where your monitor is (**Fit** does it
-from the strips; drag a corner to resize, the border to move). The rectangle always keeps the
+The Topology Editor is the only description of your setup: zone names never decide anything.
+Drag LED zones on the canvas and place the **SCREEN** rectangle where your monitor is (drag a corner
+to resize, the border to move; **Fit** makes it cover every zone, as a starting point). The rectangle always keeps the
 proportions of your real screen, so draw the strips to scale around it. Where a LED sits decides what it shows,
 whatever the zone is called: on a side of the rectangle it follows that side of the screen, inside it
 reads the point of the screen under it (the centre of the rectangle reads the centre of the screen),
@@ -155,8 +156,8 @@ outside it is left alone. Faded LEDs on the canvas are outside; a dot on a LED m
 LEDs outside the screen, and zones you switch off in Devices, are never written: they keep whatever
 color OpenRGB (in Direct mode, the mode EDAmbilight puts the device in) or another program gives them.
 A LED that stops being used gets black once, then it is left alone.
-Older setups that name their zones MonitorTop / MonitorRight / MonitorBottom / MonitorLeft keep
-the old name-based mapping until the rectangle is placed. Changes take effect without restarting.
+Until you place the rectangle, the screen covers every zone of the scene. Changes take effect
+without restarting.
 
 ![Topology Editor](docs/ss-topology.png)
 

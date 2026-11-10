@@ -26,12 +26,15 @@ ZONES = [
      "position": {"x": 67, "y": 29}, "rotation": 180},
     {"zone_index": 3, "name": "MonitorLeft", "led_count": 5, "led_spacing": 7,
      "position": {"x": -12, "y": 27}, "rotation": 270},
-    # not on the monitor frame: one high (y=25), one low (y=-10) in the editor
+    # inside the screen, away from its sides: one high (y=22), one low (y=-1) in the editor
     {"zone_index": 4, "name": "CPU", "led_count": 1, "led_spacing": 1,
-     "position": {"x": 30, "y": 25}, "rotation": 0},
+     "position": {"x": 30, "y": 22}, "rotation": 0},
     {"zone_index": 5, "name": "Case", "led_count": 1, "led_spacing": 1,
-     "position": {"x": 30, "y": -10}, "rotation": 0},
+     "position": {"x": 30, "y": -1}, "rotation": 0},
 ]
+# The screen as placed in the Topology Editor (the frame the three Monitor strips draw;
+# the Desktop strip runs just under it). Zone names play no part.
+SCREEN = {"x_min": -12, "x_max": 67, "y_min": -7, "y_max": 29}
 OFFSET = {"Desktop": 0, "MonitorRight": 16, "MonitorTop": 21, "MonitorLeft": 33}
 
 
@@ -50,7 +53,7 @@ def _service(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     Path("config").mkdir()
     Path("config/device_topologies.json").write_text(
-        json.dumps({"topologies": {KEY: {"zones": ZONES}}}))
+        json.dumps({"topologies": {KEY: {"zones": ZONES}}, "screen_rect": SCREEN}))
     mgr = _Manager()
     svc = AmbilightService(mgr)
     svc._config = {
@@ -137,7 +140,7 @@ def build_device_zones_from(zones):
         try:
             Path("config").mkdir()
             Path("config/device_topologies.json").write_text(
-                json.dumps({"topologies": {KEY: {"zones": zones}}}))
+                json.dumps({"topologies": {KEY: {"zones": zones}}, "screen_rect": SCREEN}))
             return build_device_zones(KEY)[0]
         finally:
             os.chdir(old)

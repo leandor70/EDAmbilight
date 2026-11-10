@@ -90,20 +90,16 @@ def test_corner_leds_follow_the_direction_of_their_strip(topo):
     assert len(zones["zona_d"]) == 1 and zones["zona_d"][0]["edge"] == "left"
 
 
-def test_without_rectangle_old_names_keep_the_old_mapping(topo):
+def test_old_monitor_names_decide_nothing(topo):
+    keys = ("edge", "led_start", "led_end", "reversed", "screen_start", "screen_end")
+    for rect in (RECT, None):                         # with a rectangle, and automatic
+        topo(frame_zones(("MonitorTop", "MonitorRight", "MonitorBottom", "MonitorLeft")), rect)
+        named = [tuple(e[k] for k in keys) for e in svc.build_device_zones("Strip::linear")[0]]
+        topo(frame_zones(("MonitorBottom", "MonitorLeft", "MonitorTop", "MonitorRight")), rect)
+        swapped = [tuple(e[k] for k in keys) for e in svc.build_device_zones("Strip::linear")[0]]
+        assert named == swapped                       # same places, other names: same result
     data = topo(frame_zones(("MonitorTop", "MonitorRight", "MonitorBottom", "MonitorLeft")))
-    assert svc.screen_frame(data)[0] == "names"
-    old = svc.build_device_zones("Strip::linear")[0]
-
-    rect = svc.suggest_screen_rect(data)
-    topo(frame_zones(("MonitorTop", "MonitorRight", "MonitorBottom", "MonitorLeft")), rect)
-    new = svc.build_device_zones("Strip::linear")[0]
-
-    keys = ("name", "edge", "led_start", "led_end", "reversed")
-    assert [tuple(e[k] for k in keys) for e in new] == [tuple(e[k] for k in keys) for e in old]
-    for a, b in zip(old, new):
-        assert a["screen_start"] == pytest.approx(b["screen_start"], abs=1e-6)
-        assert a["screen_end"] == pytest.approx(b["screen_end"], abs=1e-6)
+    assert svc.screen_frame(data)[0] == "auto"
 
 
 def test_modes(topo):

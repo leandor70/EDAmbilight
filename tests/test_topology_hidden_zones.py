@@ -1,4 +1,5 @@
-"""Zones named '???' are hidden in the Topology Editor but kept in the config."""
+"""Zones that OpenRGB names '???' are zones like the others: the name decides nothing.
+They are shown in the Topology Editor, saved and reloaded with the rest."""
 import json
 import sys
 from pathlib import Path
@@ -27,7 +28,7 @@ def _setup(tmp_path, monkeypatch):
     api.TOPOLOGY_CONFIG_FILE.write_text(json.dumps(
         {"version": 1, "topologies": {KEY: {"device_id": KEY, "zones": STORED}}}))
 
-    dev = N(name="Board", type=N(name="MOTHERBOARD"), leds=[0] * 5,
+    dev = N(name="Board", type=N(name="MOTHERBOARD"), leds=[0] * 8,
             zones=[N(name=z["name"], leds=[0] * z["led_count"], segments=[]) for z in STORED])
     ctrl = DeviceController(dev, TopologyType.LINEAR)
     ctrl.device_key = KEY
@@ -39,30 +40,29 @@ def _stored():
     return json.loads(api.TOPOLOGY_CONFIG_FILE.read_text())["topologies"][KEY]
 
 
-def test_scene_hides_unreadable_zones(tmp_path, monkeypatch):
+def test_scene_shows_every_zone_whatever_its_name(tmp_path, monkeypatch):
     _setup(tmp_path, monkeypatch)
     scene = api.get_scene_topology()
-    assert [z["name"] for z in scene["zones"]] == ["CPU", "Logo", "Case"]
-    assert scene["devices"][0]["zone_count"] == 3
-    assert api.get_topology_devices()["devices"][0]["zone_count"] == 3
+    assert [z["name"] for z in scene["zones"]] == ["CPU", "???", "Logo", "???", "Case"]
+    assert scene["devices"][0]["zone_count"] == 5
+    assert api.get_topology_devices()["devices"][0]["zone_count"] == 5
 
 
-def test_save_keeps_hidden_zones_and_offsets(tmp_path, monkeypatch):
+def test_save_keeps_every_zone_and_offsets(tmp_path, monkeypatch):
     _setup(tmp_path, monkeypatch)
-    visible = api.get_scene_topology()["zones"]
-    visible[0]["position"] = {"x": 50, "y": 60}          # the user moves CPU
-    assert api.save_scene_topology(visible, {"x": 50, "y": 50})["success"]
+    zones = api.get_scene_topology()["zones"]
+    zones[1]["position"] = {"x": 50, "y": 60}            # the user moves a '???' zone
+    assert api.save_scene_topology(zones, {"x": 50, "y": 50})["success"]
 
     saved = _stored()
     assert [z["zone_index"] for z in saved["zones"]] == [0, 1, 2, 3, 4]
-    assert [z["name"] for z in saved["zones"]] == ["CPU", "???", "Logo", "???", "Case"]
-    assert saved["zones"][0]["position"] == {"x": 50, "y": 60}
-    assert saved["total_leds"] == 8                      # hidden LEDs still counted
+    assert saved["zones"][1]["position"] == {"x": 50, "y": 60}
+    assert saved["total_leds"] == 8
     assert saved["zone_count"] == 5
 
 
-def test_reload_does_not_show_hidden_zones(tmp_path, monkeypatch):
+def test_reload_shows_every_zone(tmp_path, monkeypatch):
     _setup(tmp_path, monkeypatch)
     res = api.reload_scene_from_openrgb()
-    assert [z["name"] for z in res["zones"]] == ["CPU", "Logo", "Case"]
-    assert len(_stored()["zones"]) == 5                   # config still complete
+    assert [z["name"] for z in res["zones"]] == ["CPU", "???", "Logo", "???", "Case"]
+    assert len(_stored()["zones"]) == 5

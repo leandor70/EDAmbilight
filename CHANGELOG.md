@@ -15,7 +15,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - **Screen rectangle: where a zone is, not what it is called.** The Topology Editor has a SCREEN
-  rectangle (your monitor): **Fit** places it on the strips, corners resize it, the border moves it.
+  rectangle (your monitor): corners resize it, the border moves it, **Fit** makes it cover every zone.
   LEDs on a side of the rectangle follow that side of the screen, LEDs inside read the point of the
   screen under them (the centre reads the centre), LEDs outside are left alone. It works LED by LED,
   so a zone longer than the screen lights only the part along it. Zone names no longer matter, in
@@ -27,8 +27,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     Windows): Fit and the automatic rectangle grow to them, corners resize keeping them. A rectangle
     saved with other proportions is adapted when the editor opens and left unsaved, with a warning,
     because growing it can move strips from a side to the inside.
-  - Without a rectangle, setups whose zones are named MonitorTop / Right / Bottom / Left keep the old
-    name-based mapping (Fit reproduces it); others use the bounding box of the whole scene.
+  - **Zone names never decide anything any more**: the Topology Editor is the only description of a
+    setup. Gone are the MonitorTop / MonitorRight / MonitorBottom / MonitorLeft / Desktop names that
+    used to pick a side, the hiding of zones OpenRGB names "???" (now listed, placed and driven like
+    the others) and the zone on/off switches saved by name by old versions (by index only; a switch
+    saved by name is back on). Until the rectangle is placed, the screen covers the whole scene.
+    **After updating, place the rectangle in the Topology Editor and save.**
   - Once the rectangle is placed, zones that read one point measure it on the screen, not on the
     whole scene as before: devices placed away from the monitor may read a different part of it.
   - On the canvas, a faded LED is outside the screen and a dot on a LED means it reads one point.

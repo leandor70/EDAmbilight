@@ -28,17 +28,6 @@ STANDBY_PREVIEW_MAX = 60.0
 # catturati si riapplicano gli ultimi colori con l'accento corrente
 ACCENT_TICK = 1.0 / 60.0
 
-# Zone name -> screen edge mapping. The LED order along the edge is not fixed
-# here: it follows from the LED positions in the topology (see _edge_reversed).
-_ZONE_SCREEN_MAP = {
-    "MonitorRight":  {"edge": "right"},
-    "MonitorTop":    {"edge": "top"},
-    "MonitorLeft":   {"edge": "left"},
-    "MonitorBottom": {"edge": "bottom"},
-    "Desktop":       {"edge": "bottom"},
-}
-
-
 # ── Sampling helpers ──────────────────────────────────────────────────────────
 
 
@@ -63,21 +52,6 @@ def _led_world_positions(zone: dict) -> List[Tuple[float, float]]:
     if zone.get("direction") == "reverse":
         pts.reverse()
     return pts
-
-
-def _edge_reversed(edge: str, led_pts: List[Tuple[float, float]]) -> bool:
-    """True when LED 0 sits at the far end of the edge.
-
-    Samples are taken left->right (top/bottom) or top->bottom (left/right),
-    so LED order must be flipped when LED 0 is on the right / at the bottom.
-    A single LED has no direction.
-    """
-    if len(led_pts) < 2:
-        return False
-    (x_first, y_first), (x_last, y_last) = led_pts[0], led_pts[-1]
-    if edge in ("top", "bottom"):
-        return x_first > x_last
-    return y_first > y_last
 
 
 def _sample_segment(seg_2d: np.ndarray, strategy: str) -> Tuple[int, int, int]:
@@ -339,23 +313,10 @@ def _sample_edge(
 # ── Zone discovery ────────────────────────────────────────────────────────────
 
 
-def _is_unreadable_name(name: str) -> bool:
-    """OpenRGB hands over some zone names as '???' (non-Latin chars lost upstream).
-
-    Such zones can't be told apart or identified by the user, so they are left out.
-    """
-    return not name.strip().strip("?")
-
-
 def is_zone_enabled(zones_enabled: dict, zone: dict) -> bool:
-    """Zones are keyed by zone_index (names can repeat or be unreadable).
-
-    Falls back to the legacy name key written by older versions.
-    """
-    idx_key = str(zone.get("zone_index"))
-    if idx_key in zones_enabled:
-        return bool(zones_enabled[idx_key])
-    return bool(zones_enabled.get(zone.get("name", ""), True))
+    """Zone switches are keyed by zone_index only: a zone name never decides
+    anything (keys written by name by old versions are ignored). On by default."""
+    return bool(zones_enabled.get(str(zone.get("zone_index")), True))
 
 
 def _sample_grid(frame: np.ndarray, rows: int, cols: int) -> np.ndarray:
@@ -380,14 +341,14 @@ def _sample_grid(frame: np.ndarray, rows: int, cols: int) -> np.ndarray:
 #   * LED on (or near) a side of the rectangle  -> reads that side of the screen
 #   * LED inside the rectangle                  -> reads the point of the screen
 #                                                   under it (centre -> centre)
-#   * LED outside the rectangle                 -> stays off
-# "Near" is SCREEN_EDGE_BAND of the smaller side of the rectangle, inside or out,
-# so a strip drawn a little off the frame still counts as that side.
+#   * LED outside the rectangle                 -> left alone (never written)
+# "Near" is SCREEN_EDGE_BAND of the smaller side of the rectangle, across the
+# side, so a strip drawn a little off the frame still counts as that side.
 #
-# The rectangle is stored in device_topologies.json as "screen_rect" in editor
-# coordinates (y pointing UP, like zone positions). Without it, a topology that
-# names its zones MonitorTop/Right/Bottom/Left keeps the old name-based mapping,
-# and one that does not uses the bounding box of the whole scene.
+# The topology is the ONLY description of a setup: zone names never decide
+# anything. The rectangle is stored in device_topologies.json as "screen_rect" in
+# editor coordinates (y pointing UP, like zone positions); without it the screen
+# is the bounding box of the whole scene, grown to the real screen proportions.
 
 SCREEN_EDGE_BAND = 0.15
 
@@ -403,7 +364,7 @@ def _scene_points(data: dict, skip=frozenset()) -> List[Tuple[float, float]]:
     """LED points of the scene; `skip` = (device_key, zone_index) left out (key grids)."""
     return [pt for key, topo in data.get("topologies", {}).items()
             for z in topo.get("zones", [])
-            if not _is_unreadable_name(z.get("name", "")) and (key, z.get("zone_index")) not in skip
+            if (key, z.get("zone_index")) not in skip
             for pt in _led_world_positions(z)]
 
 
@@ -431,43 +392,29 @@ def _bbox(pts) -> Tuple[float, float, float, float]:
 
 
 def screen_frame(data: dict, skip=frozenset(), aspect: Optional[float] = None
-                 ) -> Tuple[str, Optional[Tuple[float, float, float, float]]]:
-    """How the screen is located in the scene.
+                 ) -> Tuple[str, Tuple[float, float, float, float]]:
+    """Where the screen sits in the scene: (mode, rect).
 
-    Returns (mode, rect) with rect = (x_min, x_max, y_min, y_max) in sampling
-    coordinates (y DOWN, as _led_world_positions):
+    rect = (x_min, x_max, y_min, y_max) in sampling coordinates (y DOWN, as
+    _led_world_positions):
       "manual" -> the stored screen_rect
-      "names"  -> no rectangle, zones named Monitor*: old name-based mapping (rect None)
-      "auto"   -> no rectangle, no such names: bounding box of the whole scene,
-                  grown to the proportions of the real screen (aspect = width/height)
+      "auto"   -> no rectangle yet: bounding box of the whole scene, grown to the
+                  proportions of the real screen (aspect = width/height)
     """
     r = data.get("screen_rect")
     if _valid_rect(r):
         return "manual", (float(r["x_min"]), float(r["x_max"]), -float(r["y_max"]), -float(r["y_min"]))
-    if any(z.get("name") in _ZONE_SCREEN_MAP
-           for t in data.get("topologies", {}).values() for z in t.get("zones", [])):
-        return "names", None
     pts = _scene_points(data, skip)
     return "auto", fit_aspect(_bbox(pts) if pts else (0.0, 100.0, 0.0, 100.0), aspect)
 
 
 def suggest_screen_rect(data: dict, skip=frozenset(), aspect: Optional[float] = None) -> Optional[dict]:
-    """A starting rectangle (editor coordinates, y UP) for the Topology Editor.
-
-    From named zones: the frame drawn by the Monitor* zones (the same rectangle
-    the name-based mapping uses, so a setup working by name keeps its sides; a
-    Desktop strip just under it falls in the edge band). Otherwise the bounding
-    box of the whole scene."""
-    zones = [z for t in data.get("topologies", {}).values() for z in t.get("zones", [])]
-    frame = [p for z in zones if z.get("name", "").startswith("Monitor")
-             for p in _led_world_positions(z)]
-    if frame:
-        x0, x1, y0, y1 = _bbox(frame)
-    else:
-        pts = _scene_points(data, skip)
-        if not pts:
-            return None
-        x0, x1, y0, y1 = _bbox(pts)
+    """A starting rectangle (editor coordinates, y UP): the bounding box of the
+    whole scene with the real screen proportions. The user then places it."""
+    pts = _scene_points(data, skip)
+    if not pts:
+        return None
+    x0, x1, y0, y1 = _bbox(pts)
     if x1 - x0 <= 0 or y1 - y0 <= 0:
         return None
     x0, x1, y0, y1 = fit_aspect((x0, x1, y0, y1), aspect)
@@ -617,131 +564,15 @@ def build_device_zones(device_key: str, layouts: Optional[dict] = None,
         off += zone["led_count"]
     total_leds = off
 
-    mode, rect = screen_frame(data, scene_skip, aspect)
-    if mode != "names":
-        result: List[dict] = []
-        for z_idx, zone in enumerate(all_zones):
-            if _is_unreadable_name(zone.get("name", "")):
-                continue                      # hidden '???' zones: never driven
-            layout = (layouts or {}).get(zone["zone_index"])
-            if layout:
-                result.append(_matrix_entry(zone, zone_offsets[z_idx], layout))
-            else:
-                result.extend(_geometric_entries(zone, zone_offsets[z_idx], rect))
-        return result, total_leds
-
-    # ── Old name-based mapping (no screen rectangle yet, zones named Monitor*) ──
-    frame_zones = [z for z in all_zones if z.get("name", "").startswith("Monitor")]
-    if frame_zones:
-        all_pts   = [pt for z in frame_zones for pt in _led_world_positions(z)]
-        mon_x_min = min(p[0] for p in all_pts)
-        mon_x_max = max(p[0] for p in all_pts)
-        mon_y_min = min(p[1] for p in all_pts)
-        mon_y_max = max(p[1] for p in all_pts)
-    else:
-        mon_x_min, mon_x_max, mon_y_min, mon_y_max = 0.0, 100.0, 0.0, 100.0
-
+    _, rect = screen_frame(data, scene_skip, aspect)
     result: List[dict] = []
     for z_idx, zone in enumerate(all_zones):
-        name = zone.get("name", "")
-        if name not in _ZONE_SCREEN_MAP:
-            continue
-
-        mapping  = _ZONE_SCREEN_MAP[name]
-        edge     = mapping["edge"]
-        spacing  = zone.get("led_spacing", 1.0)
-        led_pts  = _led_world_positions(zone)
-
-        if edge in ("top", "bottom"):
-            in_range = [(i, x, y) for i, (x, y) in enumerate(led_pts)
-                        if mon_x_min <= x <= mon_x_max]
-            if not in_range:
-                in_range = [(i, x, y) for i, (x, y) in enumerate(led_pts)]
-            xs           = [x for _, x, _ in in_range]
-            x_lo, x_hi   = min(xs), max(xs)
-            mon_span     = max(0.001, mon_x_max - mon_x_min)
-            screen_start = max(0.0, (x_lo - spacing / 2 - mon_x_min) / mon_span)
-            screen_end   = min(1.0, (x_hi + spacing / 2 - mon_x_min) / mon_span)
-        else:
-            in_range = [(i, x, y) for i, (x, y) in enumerate(led_pts)
-                        if mon_y_min <= y <= mon_y_max]
-            if not in_range:
-                in_range = [(i, x, y) for i, (x, y) in enumerate(led_pts)]
-            ys           = [y for _, _, y in in_range]
-            y_lo, y_hi   = min(ys), max(ys)
-            mon_span     = max(0.001, mon_y_max - mon_y_min)
-            screen_start = max(0.0, (y_lo - spacing / 2 - mon_y_min) / mon_span)
-            screen_end   = min(1.0, (y_hi + spacing / 2 - mon_y_min) / mon_span)
-
-        led_start = in_range[0][0]
-        led_end   = in_range[-1][0] + 1
-
-        result.append({
-            "name":         name,
-            "zone_index":   zone["zone_index"],
-            "led_count":    zone["led_count"],
-            "led_offset":   zone_offsets[z_idx],
-            "led_start":    led_start,
-            "led_end":      led_end,
-            "screen_start": screen_start,
-            "screen_end":   screen_end,
-            "edge":         edge,
-            "reversed":     _edge_reversed(edge, led_pts),
-        })
-
-    # Non-Monitor zones: sample screen area proportional to canvas position.
-    # Use global scene bounds (all devices) so positions are consistent.
-    all_scene_pts = [
-        pt
-        for _, topo in data.get("topologies", {}).items()
-        for z in topo.get("zones", [])
-        for pt in _led_world_positions(z)
-    ]
-    if all_scene_pts:
-        scene_x_min = min(p[0] for p in all_scene_pts)
-        scene_x_max = max(p[0] for p in all_scene_pts)
-        scene_y_min = min(p[1] for p in all_scene_pts)
-        scene_y_max = max(p[1] for p in all_scene_pts)
-    else:
-        scene_x_min, scene_x_max, scene_y_min, scene_y_max = 0.0, 100.0, 0.0, 100.0
-
-    span_x = max(0.001, scene_x_max - scene_x_min)
-    span_y = max(0.001, scene_y_max - scene_y_min)
-
-    for z_idx, zone in enumerate(all_zones):
-        name = zone.get("name", "")
-        if name in _ZONE_SCREEN_MAP or _is_unreadable_name(name):
-            continue
-
         layout = (layouts or {}).get(zone["zone_index"])
         if layout:
             result.append(_matrix_entry(zone, zone_offsets[z_idx], layout))
-            continue
-
-        led_pts = _led_world_positions(zone)
-        if not led_pts:
-            continue
-
-        x_avg = sum(p[0] for p in led_pts) / len(led_pts)
-        y_avg = sum(p[1] for p in led_pts) / len(led_pts)
-
-        result.append({
-            "name":         name,
-            "zone_index":   zone["zone_index"],
-            "led_count":    zone["led_count"],
-            "led_offset":   zone_offsets[z_idx],
-            "led_start":    0,
-            "led_end":      zone["led_count"],
-            "screen_start": 0.0,
-            "screen_end":   1.0,
-            "edge":         "area",
-            "x_pct":        max(0.0, min(1.0, (x_avg - scene_x_min) / span_x)),
-            "y_pct":        max(0.0, min(1.0, (y_avg - scene_y_min) / span_y)),
-            "reversed":     False,
-        })
-
+        else:
+            result.extend(_geometric_entries(zone, zone_offsets[z_idx], rect))
     return result, total_leds
-
 
 # ── Service ───────────────────────────────────────────────────────────────────
 

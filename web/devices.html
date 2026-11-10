@@ -282,7 +282,7 @@ function renderDevices(devs) {
     devs.forEach((dev, idx) => updateZoneCount(idx));
 }
 
-// "area" zones read one point of the screen; Monitor* zones follow a screen edge
+// what a zone reads comes from where it is in the Topology Editor: a side, one point, or nothing
 const _edgeText = z => z.outside ? 'outside the screen'
                      : z.edge === 'area' ? 'screen point'
                      : z.edge === 'matrix' ? `${z.cols}×${z.rows} keys`

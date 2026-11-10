@@ -222,10 +222,9 @@ _RECT_KEYS = ("x_min", "x_max", "y_min", "y_max")
 def get_screen_rect() -> dict:
     """Where the screen sits in the scene (editor coordinates, y up).
 
-    mode: "manual" (a rectangle is saved and decides the sides), "names" (no
-    rectangle: the old Monitor* zone names decide) or "auto" (no rectangle, no
-    such names: the bounding box of the scene). `suggested` is a starting
-    rectangle for the editor ("Fit")."""
+    mode: "manual" (a rectangle is saved) or "auto" (none yet: the bounding box
+    of the scene with the real proportions). `suggested` is that box, the
+    starting rectangle for the editor ("Fit")."""
     from effects.ambilight_service import screen_frame, suggest_screen_rect
     data = _load_topologies()
     skip = key_grid_zone_ids()
@@ -301,28 +300,9 @@ def key_grid_zone_ids() -> set:
 
 
 def _scene_zones(device_id: str, zones: list) -> list:
-    """Zones the editor shows: no hidden ('???') ones, no key grids."""
+    """Zones the editor shows: all of them but key grids (whatever their name)."""
     grids = _key_grid_indexes(device_id)
-    return [z for z in _visible_zones(zones) if z.get("zone_index") not in grids]
-
-
-# ── Hidden zones ──────────────────────────────────────────────────────────────
-
-
-def _is_hidden_zone(zone: dict) -> bool:
-    """Zones OpenRGB reports as '???' cannot be recognised on the hardware and
-    never receive colors (the engine skips them), so the editor does not show
-    them. They stay in the config: their LEDs still count for the offsets of
-    the zones that follow."""
-    from effects.ambilight_service import _is_unreadable_name
-    return _is_unreadable_name(zone.get("name", ""))
-
-
-def _visible_zones(zones: list) -> list:
-    return [z for z in zones if not _is_hidden_zone(z)]
-
-
-# ── Device list ───────────────────────────────────────────────────────────────
+    return [z for z in zones if z.get("zone_index") not in grids]
 
 
 @eel.expose
@@ -354,7 +334,7 @@ def get_topology_devices() -> dict:
                 "device_id":    device_key,
                 "name":         ctrl.topology.device.name,
                 "led_count":    ctrl.topology.led_count,
-                "zone_count":   len(_visible_zones(topo.get("zones", []))),
+                "zone_count":   len(topo.get("zones", [])),
                 "has_topology": device_key in topologies,
             })
 
@@ -469,7 +449,7 @@ def get_scene_topology() -> dict:
         for dev in devs_result["devices"]:
             device_id     = dev["device_id"]
             topo          = topologies.get(device_id, {})
-            stored        = _visible_zones(topo.get("zones", []))
+            stored        = topo.get("zones", [])
             zones         = _scene_zones(device_id, topo.get("zones", []))
             if stored and not zones:
                 continue      # only key grids (a keyboard): nothing to place
@@ -514,11 +494,11 @@ def save_scene_topology(zones: list, global_effect_center: dict) -> dict:
         for device_id, device_zones in by_device.items():
             if device_id not in topologies:
                 topologies[device_id] = {"device_id": device_id}
-            # The editor never sees hidden ('???') zones: keep the stored ones,
+            # The editor never sees key grids: keep the stored ones,
             # otherwise saving would drop their LEDs and shift every later zone.
             grids  = _key_grid_indexes(device_id)
             hidden = [z for z in topologies[device_id].get("zones", [])
-                      if _is_hidden_zone(z) or z.get("zone_index") in grids]
+                      if z.get("zone_index") in grids]
             if hidden:
                 device_zones = sorted(device_zones + hidden,
                                       key=lambda z: z.get("zone_index", 0))

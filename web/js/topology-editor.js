@@ -46,7 +46,8 @@ class TopologyCanvas {
 
         // Screen rectangle: where the monitor sits in the scene (world coords, y up).
         // rect = the one placed by hand (null = automatic); mode comes from the backend
-        // ('manual' | 'names' | 'auto'). Key grids (keyboards) are never sent here.
+        // ('manual' | 'auto'). Key grids (keyboards) are never sent here. Zone names
+        // decide nothing: only where the zones and the rectangle are.
         // aspect = width / height of the real screen: the rectangle always keeps it.
         this.screen = { rect: null, mode: 'auto', aspect: null, size: null };
         this.screenDrag = null;
@@ -807,10 +808,9 @@ class TopologyCanvas {
         return pts;
     }
 
-    // Automatic rectangle: the frame of the Monitor* zones, else every zone
+    // Automatic rectangle: every zone of the scene, with the real screen proportions
     autoScreenRect() {
-        const named = this.zones.filter(z => (z.name || '').startsWith('Monitor'));
-        const pts = (named.length ? named : this.zones).flatMap(z => this._ledPoints(z));
+        const pts = this.zones.flatMap(z => this._ledPoints(z));
         if (!pts.length) return null;
         const r = {
             x_min: Math.min(...pts.map(p => p.x)), x_max: Math.max(...pts.map(p => p.x)),
@@ -831,9 +831,6 @@ class TopologyCanvas {
 
     effectiveScreenRect() { return this.screen.rect || this.autoScreenRect(); }
 
-    // Does the rectangle decide? (not while the old zone names still do)
-    _screenDecides() { return !!this.screen.rect || this.screen.mode === 'auto'; }
-
     // Within the band ACROSS a side, and within its length ALONG it (+- reach, half
     // a LED): past a corner a LED is outside. Same rule as the backend.
     _classifyLed(p, r, axis, reach = 0.5) {
@@ -850,7 +847,6 @@ class TopologyCanvas {
 
     // Per LED: 'top' | 'right' | 'bottom' | 'left' | 'area' | 'off', or null when not shown
     ledKinds(zone) {
-        if (!this._screenDecides()) return null;
         const r = this.effectiveScreenRect();
         if (!r) return null;
         const pts = this._ledPoints(zone);
@@ -1372,9 +1368,7 @@ function updateScreenPanel() {
     const sc = canvas.screen;
     el.textContent = sc.rect
         ? 'Placed by hand. LEDs on a side read that side of the screen, LEDs inside read the point under them, LEDs outside are left alone.'
-        : sc.mode === 'names'
-        ? 'Automatic: the sides still come from the zone names (MonitorTop, MonitorRight…). Press Fit or drag the rectangle to place the screen yourself: then the names no longer matter.'
-        : 'Automatic: the screen covers every zone. Drag a corner, or press Fit, to place it where your monitor is.';
+        : 'Automatic: the screen covers every zone. Drag a corner or the border to place it where your monitor is: then save.';
     const auto = document.getElementById('btn-screen-auto');
     if (auto) auto.disabled = !sc.rect;
     const size = document.getElementById('screen-size');

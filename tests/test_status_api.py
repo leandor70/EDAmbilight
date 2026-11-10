@@ -36,7 +36,7 @@ def test_status_counts_only_enabled_and_zone_enabled():
                    {"name": "MonitorLeft", "zone_index": 1, "edge": "left"}],
              "B": [{"name": "MonitorTop", "zone_index": 0, "edge": "top"}]}
     cfg = {"enabled": True, "devices": {
-        "A": {"enabled": True, "zones_enabled": {"MonitorLeft": False}},
+        "A": {"enabled": True, "zones_enabled": {"1": False}},
         "B": {"enabled": False}}}
     _setup(cfg, zones, ["A", "B", "C"])
     s = ambilight_api.get_ambilight_status()
@@ -52,16 +52,16 @@ def test_status_no_enabled_device_means_zero_active_zones():
     assert s["active_zones"] == 0 and s["mapped_devices"] == 1
 
 
-def test_zones_with_same_name_are_toggled_by_index():
+def test_zone_switches_go_by_index_never_by_name():
     from effects.ambilight_service import is_zone_enabled
     zones = [{"name": "???", "zone_index": i} for i in (1, 5, 6)]
-    legacy = {"???": False}
-    assert not any(is_zone_enabled(legacy, z) for z in zones)   # old files keep working
-    by_index = {"???": False, "5": True}                         # index wins over name
-    assert [is_zone_enabled(by_index, z) for z in zones] == [False, True, False]
+    by_name = {"???": False}                                     # old files: keys by name
+    assert all(is_zone_enabled(by_name, z) for z in zones)       # ignored: on by default
+    by_index = {"???": False, "5": False}
+    assert [is_zone_enabled(by_index, z) for z in zones] == [True, False, True]
 
 
-def test_unreadable_zone_names_are_skipped(tmp_path, monkeypatch):
+def test_unreadable_zone_names_are_zones_like_the_others(tmp_path, monkeypatch):
     import json
     from effects import ambilight_service as svc
     def z(i, name):
@@ -72,9 +72,9 @@ def test_unreadable_zone_names_are_skipped(tmp_path, monkeypatch):
     (tmp_path / "config" / "device_topologies.json").write_text(json.dumps(topo))
     monkeypatch.chdir(tmp_path)
     zones, total = svc.build_device_zones("D")
-    assert [x["name"] for x in zones] == ["CPU", "Case"]
-    assert total == 3                      # LED offsets still count the hidden zone
-    assert [x["led_offset"] for x in zones] == [0, 2]
+    assert [x["name"] for x in zones] == ["CPU", "???", "Case"]   # the name decides nothing
+    assert total == 3
+    assert [x["led_offset"] for x in zones] == [0, 1, 2]
 
 
 def test_set_zone_enabled_stores_index_key():
