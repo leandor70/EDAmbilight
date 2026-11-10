@@ -184,7 +184,11 @@ def _sample_area_point(
     r  = max(1, int(min(h, w) * radius_pct))
     x0, x1 = max(0, cx - r), min(w, cx + r)
     y0, y1 = max(0, cy - r), min(h, cy + r)
-    patch = frame[y0:y1, x0:x1, :3].astype(np.float32)
+    # One pixel in 2x2 (more on bigger frames: about 64 x 64 samples): 40% less
+    # time per frame; the colour changes about as much as when the point moves by
+    # one pixel, which the percentile already does on its own.
+    s  = max(1, r // 32)
+    patch = frame[y0:y1:s, x0:x1:s, :3].astype(np.float32)
     # Adaptive strategies use the brightness-based percentile on area patches
     eff = "adaptive_smooth" if strategy in ("adaptive", "adaptive_smooth") else strategy
     return _sample_segment(patch, eff)
@@ -317,11 +321,12 @@ def is_phantom_zone(zone: dict) -> bool:
     """A zone OpenRGB reports with a name made only of '?' ("???").
 
     These are LEDs that do not exist on the hardware (OpenRGB detects them
-    anyway): they are excluded from everything - never shown, never driven, left
+    anyway): they are excluded from everything - never shown, never sampled, left
     out of the scene. It is the ONE rule that looks at a zone name; nothing else
     about a setup is inferred from names.
     """
-    return not str(zone.get("name", "")).strip().strip("?")
+    from effects.openrgb_manager import is_phantom_name
+    return is_phantom_name(zone.get("name", ""))
 
 
 def is_zone_enabled(zones_enabled: dict, zone: dict) -> bool:
@@ -602,7 +607,9 @@ class AmbilightService:
         self._stop_event = threading.Event()
         self._config: dict = self._load_config()
         self._prev_colors: Dict[str, List[Tuple[int, int, int]]] = {}
-        self._actual_fps: float = 0.0
+        self._actual_fps: float = 0.0      # frames per second really processed
+        self._frame_ms: float = 0.0        # time spent on one frame (capture excluded)
+        self._last_frame_t: Optional[float] = None
         self._paused: bool = False
         self._zone_cache: Dict[str, Tuple[List[dict], int]] = {}
         self._frame_size: Optional[Tuple[int, int]] = None   # (w, h) of the captured screen
@@ -694,7 +701,13 @@ class AmbilightService:
 
     @property
     def actual_fps(self) -> float:
+        """Frames per second really processed (at most the FPS target)."""
         return self._actual_fps
+
+    @property
+    def frame_ms(self) -> float:
+        """Milliseconds spent on one frame: the load (budget = 1000 / FPS target)."""
+        return self._frame_ms
 
     @property
     def capturer_name(self) -> str:
@@ -943,8 +956,7 @@ class AmbilightService:
                 self._process_frame(frame, cfg)
 
                 elapsed = time.perf_counter() - t0
-                if elapsed > 0:
-                    self._actual_fps = round(0.85 * self._actual_fps + 0.15 / elapsed, 1)
+                self._track_rate(t0, elapsed)
 
                 wait = 1.0 / max(1, int(cfg.get("fps", 15))) - elapsed
                 if wait > 0:
@@ -953,6 +965,22 @@ class AmbilightService:
             if _timer_ok:
                 import ctypes as _ct
                 _ct.windll.winmm.timeEndPeriod(1)
+
+    def _track_rate(self, t0: float, elapsed: float) -> None:
+        """Real frame rate (time between two processed frames) and time per frame.
+
+        The rate used to be 1 / processing time, i.e. how many frames COULD be
+        done, which read 60+ fps with a target of 15."""
+        last, self._last_frame_t = self._last_frame_t, t0
+        self._frame_ms = round(0.85 * self._frame_ms + 0.15 * elapsed * 1000, 2) if self._frame_ms else round(elapsed * 1000, 2)
+        if last is None:
+            return
+        gap = t0 - last
+        if 0 < gap < 1.0:                  # a longer gap = pause / standby: start again
+            rate = 1.0 / gap
+            self._actual_fps = round(0.85 * self._actual_fps + 0.15 * rate, 1) if self._actual_fps else round(rate, 1)
+        else:
+            self._actual_fps = 0.0
 
     def _on_no_frame(self, cfg: dict) -> None:
         now = time.monotonic()

@@ -108,6 +108,7 @@ def get_ambilight_status() -> dict:
     return {
         "running":        _ambilight_service.is_running,
         "fps":            _ambilight_service.actual_fps,
+        "frame_ms":       getattr(_ambilight_service, "frame_ms", 0.0),
         "capturer":       _ambilight_service.capturer_name,
         "enabled":        cfg.get("enabled", False),
         "standby":        bool(getattr(_ambilight_service, "standby_active", False)),

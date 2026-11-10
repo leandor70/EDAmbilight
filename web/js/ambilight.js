@@ -287,8 +287,9 @@ async function pollStatus() {
         _lowFpsPolls = (s.enabled && s.running && s.fps < target * 0.7) ? _lowFpsPolls + 1 : 0;
         const low = _lowFpsPolls >= 3;
         fpsBadge.style.color = low ? 'var(--c-fps-low)' : 'var(--c-strong)';
-        fpsBadge.title = low ? `Reaching ${s.fps} of ${target} fps — try lowering FPS Target or switching Capture Engine`
-                             : 'Frame rate actually reached';
+        const load = s.frame_ms ? ` · ${s.frame_ms} ms per frame of ${Math.round(1000 / target)} available` : '';
+        fpsBadge.title = low ? `Reaching ${s.fps} of ${target} fps — try lowering FPS Target or switching Capture Engine${load}`
+                             : `Frame rate actually reached${load}`;
     }
 
     _renderStandbyTest(!!s.standby_preview);

@@ -152,10 +152,12 @@ to resize, the border to move; **Fit** makes it cover every zone, as a starting 
 proportions of your real screen, so draw the strips to scale around it. Where a LED sits decides what it shows,
 whatever the zone is called: on a side of the rectangle it follows that side of the screen, inside it
 reads the point of the screen under it (the centre of the rectangle reads the centre of the screen),
-outside it is left alone. Faded LEDs on the canvas are outside; a dot on a LED means it reads one point.
-LEDs outside the screen, and zones you switch off in Devices, are never written: they keep whatever
-color OpenRGB (in Direct mode, the mode EDAmbilight puts the device in) or another program gives them.
-A LED that stops being used gets black once, then it is left alone.
+outside it gets no screen colour. Faded LEDs on the canvas are outside; a dot on a LED means it reads
+one point. Colours are written by whole zones (one packet per device whenever possible, which keeps
+OpenRGB light): a LED outside the screen is black when part of its zone is in use, and left alone,
+never written, when its whole zone is outside or switched off in Devices. A zone left alone keeps
+whatever colour OpenRGB (in Direct mode, the mode EDAmbilight puts the device in) or another program
+gives it; a zone that stops being used gets black once, then it is left alone.
 Until you place the rectangle, the screen covers every zone of the scene. Changes take effect
 without restarting.
 

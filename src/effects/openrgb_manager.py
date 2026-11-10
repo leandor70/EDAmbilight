@@ -14,6 +14,12 @@ from enum import Enum
 from typing import List, Optional, Tuple
 
 
+def is_phantom_name(name) -> bool:
+    """A zone name made only of '?' ("???"): OpenRGB reports such zones, but their
+    LEDs do not exist on the hardware. The ONE rule that looks at a zone name."""
+    return not str(name or "").strip().strip("?")
+
+
 class TopologyType(Enum):
     MATRIX = "matrix"
     LINEAR = "linear"
@@ -182,26 +188,28 @@ class OpenRGBManager:
 
     @staticmethod
     def _write_masked(device, colors, mask) -> None:
-        """Write only the LEDs in mask: a whole zone with one packet, a zone used
-        only in part LED by LED, a zone not used at all not at all."""
-        start = 0
+        """Write by whole zones: a zone with at least one LED in use is written
+        entirely (its other LEDs get the colour given, black for the unused ones),
+        a zone with none is not written at all, so it is left free. When every zone
+        is written, one packet for the whole device.
+
+        Zones with a '???' name (LEDs that do not exist) count as written: sending
+        them black costs nothing and keeps the device on a single packet."""
         zones = getattr(device, "zones", None) or []
         if sum(len(z.leds) for z in zones) != len(colors):
-            zones = []                                  # unknown layout: LED by LED
+            device.set_colors(colors)                   # unknown layout: whole device
+            return
+        spans, start = [], 0
         for zi, zone in enumerate(zones):
             end = start + len(zone.leds)
-            part = mask[start:end]
-            if part and all(part):
-                device.set_zone_colors(zi, colors[start:end])
-            elif any(part):
-                for i in range(start, end):
-                    if mask[i]:
-                        device.set_led_color(i, colors[i])
+            spans.append((zi, start, end, any(mask[start:end]) or is_phantom_name(getattr(zone, "name", ""))))
             start = end
-        if not zones:
-            for i, m in enumerate(mask):
-                if m:
-                    device.set_led_color(i, colors[i])
+        if all(used for *_, used in spans):
+            device.set_colors(colors)
+            return
+        for zi, a, b, used in spans:
+            if used and b > a:
+                device.set_zone_colors(zi, colors[a:b])
 
     # ── Reconnect support ──────────────────────────────────────────────────────
 

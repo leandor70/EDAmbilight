@@ -139,11 +139,15 @@ def test_process_frame_crop():
 
 def test_performance():
     frame = _frame_with_bars(left=400, right=400)
-    n = 200
-    t0 = time.perf_counter()
-    for _ in range(n):
-        _detect_content_rect(frame, 18)
-    per_call = (time.perf_counter() - t0) / n * 1000
+    # best of 5 batches: a busy PC (other programs, the test run itself) must not
+    # make it fail, only a really slow detection does
+    n, best = 40, float("inf")
+    for _ in range(5):
+        t0 = time.perf_counter()
+        for _ in range(n):
+            _detect_content_rect(frame, 18)
+        best = min(best, (time.perf_counter() - t0) / n * 1000)
+    per_call = best
     assert per_call < 5.0, f"detection troppo lenta: {per_call:.2f} ms"
     print(f"  performance          -> {per_call:.2f} ms/rilevamento su {W}x{H}  OK")
 

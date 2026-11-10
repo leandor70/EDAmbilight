@@ -1367,7 +1367,7 @@ function updateScreenPanel() {
     if (!el) return;
     const sc = canvas.screen;
     el.textContent = sc.rect
-        ? 'Placed by hand. LEDs on a side read that side of the screen, LEDs inside read the point under them, LEDs outside are left alone.'
+        ? 'Placed by hand. LEDs on a side read that side of the screen, LEDs inside read the point under them, LEDs outside get no colour (a zone wholly outside is left alone).'
         : 'Automatic: the screen covers every zone. Drag a corner or the border to place it where your monitor is: then save.';
     const auto = document.getElementById('btn-screen-auto');
     if (auto) auto.disabled = !sc.rect;

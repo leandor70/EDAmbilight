@@ -39,8 +39,9 @@ def test_single_led_packet(server):                                    # noqa: F
 # ── Manager: write only what is asked ────────────────────────────────────────
 
 class _Dev:
-    def __init__(self, sizes):
-        self.zones = [N(leds=[0] * n) for n in sizes]
+    def __init__(self, sizes, names=None):
+        names = names or ["z%d" % i for i in range(len(sizes))]
+        self.zones = [N(leds=[0] * n, name=nm) for n, nm in zip(sizes, names)]
         self.leds = [0] * sum(sizes)
         self.name, self.type, self._direct_mode_set = "D", N(name="LEDSTRIP"), True
         self.calls = []
@@ -64,11 +65,25 @@ def test_everything_used_is_one_packet():
     assert dev.calls == [("all", 7), ("all", 7)]
 
 
-def test_whole_zone_free_zone_part_zone():
+def test_a_zone_used_in_part_is_written_whole_a_free_zone_not_at_all():
     dev = _Dev([3, 4, 3])
     mask = [True] * 3 + [False] * 4 + [False, True, True]
     _mgr(dev).apply_direct_colors("D", [(0, 0, 0)] * 10, mask)
-    assert dev.calls == [("zone", 0, 3), ("led", 8), ("led", 9)]
+    assert dev.calls == [("zone", 0, 3), ("zone", 2, 3)]
+
+
+def test_every_zone_touched_is_one_packet():
+    dev = _Dev([3, 4])
+    mask = [True, False, False] + [False, False, False, True]   # both zones used in part
+    _mgr(dev).apply_direct_colors("D", [(0, 0, 0)] * 7, mask)
+    assert dev.calls == [("all", 7)]
+
+
+def test_phantom_zones_do_not_split_the_packet():
+    dev = _Dev([1, 2, 1], names=["CPU", "???", "Logo"])
+    mask = [True, False, False, True]                           # the ??? LEDs are never used
+    _mgr(dev).apply_direct_colors("D", [(0, 0, 0)] * 4, mask)
+    assert dev.calls == [("all", 4)]
 
 
 def test_nothing_used_writes_nothing():

@@ -17,7 +17,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Screen rectangle: where a zone is, not what it is called.** The Topology Editor has a SCREEN
   rectangle (your monitor): corners resize it, the border moves it, **Fit** makes it cover every zone.
   LEDs on a side of the rectangle follow that side of the screen, LEDs inside read the point of the
-  screen under them (the centre reads the centre), LEDs outside are left alone. It works LED by LED,
+  screen under them (the centre reads the centre), LEDs outside get no colour. It works LED by LED,
   so a zone longer than the screen lights only the part along it. Zone names no longer matter, in
   any language.
   - A strip a little above / below a side still counts as that side (15% of the short side, across
@@ -53,11 +53,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   to miss). A small live Sampling preview at the top shows what turning a device or zone on or off
   does. The Control page keeps only compact on/off chips, a summary and a warning when nothing would
   light up (no device mapped, none on, or no active zone).
-- **LEDs the ambilight does not use are left free.** LEDs outside the screen and zones switched off in
-  Devices used to be sent black at every frame, so nothing else could light them. Now only the LEDs in
-  use are written (one packet per device when all are used, per zone or per LED otherwise), and a LED
-  that stops being used gets black once. The others keep what OpenRGB or another program gives them.
-  The OpenRGB client gained zone and single-LED updates. Calibration still blacks out whole devices.
+- **Zones the ambilight does not use are left free.** A zone wholly outside the screen, or switched
+  off in Devices, used to be sent black at every frame, so nothing else could light it. Now it is not
+  written at all (it gets black once when it stops being used) and keeps what OpenRGB or another
+  program gives it. Colours go by whole zones, one packet per device whenever every zone is in use
+  ('???' zones count as in use), so OpenRGB gets as few packets as before: inside a zone used in part,
+  the LEDs outside the screen are black. The OpenRGB client gained zone updates. Calibration still
+  blacks out whole devices.
+- **Faster sampling.** Zones that read one point of the screen sample one pixel in 2 x 2 of their
+  area: a frame costs about 40% less (about 6 ms instead of 10 on a 3840 x 1600 screen captured at
+  960 x 400), with a colour change of the same size as moving the point by one pixel.
 - The chosen theme is also saved in `config/settings.json` (`ui_theme`), not only in the browser, so
   it is no longer lost when the web port changes, another browser is used or site data is cleared.
 - Topology Editor: the grey "VBBox" is gone (a leftover from ED:Event2Led, used by nothing here) and
@@ -70,6 +75,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   end, and the ambilight, the calibration and the screen rectangle all follow it. A zone that was
   saved as "reverse" in an older version will now really run the other way: flip it back if needed.
 - Changing the theme within a second of opening a page no longer gets undone by the saved value.
+- **The fps shown on the dashboard is the real frame rate.** It was 1 / processing time, i.e. how many
+  frames could be done (60+ fps with a target of 15). Its tooltip now also tells the milliseconds a
+  frame takes out of the ones available.
 
 ---
 
