@@ -8,52 +8,63 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+---
+
+## [1.6.0] — 2026-11-10
+
+### Added
+
+- **Screen rectangle: where a zone is, not what it is called.** The Topology Editor has a SCREEN
+  rectangle (your monitor): **Fit** places it on the strips, corners resize it, the border moves it.
+  LEDs on a side of the rectangle follow that side of the screen, LEDs inside read the point of the
+  screen under them (the centre reads the centre), LEDs outside are left alone. It works LED by LED,
+  so a zone longer than the screen lights only the part along it. Zone names no longer matter, in
+  any language.
+  - A strip a little above / below a side still counts as that side (15% of the short side, across
+    it); past the end of a side (more than half a LED beyond the corner) a LED is outside, and a
+    horizontal strip never reads a vertical side (nor the other way round).
+  - The rectangle always has the proportions of the real screen (read from the capture, else from
+    Windows): Fit and the automatic rectangle grow to them, corners resize keeping them. A rectangle
+    saved with other proportions is adapted when the editor opens and left unsaved, with a warning,
+    because growing it can move strips from a side to the inside.
+  - Without a rectangle, setups whose zones are named MonitorTop / Right / Bottom / Left keep the old
+    name-based mapping (Fit reproduces it); others use the bounding box of the whole scene.
+  - Once the rectangle is placed, zones that read one point measure it on the screen, not on the
+    whole scene as before: devices placed away from the monitor may read a different part of it.
+  - On the canvas, a faded LED is outside the screen and a dot on a LED means it reads one point.
+- **Key grids.** A zone that OpenRGB describes as a matrix (a keyboard: 24 x 6 cells on an ASUS TUF
+  Gaming K7) is no longer one row with one color. A grid of that size is laid over the whole screen
+  and every key shows the mean color of the cell it sits under, so the keyboard becomes a tiny copy
+  of the picture. The sampling preview draws the keys as tiles; the Devices page names the zone
+  "24x6 keys". The OpenRGB client now keeps the key map it used to discard. A key grid has nothing
+  to place, so it is not shown in the Topology Editor (it stays in the config).
+- Keyboards are no longer hidden: they are listed like any device, off until you switch them on.
+  After updating, a keyboard that was hidden before appears once in the "hardware changed" notice.
+
 ### Changed
 
-- **Where a zone is, not what it is called.** The Topology Editor has a SCREEN rectangle (your monitor):
-  **Fit** places it on the strips, corners resize it, the border moves it. LEDs on a side of the rectangle
-  follow that side of the screen, LEDs inside read the point of the screen under them, LEDs outside are
-  left alone; it works LED by LED, so a zone longer than the screen lights only the part along it.
-  A strip a little above / below a side still counts as that side (15% of the short side, across it),
-  but past the end of the side (more than half a LED beyond the corner) a LED is outside, and a
-  horizontal strip never reads a vertical side (nor the other way round). Zone names
-  no longer matter. Without a rectangle, setups whose zones are named MonitorTop / Right / Bottom / Left
-  keep the old mapping (Fit reproduces it), others use the bounding box of the whole scene.
-  The rectangle always has the proportions of the real screen (read from the capture, else from
-  Windows): Fit and the automatic rectangle grow to them, corners resize keeping them. A rectangle
-  saved with other proportions is adapted when the editor opens and left unsaved, with a warning,
-  because growing it can move strips from a side to the inside.
+- **Devices is now the one place for hardware.** Each device is a row with its on/off switch and an
+  expandable list of its zones (the zone switches used to be on the Control page, where they were easy
+  to miss). A small live Sampling preview at the top shows what turning a device or zone on or off
+  does. The Control page keeps only compact on/off chips, a summary and a warning when nothing would
+  light up (no device mapped, none on, or no active zone).
 - **LEDs the ambilight does not use are left free.** LEDs outside the screen and zones switched off in
   Devices used to be sent black at every frame, so nothing else could light them. Now only the LEDs in
   use are written (one packet per device when all are used, per zone or per LED otherwise), and a LED
   that stops being used gets black once. The others keep what OpenRGB or another program gives them.
   The OpenRGB client gained zone and single-LED updates. Calibration still blacks out whole devices.
+- The chosen theme is also saved in `config/settings.json` (`ui_theme`), not only in the browser, so
+  it is no longer lost when the web port changes, another browser is used or site data is cleared.
+- Topology Editor: the grey "VBBox" is gone (a leftover from ED:Event2Led, used by nothing here) and
+  the Effect Center panel is now **Calibration Center**: it only sets where the calibration rings start.
+
+### Fixed
+
 - **Flip Direction now works.** It used to change only the arrow on the canvas: the LED order always
   followed the rotation. Now Flip (F) means the zone is wired the other way round, LED 0 at the far
   end, and the ambilight, the calibration and the screen rectangle all follow it. A zone that was
   saved as "reverse" in an older version will now really run the other way: flip it back if needed.
-- Topology Editor: the grey "VBBox" is gone (a leftover from ED:Event2Led, used by nothing here) and
-  the Effect Center panel is now **Calibration Center**: it only sets where the calibration rings start.
-  Note: once the rectangle is placed, zones read their point relative to the screen, not to the whole
-  scene as before, so devices placed away from the monitor may read a different part of the screen.
-
-- **Devices is now the one place for hardware.** Each device is a row with its on/off switch and an
-  expandable list of its zones (the zone switches used to be on the Control page, where they were easy
-  to miss). A small live Sampling preview at the top shows what
-  turning a device or zone on or off does. The Control page keeps only compact on/off chips, a summary
-  and a warning when nothing would light up (no device mapped, none on, or no active zone).
-- Keyboards are no longer hidden: they are listed like any device, off until you switch them on.
-  After updating, a keyboard that was hidden before appears once in the "hardware changed" notice.
-- **Key grids.** A zone that OpenRGB describes as a matrix (a keyboard: 24 x 6 cells on an ASUS TUF
-  Gaming K7) is no longer one row with one color. A grid of that size is laid over the whole screen
-  and every key shows the mean color of the cell it sits under, so the keyboard becomes a tiny copy
-  of the picture. The sampling preview draws the keys as tiles; the Devices page names the zone
-  "24x6 keys". The OpenRGB client now keeps the key map it used to discard. A key grid has
-  nothing to place, so it is no longer shown in the Topology Editor (it stays in the config).
-- The chosen theme is now also saved in `config/settings.json` (`ui_theme`), not only in the
-  browser. It is no longer lost when the web port changes, when another browser is used or when
-  the browser clears site data. The saved value wins at load; an existing browser choice is
-  copied into the file the first time.
+- Changing the theme within a second of opening a page no longer gets undone by the saved value.
 
 ---
 
