@@ -10,6 +10,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.1] — 2026-11-11
+
+### Fixed
+
+- **The percentile strategies no longer flicker** (Percentile 80%, Percentile + EMA, Adaptive depth,
+  Adaptive + EMA, the default). A LED took the colour of ONE pixel, the one at the 80th brightness
+  percentile: on dark content with coloured text (a chat, an IDE, a terminal) a blinking cursor moved
+  it onto a letter of another colour and the LED jumped (up to 225/255). It is now the mean of the
+  brightest 20% of the area: a cursor moves it by a few units. When vivid content covers less than
+  20% of the area the LED now shows its colour, dimmer, instead of the dark background.
+  It costs no more than before: the brightest 20% is taken on one pixel in 2 x 2 of an edge segment
+  and one in 3 x 3 of an area that reads one point (about 5.7 ms per frame on a 3840 x 1600 screen
+  captured at 960 x 400, was 6.0).
+
+### Changed
+
+- The presets say what they are for (tooltip and Help): Gaming for action games, Calm for strategy and
+  management games, the desktop and reading, Cinema for films, Balanced for everyday use.
+
+---
+
 ## [1.6.0] — 2026-11-10
 
 ### Added

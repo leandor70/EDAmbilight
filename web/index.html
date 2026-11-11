@@ -304,7 +304,7 @@
 
                 <div class="panel">
                     <div class="panel-body" style="padding:16px 20px;">
-                        <div class="ds-label" style="margin-bottom:10px;">Algorithm <button type="button" class="info-btn" aria-label="Info: Algorithm" data-info-title="Algorithm" data-info="How each LED color is calculated from the screen edge. It decides which parameters below are active.&#10;Adaptive + EMA|Auto sampling depth plus smoothing. Best overall.&#10;Adaptive depth|Auto depth, no smoothing: reacts instantly.&#10;Percentile + EMA|Fixed depth, bright-pixel color, smoothed.&#10;Percentile 80%|Picks a bright pixel of the area: vivid colors, may flicker.&#10;Dominant color|Median color: ignores small bright details.&#10;RGB mean|Plain average: calm but washed-out colors.&#10;Black bar detect|Ignores black letterbox bars so colors match the actual picture.">i</button></div>
+                        <div class="ds-label" style="margin-bottom:10px;">Algorithm <button type="button" class="info-btn" aria-label="Info: Algorithm" data-info-title="Algorithm" data-info="How each LED color is calculated from the screen edge. It decides which parameters below are active.&#10;Adaptive + EMA|Auto sampling depth plus smoothing. Best overall.&#10;Adaptive depth|Auto depth, no smoothing: reacts instantly.&#10;Percentile + EMA|Fixed depth, bright-area color, smoothed.&#10;Percentile 80%|Mean of the brightest 20% of the area: vivid colors, stable.&#10;Dominant color|Median color: ignores small bright details.&#10;RGB mean|Plain average: calm but washed-out colors.&#10;Black bar detect|Ignores black letterbox bars so colors match the actual picture.">i</button></div>
                         <select id="ctrl-strategy" onchange="onStrategyChange(this.value)">
                             <option value="adaptive_smooth">Adaptive + EMA (best)</option>
                             <option value="adaptive">Adaptive depth</option>
@@ -330,10 +330,10 @@
             <div class="preset-bar ds-appear" style="animation-delay:.14s;">
                 <span class="preset-bar-label">Presets</span>
                 <div id="preset-chips" style="display:flex; gap:6px; flex-wrap:wrap;">
-                    <button type="button" class="btn preset-chip" data-preset="balanced" onclick="applyPreset('balanced')">Balanced</button>
-                    <button type="button" class="btn preset-chip" data-preset="cinema"   onclick="applyPreset('cinema')">Cinema</button>
-                    <button type="button" class="btn preset-chip" data-preset="gaming"   onclick="applyPreset('gaming')">Gaming</button>
-                    <button type="button" class="btn preset-chip" data-preset="calm"     onclick="applyPreset('calm')">Calm</button>
+                    <button type="button" class="btn preset-chip" data-preset="balanced" onclick="applyPreset('balanced')" title="Balanced: everyday use (the defaults). 15 fps, medium smoothing">Balanced</button>
+                    <button type="button" class="btn preset-chip" data-preset="cinema"   onclick="applyPreset('cinema')" title="Cinema: films and series. 24 fps, soft smoothing, richer colors">Cinema</button>
+                    <button type="button" class="btn preset-chip" data-preset="gaming"   onclick="applyPreset('gaming')" title="Gaming: action games, shooters, racing. 30 fps, follows the picture quickly">Gaming</button>
+                    <button type="button" class="btn preset-chip" data-preset="calm"     onclick="applyPreset('calm')" title="Calm: strategy and management games, desktop, reading. 15 fps, slow and steady changes">Calm</button>
                 </div>
                 <span id="preset-custom" class="preset-custom">Custom</span>
                 <div style="margin-left:auto; display:flex; gap:6px; flex-wrap:wrap;">

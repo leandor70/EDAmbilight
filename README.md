@@ -3,7 +3,7 @@
 **Real-time screen ambient lighting controller for OpenRGB**
 
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue)
-![Version](https://img.shields.io/badge/version-1.6.0-cyan)
+![Version](https://img.shields.io/badge/version-1.6.1-cyan)
 ![OpenRGB](https://img.shields.io/badge/requires-OpenRGB-orange)
 ![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-green)
 
@@ -235,7 +235,7 @@ Configuration files are stored in the `config/` folder next to the exe and are c
 |---|---|
 | `adaptive_smooth` | Adaptive depth + EMA — recommended for most content |
 | `smooth` | Fixed depth + EMA |
-| `percentile` | 80th-percentile luminance — vibrant colors |
+| `percentile` | mean of the brightest 20% — vibrant, stable colors |
 | `dominant` | Median pixel — stable, natural colors |
 | `mean` | Average all pixels — accurate but can look washed out |
 

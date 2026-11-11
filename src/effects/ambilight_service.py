@@ -54,16 +54,25 @@ def _led_world_positions(zone: dict) -> List[Tuple[float, float]]:
     return pts
 
 
-def _sample_segment(seg_2d: np.ndarray, strategy: str) -> Tuple[int, int, int]:
+def _sample_segment(seg_2d: np.ndarray, strategy: str, thin: bool = True) -> Tuple[int, int, int]:
     pixels = seg_2d.reshape(-1, 3)
     if len(pixels) == 0:
         return (0, 0, 0)
 
     if strategy in ("percentile", "smooth", "adaptive", "adaptive_smooth"):
-        lums = 0.2126 * pixels[:, 2] + 0.7152 * pixels[:, 1] + 0.0722 * pixels[:, 0]
+        if thin and seg_2d.ndim == 3 and seg_2d.shape[0] >= 8 and seg_2d.shape[1] >= 8:
+            # one pixel in 2 x 2: the mean of the brightest 20% barely changes
+            # (it averages many pixels) and the sorting costs a quarter
+            pixels = seg_2d[::2, ::2].reshape(-1, 3)
+        p32  = pixels.astype(np.float32)
+        lums = 0.2126 * p32[:, 2] + 0.7152 * p32[:, 1] + 0.0722 * p32[:, 0]
         k    = int(len(lums) * 0.80)
-        idx  = np.argpartition(lums, k)[k]
-        bgr  = pixels[idx]
+        # Mean of the brightest 20%, taken exactly by index. One pixel (the 80th
+        # percentile itself) flickered: on dark content with coloured text a
+        # blinking cursor moved it onto a letter of another colour. A threshold
+        # (pixels >= lum[k]) is no good either: with less than 20% bright content
+        # the background ties with it and the set swaps almost entirely.
+        bgr  = p32[np.argpartition(lums, k)[k:]].mean(axis=0)
     elif strategy == "dominant":
         bgr = np.median(pixels, axis=0)
     else:  # mean
@@ -184,14 +193,14 @@ def _sample_area_point(
     r  = max(1, int(min(h, w) * radius_pct))
     x0, x1 = max(0, cx - r), min(w, cx + r)
     y0, y1 = max(0, cy - r), min(h, cy + r)
-    # One pixel in 2x2 (more on bigger frames: about 64 x 64 samples): 40% less
-    # time per frame; the colour changes about as much as when the point moves by
-    # one pixel, which the percentile already does on its own.
-    s  = max(1, r // 32)
+    # One pixel in 3 x 3 (about 48 x 48 samples on any frame size): the strategies
+    # average many pixels, so the colour changes by a few units at most (measured
+    # on coloured text: within 5/255 of all pixels), and it costs a fifth.
+    s  = max(1, r // 24)
     patch = frame[y0:y1:s, x0:x1:s, :3].astype(np.float32)
     # Adaptive strategies use the brightness-based percentile on area patches
     eff = "adaptive_smooth" if strategy in ("adaptive", "adaptive_smooth") else strategy
-    return _sample_segment(patch, eff)
+    return _sample_segment(patch, eff, thin=False)      # already thinned above
 
 
 # ── Black-border detection ────────────────────────────────────────────────────
