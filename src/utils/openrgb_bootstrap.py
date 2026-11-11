@@ -17,6 +17,7 @@ import socket
 import subprocess
 import sys
 import time
+from collections import Counter
 from pathlib import Path
 
 DOWNLOAD_URL     = "https://openrgb.org"
@@ -171,23 +172,54 @@ def ensure_openrgb(settings, status_cb=None) -> dict:
     }
 
 
-def wait_devices_settled(client, stable_secs=5.0, timeout=45.0):
-    """Poll the device list of a freshly started OpenRGB until its count has
-    not changed for `stable_secs` (and is non-zero), or `timeout` elapses."""
-    deadline    = time.monotonic() + timeout
-    last_count  = -1
+def device_names_of_keys(keys) -> Counter:
+    """Device names, with repeats, from device keys ("name::linear", "name::linear#2")."""
+    return Counter(str(k).split("::")[0] for k in (keys or []))
+
+
+def wait_devices_settled(client, stable_secs=5.0, timeout=45.0, expected=None,
+                         missing_stable_secs=15.0, status_cb=None) -> bool:
+    """Poll the device list of OpenRGB until its detection looks finished.
+
+    OpenRGB opens its SDK server before it has finished detecting hardware, and
+    detection does not take the same time at every start: on the same PC once
+    3 s, once 13 s with 10 s without any new device in the middle (slow I2C
+    memory modules). A count that stays still for a few seconds is therefore
+    not enough when the PC has devices that come late.
+
+    expected: the device names (Counter, repeats count) seen at the previous
+    start. Done as soon as all of them are there. While some are missing the
+    count must stay still for missing_stable_secs (a device really unplugged
+    costs that once: the next start no longer expects it).
+    Without expected: done when the count is non-zero and still for stable_secs.
+    Returns True when every expected device is there (or nothing was expected).
+    """
+    expected = Counter(expected or {})
+    deadline     = time.monotonic() + timeout
+    last_count   = -1
     stable_since = time.monotonic()
+    complete     = not expected
     while time.monotonic() < deadline:
         try:
             client.refresh()
         except Exception as e:
             print(f"       OpenRGB device poll failed: {e}")
-            return
+            return complete
         count = len(client.devices)
         now   = time.monotonic()
+        if expected:
+            names = Counter(getattr(d, "name", "") for d in client.devices)
+            have = sum(min(names[n], c) for n, c in expected.items())
+            complete = have >= sum(expected.values())
+            if complete:
+                break
+            if status_cb:
+                status_cb(f"OpenRGB detecting devices... ({have} of {sum(expected.values())})")
         if count != last_count:
             last_count, stable_since = count, now
-        elif count > 0 and now - stable_since >= stable_secs:
+        elif count > 0 and now - stable_since >= (missing_stable_secs if expected else stable_secs):
             break
         time.sleep(1.0)
-    print(f"       OpenRGB detection settled: {last_count} device(s)")
+    missing = "" if complete else " (some devices of the last start are missing)"
+    print(f"       OpenRGB detection settled: {len(client.devices)} device(s){missing}")
+    return complete

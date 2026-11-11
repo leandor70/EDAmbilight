@@ -24,10 +24,8 @@ function apiOk(res) {
 
 // ── Notifications ────────────────────────────────────────────────────────────
 
-function showNotification(message, type = 'info', duration = 4000) {
-    const colors = { success: 'var(--toast-success)', error: 'var(--toast-error)', warning: 'var(--toast-warning)', info: 'var(--toast-info)' };
-    const icons  = { success: 'check_circle', error: 'error', warning: 'warning', info: 'info' };
-
+// The column of toasts at the top right (created on first use)
+function toastContainer() {
     let container = document.getElementById('toast-container');
     if (!container) {
         container = document.createElement('div');
@@ -39,6 +37,14 @@ function showNotification(message, type = 'info', duration = 4000) {
         });
         document.body.appendChild(container);
     }
+    return container;
+}
+
+function showNotification(message, type = 'info', duration = 4000) {
+    const colors = { success: 'var(--toast-success)', error: 'var(--toast-error)', warning: 'var(--toast-warning)', info: 'var(--toast-info)' };
+    const icons  = { success: 'check_circle', error: 'error', warning: 'warning', info: 'info' };
+
+    const container = toastContainer();
 
     const toast = document.createElement('div');
     toast.innerHTML = `

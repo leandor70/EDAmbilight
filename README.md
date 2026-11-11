@@ -3,7 +3,7 @@
 **Real-time screen ambient lighting controller for OpenRGB**
 
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue)
-![Version](https://img.shields.io/badge/version-1.6.1-cyan)
+![Version](https://img.shields.io/badge/version-1.6.2-cyan)
 ![OpenRGB](https://img.shields.io/badge/requires-OpenRGB-orange)
 ![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-green)
 
@@ -17,6 +17,14 @@
 
 Download the `EDAmbilight-vX.Y.Z.zip` from the release page, extract anywhere, run `EDAmbilight.exe`.
 No Python or extra dependencies needed.
+
+**New versions.** From 1.6.2 on, EDAmbilight tells you when a newer release is out: a toast with a
+link to its page (what's new and the download). Nothing is downloaded or installed for you: to
+update, extract the new zip and copy your `config` folder into it. **Close** hides the toast until
+the next start, **Skip this version** for good (a later version is shown again). To do it, the app
+asks GitHub for the latest release at startup, at most once a day: it is the only connection to the
+internet it makes, and GitHub sees your IP address, nothing else. Switch it off in *Settings → About*
+(**Tell me when a new version is out**); **Check now** asks at once.
 
 > **OpenRGB must be running** with the SDK Server enabled before launching EDAmbilight.
 > In OpenRGB: *Settings → SDK Server → Start Server* (default port 6742)
@@ -47,7 +55,10 @@ No Python or extra dependencies needed.
 - **Visual topology editor** — drag-and-drop canvas to map LED zones to screen regions
 - **System tray** — minimize to tray; reopen the UI from any browser tab
 - **OpenRGB auto-start** — launches OpenRGB automatically if it is not already running
-- **No internet required** — fully local, no telemetry, no cloud
+- **No internet required** — fully local, no telemetry, no cloud. The one exception, which you can switch
+  off: at most once a day the app asks GitHub whether a newer release exists (see *New versions* below)
+- **New version notice** — a toast with a link to the release page when a newer version is out;
+  nothing is downloaded or installed for you
 
 ---
 
@@ -168,7 +179,8 @@ without restarting.
 ### Settings
 
 Configure the OpenRGB connection (host, port, executable path, auto-start) and the web UI port,
-restart or quit the app, and open the log folder.
+restart or quit the app, and open the log folder. *About* shows the version and whether to be told
+about new ones (**Check now** asks GitHub at once).
 
 ![Settings](docs/ss-settings.png)
 
@@ -200,7 +212,8 @@ Configuration files are stored in the `config/` folder next to the exe and are c
   "openrgb_port": 6742,
   "openrgb_path": "",
   "openrgb_autostart": true,
-  "web_port": 8001
+  "web_port": 8001,
+  "update_check": true
 }
 ```
 
@@ -211,6 +224,7 @@ Configuration files are stored in the `config/` folder next to the exe and are c
 | `openrgb_path` | `""` | Absolute path to `openrgb.exe` (empty = autodetect) |
 | `openrgb_autostart` | `true` | Launch OpenRGB automatically if not running |
 | `web_port` | `8001` | Port for the built-in web UI |
+| `update_check` | `true` | Ask GitHub, at most once a day, whether a newer release is out (`update_latest`, `update_checked_at` and `update_skip_version` are kept by the app) |
 
 ### `config/ambilight_config.json`
 

@@ -10,6 +10,35 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.6.2] — 2026-11-11
+
+### Fixed
+
+- **Devices reported as "no longer detected" at some starts.** OpenRGB detection does not always
+  take the same time: on the same PC once 3 seconds, once 13 with 10 seconds without any new device
+  in the middle (slow memory modules). EDAmbilight took a device count that stayed still for 5
+  seconds as the end of detection, so it could stop at 1 device out of 7; and it did not wait at all
+  when OpenRGB was already running, even if it had just started (with Windows, for example). It now
+  waits until every device of the previous start is back, whoever started OpenRGB: when they all are,
+  there is no wait at all; while some are missing the splash screen counts them ("5 of 7"), and a
+  device really unplugged costs about 15 seconds once (the next start no longer expects it). Save &
+  Reconnect and Retry wait the same way.
+
+### Added
+
+- **New version notice.** At startup, at most once a day, EDAmbilight asks GitHub for the latest
+  release; when it is newer a toast shows it with a link to its page (what's new, download). Nothing
+  is downloaded or installed. **Close** hides it until the next start, **Skip this version** for good.
+  It is the only connection to the internet the app makes (GitHub sees the IP address, nothing else):
+  switch it off in Settings > About, where **Check now** asks at once. No network means no notice.
+
+### Changed
+
+- **Lighter DXGI capture.** Each grab copied the whole captured frame (25 MB at 3840 x 1600) before
+  reading one pixel in 16 of it; now it reads it in place, saving about 5 ms of CPU per frame.
+
+---
+
 ## [1.6.1] — 2026-11-11
 
 ### Fixed

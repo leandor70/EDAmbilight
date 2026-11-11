@@ -123,7 +123,12 @@ class _DxcamCapturer:
                         return None
                     self._recover()
                 cam = self._cam
-            frame = cam.get_latest_frame()
+            # No copy: dxcam would copy the whole frame (25 MB at 3840 x 1600) at
+            # every grab, about 5 ms of CPU, to read one pixel in 16 of it. The
+            # view points into dxcam's ring buffer (8 frames): the slot is reused
+            # only 8 frames later, long after the ~10 ms a frame is processed,
+            # and the frame is used only by the ambilight loop, never kept.
+            frame = cam.get_latest_frame(copy=False)
             return None if frame is None else frame[::DOWNSAMPLE, ::DOWNSAMPLE, :3]
         except Exception as exc:
             if any(t in str(exc).lower() for t in self._RECOVERABLE):

@@ -219,9 +219,13 @@ class OpenRGBManager:
         try:
             from core.openrgb_sdk import OpenRGBClient
             new_client = OpenRGBClient(host, port)
-            if settle:
-                from utils.openrgb_bootstrap import wait_devices_settled
-                wait_devices_settled(new_client)
+            from utils.openrgb_bootstrap import wait_devices_settled
+            from collections import Counter
+            # The devices known now: after a restart of OpenRGB they come back
+            # one by one, so wait for them (no wait when they are all there).
+            expected = Counter(c.topology.device.name for c in self.devices)
+            if settle or expected:
+                wait_devices_settled(new_client, expected=expected)
             old_client, self._client = self._client, new_client
             if hasattr(old_client, "close"):
                 old_client.close()

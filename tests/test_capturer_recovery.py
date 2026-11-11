@@ -34,7 +34,7 @@ class _FakeCam:
         self.is_capturing = False
         self._DXCamera__thread = None
 
-    def get_latest_frame(self):
+    def get_latest_frame(self, copy=True):
         if self.crashed:
             return None
         return np.zeros((8, 8, 4), dtype=np.uint8)

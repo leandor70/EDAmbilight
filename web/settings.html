@@ -231,6 +231,20 @@
                         Supports WGC, DXGI, and mss capture backends.
                     </p>
 
+                    <div class="settings-divider" style="margin:16px 0 14px;"></div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                        <label class="glass-toggle-container" title="At startup, at most once a day, EDAmbilight asks GitHub for the latest release and shows a notice with a link when it is newer. Nothing is downloaded or installed. It is the only connection to the internet the app makes: GitHub sees your IP address, nothing else.">
+                            <input id="inp-updates" type="checkbox" class="glass-toggle-input" onchange="saveUpdateCheck(this.checked)">
+                            <div class="glass-toggle-track"><div class="glass-toggle-thumb"></div></div>
+                            <span class="glass-toggle-label">Tell me when a new version is out</span>
+                        </label>
+                        <button class="btn-secondary" onclick="checkUpdatesNow()">
+                            <span class="material-symbols-outlined" style="font-size:15px;">system_update</span>
+                            Check now
+                        </button>
+                    </div>
+                    <div id="update-status" class="restart-notice"></div>
+
                 </div>
             </div>
 
@@ -251,6 +265,7 @@ window.addEventListener('load', async () => {
     if (s.web_port)     document.getElementById('inp-webport').value = s.web_port;
     document.getElementById('inp-path').value        = s.openrgb_path || '';
     document.getElementById('inp-autostart').checked = s.openrgb_autostart !== false;
+    document.getElementById('inp-updates').checked = s.update_check !== false;
     const v = await api('get_app_version');
     if (typeof v === 'string') document.getElementById('about-ver').textContent = 'v' + v;
 });
@@ -305,6 +320,27 @@ async function saveAndReconnect() {
         setConnStatus('err', r.error || 'Failed');
         showNotification('Saved but reconnect failed: ' + (r.error || ''), 'warning');
     }
+}
+
+async function saveUpdateCheck(on) {
+    const saved = await api('save_settings', { update_check: on });
+    if (!apiOk(saved)) { showNotification('Could not save: ' + (saved.error || ''), 'error'); return; }
+    showNotification(on ? 'You will be told when a new version is out' : 'No more checks for new versions', 'info', 2500);
+}
+
+async function checkUpdatesNow() {
+    const out = document.getElementById('update-status');
+    out.textContent = 'Asking GitHub…';
+    const r = await api('check_for_updates');
+    out.textContent = '';
+    if (!apiOk(r) || r.error) { out.textContent = 'GitHub could not be reached. Try again later.'; return; }
+    if (!r.newer) { out.textContent = `You have the latest version (${r.current}).`; return; }
+    out.append(`EDAmbilight ${r.latest} is available (you have ${r.current}). `);
+    const a = document.createElement('a');
+    a.href = r.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    a.textContent = "What's new / download";
+    a.style.color = 'var(--c-cyan)';
+    out.appendChild(a);
 }
 
 async function saveWebPort() {

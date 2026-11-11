@@ -40,6 +40,11 @@ def _load_seen() -> Optional[List[str]]:
         return None
 
 
+def load_seen_devices() -> List[str]:
+    """Device keys detected at the previous start ([] when there is no record)."""
+    return _load_seen() or []
+
+
 def _save_seen(keys: List[str]) -> None:
     try:
         _seen_file().write_text(

@@ -265,3 +265,80 @@ function _loadHardwareNotices(attempt = 0) {
 }
 
 document.addEventListener('DOMContentLoaded', () => _loadHardwareNotices());
+
+/* ── New version on GitHub ───────────────────────────────────────────────────
+   A toast with a link to the release page; nothing is downloaded or installed.
+   The check runs in the background at startup (at most once a day), so a page
+   opened right away asks again a little later. */
+let _updateShown = false;
+
+function _showUpdateToast(u) {
+    if (_updateShown || !u || !u.show || document.getElementById('update-toast')) return;
+    _updateShown = true;
+    const container = toastContainer();
+
+    const box = document.createElement('div');
+    box.id = 'update-toast';
+    box.setAttribute('role', 'status');
+    box.style.cssText = 'display:flex;gap:12px;align-items:flex-start;background:var(--pop-bg);' +
+        'border:1px solid var(--toast-info);border-radius:8px;padding:12px 16px;min-width:280px;max-width:min(470px, calc(100vw - 48px));' +
+        'box-shadow:var(--pop-shadow);pointer-events:auto;animation:slideInRight 0.3s ease-out;';
+
+    const icon = document.createElement('span');
+    icon.className = 'material-symbols-outlined';
+    icon.textContent = 'system_update';
+    icon.style.cssText = 'color:var(--toast-info);font-size:24px;';
+
+    const body = document.createElement('div');
+    body.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:8px;font-size:14px;color:var(--c-strong);';
+    const text = document.createElement('div');
+    text.textContent = `EDAmbilight ${u.latest} is available (you have ${u.current}).`;
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;';
+    const link = document.createElement('a');
+    link.className = 'btn';
+    link.href = u.url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = "What's new / download";
+    const skip = document.createElement('button');
+    skip.type = 'button';
+    skip.className = 'btn';
+    skip.textContent = 'Skip this version';
+    skip.title = 'No notice for this version again; a newer one will be shown';
+    row.append(link, skip);
+    body.append(text, row);
+
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.textContent = '×';
+    close.title = 'Close (shown again at the next start)';
+    close.setAttribute('aria-label', 'Close');
+    close.style.cssText = 'background:none;border:none;color:var(--c-faint);cursor:pointer;font-size:20px;';
+
+    const hide = skipIt => {
+        box.remove();
+        try { eel.close_update_notice(skipIt)(); } catch (_) {}
+    };
+    close.addEventListener('click', () => hide(false));
+    skip.addEventListener('click', () => hide(true));
+    link.addEventListener('click', () => hide(false));
+
+    box.append(icon, body, close);
+    container.appendChild(box);
+}
+
+function _loadUpdateInfo(attempt = 0) {
+    const later = [1500, 5000, 15000, 30000];
+    try {
+        if (typeof eel === 'undefined' || typeof eel.get_update_info !== 'function') throw 0;
+        eel.get_update_info()(u => {
+            _showUpdateToast(u);
+            if (!_updateShown && attempt < later.length) setTimeout(() => _loadUpdateInfo(attempt + 1), later[attempt]);
+        });
+    } catch (_) {
+        if (attempt < later.length) setTimeout(() => _loadUpdateInfo(attempt + 1), later[attempt]);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => _loadUpdateInfo());

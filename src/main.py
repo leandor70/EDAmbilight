@@ -213,13 +213,18 @@ def _do_init(settings):
             try:
                 from core.openrgb_sdk import OpenRGBClient
                 from effects.openrgb_manager import OpenRGBManager
-                from utils.openrgb_bootstrap import wait_devices_settled
+                from utils.openrgb_bootstrap import wait_devices_settled, device_names_of_keys
+                from api.topology_api import load_seen_devices
                 client          = OpenRGBClient(settings.get_openrgb_host(), settings.get_openrgb_port())
-                if boot.get("state") == "launched":
-                    # OpenRGB opens its SDK server before hardware detection
-                    # finishes: wait for the device list to settle.
+                # OpenRGB opens its SDK server before hardware detection finishes,
+                # also when it was already running but started a moment ago (e.g.
+                # with Windows): wait until the devices of the last start are back.
+                # When they all are, this is one read of the list and no wait.
+                expected = device_names_of_keys(load_seen_devices())
+                if boot.get("state") == "launched" or expected:
                     _set_step(1, "OpenRGB detecting devices...")
-                    wait_devices_settled(client)
+                    wait_devices_settled(client, expected=expected,
+                                         status_cb=lambda m: _set_step(1, m))
                 openrgb_manager = OpenRGBManager(client)
                 boot["devices"] = len(openrgb_manager.devices)
                 print(f"       OpenRGB connected — {len(openrgb_manager.devices)} device(s)")
@@ -255,6 +260,16 @@ def _do_init(settings):
                     print(f"       OpenRGB version: {version}")
             except Exception as e:
                 print(f"       OpenRGB version check skipped: {e}")
+
+        try:
+            from api.settings_api import init_update_check
+            from utils.update_check import UpdateChecker
+            from version import __version__
+            checker = UpdateChecker(settings, __version__)
+            init_update_check(checker)
+            checker.check_in_background()          # at most once a day, never blocks
+        except Exception as e:
+            print(f"       Update check skipped: {e}")
 
         _init_status["ready"]   = True
         _init_status["message"] = "Ready!"

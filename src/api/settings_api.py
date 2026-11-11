@@ -6,6 +6,7 @@ from typing import Optional
 _settings:          Optional[object] = None
 _openrgb_manager:   Optional[object] = None
 _ambilight_service: Optional[object] = None
+_updates:           Optional[object] = None      # utils.update_check.UpdateChecker
 
 
 def init_settings_api(settings, openrgb_manager=None, ambilight_service=None) -> None:
@@ -14,6 +15,36 @@ def init_settings_api(settings, openrgb_manager=None, ambilight_service=None) ->
     _openrgb_manager   = openrgb_manager
     _ambilight_service = ambilight_service
     print("[OK] Settings API initialized")
+
+
+def init_update_check(checker) -> None:
+    global _updates
+    _updates = checker
+
+
+@eel.expose
+def get_update_info() -> dict:
+    """Is a newer release on GitHub? {"show", "newer", "latest", "current", "url", ...}"""
+    if _updates is None:
+        return {"show": False, "newer": False}
+    return _updates.info()
+
+
+@eel.expose
+def close_update_notice(skip: bool = False) -> dict:
+    """Hide the update toast until the next start, or for good for that version."""
+    if _updates is not None:
+        _updates.close(bool(skip))
+    return {"ok": True}
+
+
+@eel.expose
+def check_for_updates() -> dict:
+    """Settings > Check now: ask GitHub at once (a few seconds at most)."""
+    if _updates is None:
+        return {"ok": False, "error": "Update check not available"}
+    _updates.check(force=True)
+    return {"ok": True, **_updates.info()}
 
 
 @eel.expose
@@ -29,6 +60,7 @@ def get_settings() -> dict:
         "theme":             _settings.get_theme(),
         "ui_theme":          _settings.get_ui_theme() if _settings.has_ui_theme() else None,
         "help_seen":         bool(_settings.settings.get("help_seen", False)),
+        "update_check":      bool(_settings.settings.get("update_check", True)),
     }
 
 
@@ -55,6 +87,9 @@ def save_settings(updates: dict) -> dict:
             _settings._save()
         if "help_seen" in updates:
             _settings.settings["help_seen"] = bool(updates["help_seen"])
+            _settings._save()
+        if "update_check" in updates:
+            _settings.settings["update_check"] = bool(updates["update_check"])
             _settings._save()
         if "openrgb_autostart" in updates:
             _settings.settings["openrgb_autostart"] = bool(updates["openrgb_autostart"])
@@ -92,9 +127,11 @@ def reconnect_openrgb(settle: bool = False) -> dict:
         from api.topology_api  import init_topology_api
 
         client          = OpenRGBClient(host, port)
-        if settle:
-            from utils.openrgb_bootstrap import wait_devices_settled
-            wait_devices_settled(client)
+        from utils.openrgb_bootstrap import wait_devices_settled, device_names_of_keys
+        from api.topology_api import load_seen_devices
+        expected = device_names_of_keys(load_seen_devices())
+        if settle or expected:
+            wait_devices_settled(client, expected=expected)
         new_manager     = OpenRGBManager(client)
         _openrgb_manager = new_manager
 
