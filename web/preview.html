@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html lang="it" data-themeable>
+<html lang="en" data-themeable>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="js/theme.js"></script>
+    <script src="js/i18n.js"></script>
+    <script src="js/i18n-it.js"></script>
     <link href="css/glass-select.css" rel="stylesheet">
     <script src="js/glass-select.js"></script>
     <title>EDAmbilight — Live Preview</title>
@@ -461,7 +463,7 @@
                         <div class="vu-bar" id="vu-mid"></div>
                         <div class="vu-lbl">M</div>
                         <div class="vu-bar" id="vu-high"></div>
-                        <div class="vu-lbl">H</div>
+                        <div class="vu-lbl" data-i18n="preview.vuHigh">H</div>
                     </div>
                 </div>
                 <div class="music-binds">
@@ -1459,8 +1461,8 @@ void main(){
         vizCtx.font         = 'bold 8px Rajdhani, sans-serif';
         vizCtx.textAlign    = 'center';
         vizCtx.fillStyle    = 'rgba(255,255,255,0.28)';
-        vizCtx.fillText('BASS', pad + mW * 0.5,          mY - 5);
-        vizCtx.fillText('HI',   W - mW * 0.5 - pad,      mY - 5);
+        vizCtx.fillText(window.EDI18n ? EDI18n.t('BASS') : 'BASS', pad + mW * 0.5,          mY - 5);
+        vizCtx.fillText(window.EDI18n ? EDI18n.t('HI') : 'HI', W - mW * 0.5 - pad,      mY - 5);
         vizCtx.fillText('0',    pad + mW * 0.5,          mY + 9);
         vizCtx.fillText('0',    W - mW * 0.5 - pad,      mY + 9);
         vizCtx.fillText('-∞',   pad + mW * 0.5,          mY + mH + 10);

@@ -3,7 +3,7 @@
 **Real-time screen ambient lighting controller for OpenRGB**
 
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue)
-![Version](https://img.shields.io/badge/version-1.6.2-cyan)
+![Version](https://img.shields.io/badge/version-1.7.0-cyan)
 ![OpenRGB](https://img.shields.io/badge/requires-OpenRGB-orange)
 ![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-green)
 
@@ -48,6 +48,9 @@ internet it makes, and GitHub sees your IP address, nothing else. Switch it off 
 - **Beat accent** — at every beat of the music playing on the PC the ambilight gets a short flash and/or hue shift: multiplicative, additive or mixed, with your own flash color, duration, intensity and a flash-rate safety limit (needs the optional `PyAudioWPatch` package)
 - **Screen standby effects** — when the display sleeps or locks, the LEDs can hold, fade out, pulse, rotate colors, show an aurora or an ember glow
 - **Light and dark theme** — a frosted-glass light theme next to the dark one, switched from the sidebar and remembered (also in `config/settings.json`); dropdown lists are translucent panels that blur what is behind them
+- **English or Italian** — the whole interface in Italian if you prefer (Settings > Language)
+- **Local only by default** — the web UI answers this PC only; web pages open in your browser cannot
+  reach it either. Other devices of the network can be allowed in Settings
 - **WebGL live preview** — visualise the ambient effect in the browser before it hits the LEDs
 
 ![Live Preview](docs/ss-preview.png)
@@ -178,8 +181,9 @@ without restarting.
 
 ### Settings
 
-Configure the OpenRGB connection (host, port, executable path, auto-start) and the web UI port,
-restart or quit the app, and open the log folder. *About* shows the version and whether to be told
+Choose the interface language (English or Italiano), configure the OpenRGB connection (host,
+port, executable path, auto-start) and the web UI port, allow other devices of the network to open
+the UI (off by default), restart or quit the app, and open the log folder. *About* shows the version and whether to be told
 about new ones (**Check now** asks GitHub at once).
 
 ![Settings](docs/ss-settings.png)
@@ -213,6 +217,8 @@ Configuration files are stored in the `config/` folder next to the exe and are c
   "openrgb_path": "",
   "openrgb_autostart": true,
   "web_port": 8001,
+  "allow_remote_access": false,
+  "language": "en",
   "update_check": true
 }
 ```
@@ -224,6 +230,8 @@ Configuration files are stored in the `config/` folder next to the exe and are c
 | `openrgb_path` | `""` | Absolute path to `openrgb.exe` (empty = autodetect) |
 | `openrgb_autostart` | `true` | Launch OpenRGB automatically if not running |
 | `web_port` | `8001` | Port for the built-in web UI |
+| `allow_remote_access` | `false` | `false`: only this PC can use the web UI (requests from other addresses, with a foreign `Host` or from another site's page are refused with 403). `true`: listens on every network interface, so phones and PCs of your network can open it, with no password; requests from other sites' pages are still refused. Applied at the next start |
+| `language` | `"en"` | Interface language: `"en"` or `"it"` |
 | `update_check` | `true` | Ask GitHub, at most once a day, whether a newer release is out (`update_latest`, `update_checked_at` and `update_skip_version` are kept by the app) |
 
 ### `config/ambilight_config.json`

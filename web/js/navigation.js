@@ -126,7 +126,7 @@ function _buildSidebar() {
                             font-variation-settings:'FILL' ${active ? '1' : '0'},'wght' ${active ? '300' : '200'},'GRAD' 0,'opsz' 24;
                             transition: font-variation-settings .2s cubic-bezier(0.23,1,0.32,1);
                         ">${item.icon}</span>
-                        <span style="
+                        <span data-i18n="nav.${item.id}" style="
                             font-size:12px; letter-spacing:.07em;
                             font-family:'Rajdhani',sans-serif;
                             text-transform:uppercase; font-weight:700;

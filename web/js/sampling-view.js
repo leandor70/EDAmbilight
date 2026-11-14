@@ -103,6 +103,7 @@ function _showSamplingTip() {
     const dev = _sampDevices().find(d => d.device_key === z.dev);
     const title = document.createElement('b');
     title.textContent = dev ? dev.name : z.dev;
+    title.setAttribute('translate', 'no');           // hardware name
     const zone = document.createElement('div');
     zone.textContent = `Zone: ${z.zone}`;
     const kind = document.createElement('span');
@@ -306,7 +307,9 @@ function _drawSampling(r) {
         else if (r.standby)         note = 'Screen unavailable (standby)';
         else if (noZones)           note = 'No device is receiving colors';
         else if (cropped)           note = `Black bars cropped (${cw}×${ch})`;
-        cap.style.whiteSpace = 'pre-line';
-        cap.textContent = `${fw}×${fh} · ${depthTxt}` + (note ? '\n' + note : '');
+        // Two text nodes, so each line is translated on its own
+        const lines = [document.createTextNode(`${fw}×${fh} · ${depthTxt}`)];
+        if (note) lines.push(document.createElement('br'), document.createTextNode(note));
+        cap.replaceChildren(...lines);
     }
 }

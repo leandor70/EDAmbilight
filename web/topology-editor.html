@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="js/theme.js"></script>
+    <script src="js/i18n.js"></script>
+    <script src="js/i18n-it.js"></script>
     <title>EDAmbilight — Topology Editor</title>
     <link href="css/tailwind.min.css" rel="stylesheet">
     <link href="css/fonts.css" rel="stylesheet">
@@ -165,7 +167,7 @@
                     <div class="ds-label" style="margin-bottom:12px;">Multi-Zone Devices</div>
                     <div id="no-devices-state" class="hidden" style="text-align:center; padding:16px 0;">
                         <span class="material-symbols-outlined" style="font-size:36px; color:rgba(255,255,255,.14); display:block; margin-bottom:8px; font-variation-settings:'FILL' 0,'wght' 200,'opsz' 40;">device_unknown</span>
-                        <p style="font-size:11px; color:var(--c-text-ghost); line-height:1.7;">No devices found.<br>Check that OpenRGB is connected in<br><a href="devices.html" style="color:var(--c-cyan);">Devices</a>.</p>
+                        <p data-i18n="topo.no_devices" style="font-size:11px; color:var(--c-text-ghost); line-height:1.7;">No devices found.<br>Check that OpenRGB is connected in<br><a href="devices.html" style="color:var(--c-cyan);">Devices</a>.</p>
                     </div>
                     <div id="topology-device-list"></div>
                 </div>
@@ -252,7 +254,7 @@
             <div class="panel" style="flex-shrink:0;">
                 <div class="panel-body" style="padding:8px 14px; flex-direction:row; align-items:center; gap:10px;">
                     <span class="material-symbols-outlined" style="font-size:14px; color:var(--c-cyan); flex-shrink:0; font-variation-settings:'FILL' 0,'wght' 200,'opsz' 20;">info</span>
-                    <span style="font-size:12px; color:var(--c-text-dim);">Drag zones · <b>R</b> rotate · <b>F</b> flip · Middle-drag to pan · Scroll to zoom</span>
+                    <span data-i18n="topo.hint" style="font-size:12px; color:var(--c-text-dim);">Drag zones · <b>R</b> rotate · <b>F</b> flip · Middle-drag to pan · Scroll to zoom</span>
                     <div style="margin-left:auto; display:flex; align-items:center; gap:12px; flex-shrink:0;">
                         <div id="mouse-pos"  style="font-size:10px; color:rgba(255,255,255,.28); font-family:monospace;">X: 0, Y: 0</div>
                         <div id="zoom-level" style="font-size:10px; color:rgba(255,255,255,.28); font-family:monospace;">100%</div>
@@ -330,7 +332,7 @@
                                     </div>
                                 </div>
                                 <div style="padding-top:10px; border-top:1px solid rgba(255,255,255,.05); font-size:11px; color:var(--c-text-ghost); display:flex; flex-direction:column; gap:3px;">
-                                    <div>Device: <span id="zone-device" style="color:var(--c-text-dim);"></span></div>
+                                    <div>Device: <span id="zone-device" translate="no" style="color:var(--c-text-dim);"></span></div>
                                     <div>Zone Index: <span id="zone-index" style="color:var(--c-text-dim);"></span></div>
                                     <div>LED Count: <span id="zone-led-count" style="color:var(--c-text-dim);"></span></div>
                                 </div>

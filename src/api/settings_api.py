@@ -61,6 +61,7 @@ def get_settings() -> dict:
         "ui_theme":          _settings.get_ui_theme() if _settings.has_ui_theme() else None,
         "help_seen":         bool(_settings.settings.get("help_seen", False)),
         "update_check":      bool(_settings.settings.get("update_check", True)),
+        "allow_remote_access": _settings.get_allow_remote_access(),
     }
 
 
@@ -91,6 +92,8 @@ def save_settings(updates: dict) -> dict:
         if "update_check" in updates:
             _settings.settings["update_check"] = bool(updates["update_check"])
             _settings._save()
+        if "allow_remote_access" in updates:
+            _settings.set_allow_remote_access(bool(updates["allow_remote_access"]))
         if "openrgb_autostart" in updates:
             _settings.settings["openrgb_autostart"] = bool(updates["openrgb_autostart"])
             _settings._save()

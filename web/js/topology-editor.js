@@ -884,7 +884,8 @@ class TopologyCanvas {
         this.ctx.font = '600 12px Inter, system-ui, sans-serif';
         this.ctx.textAlign = 'left';
         this.ctx.textBaseline = 'bottom';
-        this.ctx.fillText(manual ? 'SCREEN' : 'SCREEN (automatic)', tl.x + 2, tl.y - 4);
+        const screenLabel = manual ? 'SCREEN' : 'SCREEN (automatic)';
+        this.ctx.fillText(window.EDI18n ? EDI18n.t(screenLabel) : screenLabel, tl.x + 2, tl.y - 4);
         for (const [cx, cy] of [[tl.x, tl.y], [br.x, tl.y], [tl.x, br.y], [br.x, br.y]]) {
             this.ctx.fillStyle = pal.bg;
             this.ctx.fillRect(cx - 5, cy - 5, 10, 10);
@@ -1119,14 +1120,14 @@ class TopologyCanvas {
             const label = deviceNames[did] || did.split('::')[0];
             return `
                 <div class="mb-3">
-                    <div class="zone-group-label text-[10px] uppercase tracking-widest mb-1 px-1">${label}</div>
+                    <div translate="no" class="zone-group-label text-[10px] uppercase tracking-widest mb-1 px-1">${label}</div>
                     ${zones.map(zone => {
                         const uid = `${zone.device_id}::${zone.zone_index}`;
                         return `
                         <div class="zone-card p-2 border rounded text-xs mb-1 ${zone === this.selectedZone ? 'selected' : ''}"
                              data-zone-uid="${uid}"
                              style="border-color: ${zone.color};">
-                            <div class="font-bold" style="color: ${zone.color};">${zone.name}</div>
+                            <div class="font-bold" translate="no" style="color: ${zone.color};">${zone.name}</div>
                             <div class="zone-meta text-[10px]">${zone.led_count} LEDs · ${zone.rotation}° · ${zone.direction}</div>
                         </div>`;
                     }).join('')}
@@ -1452,7 +1453,7 @@ function renderDeviceLegend(devices) {
                 <div class="flex items-center gap-2 min-w-0">
                     <div class="w-3 h-3 rounded-sm shrink-0" style="background:${dev.color};"></div>
                     <div class="min-w-0">
-                        <div class="device-selector-name truncate">${dev.name}</div>
+                        <div class="device-selector-name truncate" translate="no">${dev.name}</div>
                         <div class="device-selector-meta">${dev.zone_count} zones · ${dev.led_count} LEDs</div>
                     </div>
                 </div>

@@ -10,6 +10,28 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.7.0] — 2026-11-14
+
+### Added
+
+- **Italian interface (optional).** Settings > Language: English (default) or Italiano. The choice
+  is kept in `config/settings.json` (`language`) and in the browser, so the page paints in the right
+  language at once. The pages stay written in English: with Italian a small script translates them
+  from a dictionary (`web/js/i18n-it.js`) while they load and whenever they change; with English it
+  does nothing.
+
+### Security
+
+- **Only this PC can use the web server.** It already listened on `localhost` only; now every
+  request is also checked: the peer must be a loopback address, the `Host` header must name this PC
+  (a web page that points its own domain at 127.0.0.1 is refused) and the `Origin`, when the browser
+  sends one, must be the app's own page (another site open in the browser can no longer open the
+  WebSocket and call the app's functions). Refused requests get 403 and a `[SECURITY]` line in the
+  log. Settings > Web Server > *Allow other devices on the network* (off by default, applied at the
+  next start) opens it to the network; the `Origin` check stays.
+
+---
+
 ## [1.6.2] — 2026-11-11
 
 ### Fixed

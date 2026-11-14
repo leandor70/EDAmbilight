@@ -4,6 +4,8 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <script src="js/theme.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/i18n-it.js"></script>
 <title>EDAmbilight — Settings</title>
 <link href="css/tailwind.min.css" rel="stylesheet">
 <link href="css/fonts.css" rel="stylesheet">
@@ -84,6 +86,30 @@
     <div class="flex-1 overflow-y-auto" style="padding:14px 20px 20px;">
         <div style="max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:10px;">
 
+            <!-- Language -->
+            <div class="panel ds-appear" style="animation-delay:.03s;">
+                <div class="panel-body" style="padding:22px 24px;">
+
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+                        <div class="section-icon">
+                            <span class="material-symbols-outlined" style="font-size:18px;color:var(--icon-accent);">translate</span>
+                        </div>
+                        <div>
+                            <div class="ds-label">Language</div>
+                            <div style="font-size:13px;color:var(--c-text-ghost);margin-top:2px;">Language of the interface</div>
+                        </div>
+                    </div>
+
+                    <div style="max-width:240px;">
+                        <select id="inp-lang" onchange="saveLanguage(this.value)" aria-label="Language">
+                            <option value="en" translate="no">English</option>
+                            <option value="it" translate="no">Italiano</option>
+                        </select>
+                    </div>
+
+                </div>
+            </div>
+
             <!-- OpenRGB Connection -->
             <div class="panel ds-appear" style="animation-delay:.06s;">
                 <div class="panel-body" style="padding:22px 24px;">
@@ -160,6 +186,15 @@
                         <input id="inp-webport" type="number" value="8001" min="1024" max="65535"/>
                     </div>
                     <div class="restart-notice">Change takes effect on next application start.</div>
+
+                    <div class="settings-divider" style="margin:16px 0 14px;"></div>
+                    <label class="glass-toggle-container" title="Off (recommended): only this PC can open EDAmbilight; requests from other devices, and from web pages that try to reach it through the browser, are refused. On: phones and PCs of your network can open it at http://<this PC's address>:<port> and control the LEDs and the app, with no password.">
+                        <input id="inp-remote" type="checkbox" class="glass-toggle-input" onchange="saveRemoteAccess(this)">
+                        <div class="glass-toggle-track"><div class="glass-toggle-thumb"></div></div>
+                        <span class="glass-toggle-label">Allow other devices on the network</span>
+                    </label>
+                    <div class="restart-notice">Off by default: only this PC can connect. Takes effect on next application start.</div>
+
                     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">
                         <button class="btn-secondary" onclick="saveWebPort()">
                             <span class="material-symbols-outlined" style="font-size:15px;">save</span>
@@ -266,6 +301,8 @@ window.addEventListener('load', async () => {
     document.getElementById('inp-path').value        = s.openrgb_path || '';
     document.getElementById('inp-autostart').checked = s.openrgb_autostart !== false;
     document.getElementById('inp-updates').checked = s.update_check !== false;
+    document.getElementById('inp-remote').checked  = s.allow_remote_access === true;
+    document.getElementById('inp-lang').value      = (window.EDI18n && EDI18n.lang) || s.language || 'en';
     const v = await api('get_app_version');
     if (typeof v === 'string') document.getElementById('about-ver').textContent = 'v' + v;
 });
@@ -341,6 +378,22 @@ async function checkUpdatesNow() {
     a.textContent = "What's new / download";
     a.style.color = 'var(--c-cyan)';
     out.appendChild(a);
+}
+
+function saveLanguage(lang) {
+    if (window.EDI18n) EDI18n.set(lang);         // saves it and reloads the page
+}
+
+async function saveRemoteAccess(box) {
+    const on = box.checked;
+    if (on && !await confirmDialog('Let any device on your network control EDAmbilight? There is no password: anyone on the same network (Wi-Fi guests included) can change the lighting, restart or quit the app.', 'Allow', { danger: true })) {
+        box.checked = false;
+        return;
+    }
+    const saved = await api('save_settings', { allow_remote_access: on });
+    if (!apiOk(saved)) { box.checked = !on; showNotification('Could not save: ' + (saved.error || ''), 'error'); return; }
+    showNotification(on ? 'Network access saved. Restart the app to apply.' : 'Only this PC will be able to connect. Restart the app to apply.', 'info');
+    document.getElementById('btn-restart-port').style.display = '';
 }
 
 async function saveWebPort() {

@@ -195,7 +195,7 @@ function renderDevices(devs) {
             ? (on ? 'On: receives the ambilight colors. Click to turn off.' : 'Off. Click to turn on.')
             : 'No zones mapped yet: map them in the Topology Editor.';
         b.setAttribute('aria-pressed', String(on));
-        b.innerHTML = `${_powerSVG}<span>${escapeHtml(dev.name)}</span>`;
+        b.innerHTML = `${_powerSVG}<span translate="no">${escapeHtml(dev.name)}</span>`;
         b.onclick = () => toggleDevice(dev.device_key, !_isOn(dev.device_key));
         container.appendChild(b);
     });
@@ -646,7 +646,8 @@ function _renderMeter(s) {
     else if (s.silent)              text = 'Listening: no sound is playing';
     else if (s.notice)              text = `${s.notice} (${s.device})`;
     else                            text = `Listening to ${s.device || 'the default output'}`;
-    if (st.textContent !== text) st.textContent = text;
+    // Compare with the last text set, not the shown one (it may be translated)
+    if (st.dataset.text !== text) { st.dataset.text = text; st.textContent = text; }
 }
 
 function _initAccent() {

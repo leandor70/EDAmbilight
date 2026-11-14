@@ -46,11 +46,23 @@ class Settings:
     def get_web_port(self) -> int:
         return int(self.settings.get("web_port", 8001))
 
+    def get_allow_remote_access(self) -> bool:
+        """Other devices of the network may open the web UI (default: only this PC)."""
+        return self.settings.get("allow_remote_access") is True
+
+    def set_allow_remote_access(self, allow: bool):
+        self.settings["allow_remote_access"] = bool(allow)
+        self._save()
+
+    LANGUAGES = ("en", "it")
+
     def get_language(self) -> str:
-        return self.settings.get("language", "en")
+        """Interface language: "en" (default) or "it"."""
+        lang = self.settings.get("language")
+        return lang if lang in self.LANGUAGES else "en"
 
     def set_language(self, lang: str):
-        self.settings["language"] = lang
+        self.settings["language"] = lang if lang in self.LANGUAGES else "en"
         self._save()
 
     def get_theme(self) -> str:

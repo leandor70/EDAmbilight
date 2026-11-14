@@ -4,6 +4,8 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <script src="js/theme.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/i18n-it.js"></script>
 <title>EDAmbilight — Help</title>
 <link href="css/tailwind.min.css" rel="stylesheet">
 <link href="css/fonts.css" rel="stylesheet">
@@ -81,19 +83,19 @@
                 <div class="panel-body help-text" style="padding:22px 24px;">
                     <div class="orbitron" style="font-size:1.1rem;font-weight:700;letter-spacing:.12em;color:var(--c-cyan);margin-bottom:10px;">WELCOME TO EDAMBILIGHT</div>
                     <p>EDAmbilight reads the colors at the edges of your screen and sends them to your RGB devices through OpenRGB, so your lights follow what is on screen.</p>
-                    <p>Follow these four steps once. You can come back to this page any time from the <b>Help</b> button in the sidebar.</p>
+                    <p data-i18n="help.welcome">Follow these four steps once. You can come back to this page any time from the <b>Help</b> button in the sidebar.</p>
                 </div>
             </div>
 
             <div class="panel ds-appear" style="animation-delay:.10s;">
                 <div class="panel-body help-text" style="padding:20px 24px;">
                     <div class="step-head"><div class="step-num">1</div><div class="step-title">Make sure OpenRGB is running</div></div>
-                    <p>EDAmbilight talks to your lights through <b>OpenRGB</b>. It starts it for you if it can find it.</p>
+                    <p data-i18n="help.s1.intro">EDAmbilight talks to your lights through <b>OpenRGB</b>. It starts it for you if it can find it.</p>
                     <ul>
-                        <li>OpenRGB needs <b>administrator rights</b> to reach your devices: when it starts, Windows shows a permission prompt. Click <b>Yes</b>, otherwise no device will be found.</li>
-                        <li>In OpenRGB, open the <b>SDK Server</b> tab and click <b>Start Server</b> (default port 6742).</li>
-                        <li>Memory modules and motherboards need the <b>PawnIO</b> driver (<b>pawnio.eu</b>). Without it OpenRGB 1.x does not detect them. OpenRGB 1.0 or later is recommended.</li>
-                        <li>If the connection fails, check host, port and the OpenRGB path in <a href="settings.html">Settings</a>.</li>
+                        <li data-i18n="help.s1.admin">OpenRGB needs <b>administrator rights</b> to reach your devices: when it starts, Windows shows a permission prompt. Click <b>Yes</b>, otherwise no device will be found.</li>
+                        <li data-i18n="help.s1.sdk">In OpenRGB, open the <b>SDK Server</b> tab and click <b>Start Server</b> (default port 6742).</li>
+                        <li data-i18n="help.s1.pawnio">Memory modules and motherboards need the <b>PawnIO</b> driver (<b>pawnio.eu</b>). Without it OpenRGB 1.x does not detect them. OpenRGB 1.0 or later is recommended.</li>
+                        <li data-i18n="help.s1.fail">If the connection fails, check host, port and the OpenRGB path in <a href="settings.html">Settings</a>.</li>
                     </ul>
                 </div>
             </div>
@@ -101,13 +103,13 @@
             <div class="panel ds-appear" style="animation-delay:.16s;">
                 <div class="panel-body help-text" style="padding:20px 24px;">
                     <div class="step-head"><div class="step-num">2</div><div class="step-title">Map your strip to the screen</div></div>
-                    <p>Open the <a href="topology-editor.html">Topology</a> page. On first run the zones of your devices are imported from OpenRGB automatically (the <b>Reload</b> button does it again at any time).</p>
+                    <p data-i18n="help.s2.intro">Open the <a href="topology-editor.html">Topology</a> page. On first run the zones of your devices are imported from OpenRGB automatically (the <b>Reload</b> button does it again at any time).</p>
                     <ul>
-                        <li>The <b>SCREEN</b> rectangle on the canvas is your monitor. Drag its corners and border so that it sits where the strips around your monitor are (<b>Fit</b> makes it cover every zone, as a starting point).</li>
+                        <li data-i18n="help.s2.screen">The <b>SCREEN</b> rectangle on the canvas is your monitor. Drag its corners and border so that it sits where the strips around your monitor are (<b>Fit</b> makes it cover every zone, as a starting point).</li>
                         <li>Where you put a zone decides what it shows; its name never does: LEDs on a side of the rectangle follow that side of the screen, LEDs inside read the point of the screen under them, LEDs outside get no screen color (they are drawn faded): they are black when part of their zone is in use, and left alone when the whole zone is outside, so it keeps the color OpenRGB or another program gives it. The same goes for a zone you switch off in Devices.</li>
-                        <li>The small 0 shows where LED 0 of a zone is. If the colors run the wrong way along a side, press <b>Flip Direction</b> (or <b>F</b>): LED 0 moves to the other end. Then press <b>Save Topology</b>.</li>
+                        <li data-i18n="help.s2.flip">The small 0 shows where LED 0 of a zone is. If the colors run the wrong way along a side, press <b>Flip Direction</b> (or <b>F</b>): LED 0 moves to the other end. Then press <b>Save Topology</b>.</li>
                     </ul>
-                    <div class="help-note">Tip: a strip that goes around the monitor needs one zone per side. Split it into segments in OpenRGB (Resizable zones &amp; segments), then press <b>Reload</b>. Zones that OpenRGB names &ldquo;???&rdquo; are LEDs that do not exist on the hardware: EDAmbilight leaves them out of everything.</div>
+                    <div class="help-note" data-i18n="help.s2.tip">Tip: a strip that goes around the monitor needs one zone per side. Split it into segments in OpenRGB (Resizable zones &amp; segments), then press <b>Reload</b>. Zones that OpenRGB names &ldquo;???&rdquo; are LEDs that do not exist on the hardware: EDAmbilight leaves them out of everything.</div>
                 </div>
             </div>
 
@@ -115,8 +117,8 @@
                 <div class="panel-body help-text" style="padding:20px 24px;">
                     <div class="step-head"><div class="step-num">3</div><div class="step-title">Choose devices and switch it on</div></div>
                     <ul>
-                        <li>In <a href="devices.html">Devices</a> switch each device on or off and, under <b>Zones</b>, choose which of its zones are used. Keyboards are listed too and start off; their keys show the part of the screen they sit under. The preview at the top shows what changes. The Control page has the same on/off switches in a compact row.</li>
-                        <li>Turn on the <b>Enable</b> switch in the Status panel. The ring pulses when the ambilight is running.</li>
+                        <li data-i18n="help.s3.devices">In <a href="devices.html">Devices</a> switch each device on or off and, under <b>Zones</b>, choose which of its zones are used. Keyboards are listed too and start off; their keys show the part of the screen they sit under. The preview at the top shows what changes. The Control page has the same on/off switches in a compact row.</li>
+                        <li data-i18n="help.s3.enable">Turn on the <b>Enable</b> switch in the Status panel. The ring pulses when the ambilight is running.</li>
                     </ul>
                 </div>
             </div>
@@ -125,10 +127,10 @@
                 <div class="panel-body help-text" style="padding:20px 24px;">
                     <div class="step-head"><div class="step-num">4</div><div class="step-title">Fine-tune the look</div></div>
                     <ul>
-                        <li>Hover over (or Tab to) the <b>i</b> next to any panel title to see what each parameter does and what happens when you raise or lower it.</li>
-                        <li>Pick a <b>preset</b> for a quick start: <b>Balanced</b> for everyday use, <b>Cinema</b> for films and series, <b>Gaming</b> for action games (shooters, racing: it follows the picture quickly), <b>Calm</b> for strategy and management games, the desktop and reading (slow, steady changes); <b>Reset</b> restores the defaults and <b>Advanced</b> shows or hides the fine-tuning sliders.</li>
-                        <li>Parameters that the selected algorithm does not use are dimmed with a <b>Not used</b> badge.</li>
-                        <li>Pick what the LEDs do while the display sleeps or locks in <b>Screen standby</b> (fade, pulse, aurora and more); the default keeps the last colors.</li>
+                        <li data-i18n="help.s4.info">Hover over (or Tab to) the <b>i</b> next to any panel title to see what each parameter does and what happens when you raise or lower it.</li>
+                        <li data-i18n="help.s4.preset">Pick a <b>preset</b> for a quick start: <b>Balanced</b> for everyday use, <b>Cinema</b> for films and series, <b>Gaming</b> for action games (shooters, racing: it follows the picture quickly), <b>Calm</b> for strategy and management games, the desktop and reading (slow, steady changes); <b>Reset</b> restores the defaults and <b>Advanced</b> shows or hides the fine-tuning sliders.</li>
+                        <li data-i18n="help.s4.notused">Parameters that the selected algorithm does not use are dimmed with a <b>Not used</b> badge.</li>
+                        <li data-i18n="help.s4.standby">Pick what the LEDs do while the display sleeps or locks in <b>Screen standby</b> (fade, pulse, aurora and more); the default keeps the last colors.</li>
                         <li>Changes apply live: no need to save or restart.</li>
                     </ul>
                 </div>
@@ -138,13 +140,13 @@
                 <div class="panel-body help-text" style="padding:20px 24px;">
                     <div class="step-head"><div class="step-num"><span class="material-symbols-outlined" style="font-size:18px;">help</span></div><div class="step-title">Good to know</div></div>
                     <ul>
-                        <li><b>Black screen / dark LEDs:</b> protected (HDCP) video such as some streaming apps cannot be captured. Try another <b>Capture Engine</b> on the Control page.</li>
-                        <li><b>Exclusive fullscreen games:</b> choose <b>DXGI</b> as Capture Engine.</li>
-                        <li><b>Window closed:</b> the app keeps running in the system tray. Right-click the tray icon to reopen or quit.</li>
-                        <li><b>Slow start:</b> when EDAmbilight launches OpenRGB itself, the first start can take around 15 seconds more while OpenRGB detects your hardware. The app waits so that no device is missed.</li>
-                        <li><b>Light or dark:</b> the sun / moon button at the bottom of the sidebar (in the panel header on Live Preview) switches the theme. The choice is remembered.</li>
-                        <li><b>New versions:</b> when a newer release is out, a notice at the top right links to its page (what's new, download). Nothing is downloaded or installed for you: extract the new zip and copy your <b>config</b> folder into it. <b>Skip this version</b> hides it for good. To know, the app asks GitHub at startup, at most once a day; switch it off in <a href="settings.html">Settings</a> &gt; About.</li>
-                        <li>Logs are written to <b>log/edambilight.log</b> next to the exe.</li>
+                        <li data-i18n="help.gtk.black"><b>Black screen / dark LEDs:</b> protected (HDCP) video such as some streaming apps cannot be captured. Try another <b>Capture Engine</b> on the Control page.</li>
+                        <li data-i18n="help.gtk.fullscreen"><b>Exclusive fullscreen games:</b> choose <b>DXGI</b> as Capture Engine.</li>
+                        <li data-i18n="help.gtk.window"><b>Window closed:</b> the app keeps running in the system tray. Right-click the tray icon to reopen or quit.</li>
+                        <li data-i18n="help.gtk.slow"><b>Slow start:</b> when EDAmbilight launches OpenRGB itself, the first start can take around 15 seconds more while OpenRGB detects your hardware. The app waits so that no device is missed.</li>
+                        <li data-i18n="help.gtk.theme"><b>Light or dark:</b> the sun / moon button at the bottom of the sidebar (in the panel header on Live Preview) switches the theme. The choice is remembered.</li>
+                        <li data-i18n="help.gtk.updates"><b>New versions:</b> when a newer release is out, a notice at the top right links to its page (what's new, download). Nothing is downloaded or installed for you: extract the new zip and copy your <b>config</b> folder into it. <b>Skip this version</b> hides it for good. To know, the app asks GitHub at startup, at most once a day; switch it off in <a href="settings.html">Settings</a> &gt; About.</li>
+                        <li data-i18n="help.gtk.logs">Logs are written to <b>log/edambilight.log</b> next to the exe.</li>
                     </ul>
                 </div>
             </div>

@@ -4,6 +4,8 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <script src="js/theme.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/i18n-it.js"></script>
 <title>EDAmbilight — Devices</title>
 <link href="css/tailwind.min.css" rel="stylesheet">
 <link href="css/fonts.css" rel="stylesheet">
@@ -195,7 +197,7 @@ function renderDevices(devs) {
                     <span class="material-symbols-outlined"
                           style="font-size:44px;color:var(--c-text-ghost);">device_hub</span>
                     <div style="color:var(--c-text-dim);font-size:.9rem;">No devices found.</div>
-                    <div style="color:var(--c-text-ghost);font-size:.85rem;text-align:center;">
+                    <div style="color:var(--c-text-ghost);font-size:.85rem;text-align:center;" data-i18n="devices.empty_hint">
                         Make sure OpenRGB is running with the SDK server on.<br>
                         Host and port are in <a href="settings.html" style="color:var(--c-cyan);">Settings</a>.
                     </div>
@@ -238,7 +240,7 @@ function renderDevices(devs) {
                           style="font-size:20px;color:${iconColor};">${iconName}</span>
                 </div>
                 <div style="flex:1;min-width:0;">
-                    <div style="font-weight:700;font-size:14px;color:var(--c-name);
+                    <div translate="no" style="font-weight:700;font-size:14px;color:var(--c-name);
                                 white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:5px;">
                         ${escapeHtml(dev.name)}
                     </div>
@@ -301,7 +303,7 @@ function zonesHtml(dev, idx) {
         <label class="dev-zone-item">
             <input type="checkbox" class="dev-zone-check" ${z.enabled ? 'checked' : ''}
                    onchange="toggleZone(${idx}, ${Number(z.zone_index)}, this.checked)">
-            <span class="dev-zone-name">${escapeHtml(_zoneLabel(z))}</span>
+            <span class="dev-zone-name"${_zoneLabel(z) === z.name ? ' translate="no"' : ''}>${escapeHtml(_zoneLabel(z))}</span>
             <span class="dev-zone-edge">${escapeHtml(_edgeText(z))}</span>
         </label>`).join('')}
     </div>${note}`;

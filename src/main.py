@@ -327,9 +327,20 @@ def main():
     web_port  = settings.get_web_port()
     _web_port = web_port
 
+    # Only this PC may use the server, unless Settings > Web Server allows the
+    # network (then it listens on every interface; the Origin check stays).
+    import bottle
+    from utils.local_guard import install as install_local_guard
+    allow_remote = settings.get_allow_remote_access()
+    install_local_guard(bottle.default_app(), allow_remote=allow_remote)
+    if allow_remote:
+        print("[WARNING] Remote access enabled: other devices of the network can control EDAmbilight")
+
     eel.start(
         "loading.html",
         size=(1280, 780),
+        host="localhost",
+        all_interfaces=allow_remote,
         port=web_port,
         mode=None,
         block=False,
